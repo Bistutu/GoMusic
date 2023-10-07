@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	id := "8725919816"
+	id := "6957476382"
 	res, err := httputil.Post("https://music.163.com/api/v6/playlist/detail", strings.NewReader("id="+id))
 	if err != nil {
 		log.Fatalf("fail to post: %v", err)
@@ -65,7 +65,7 @@ func main() {
 		builder.WriteString(authorsString)
 		songsString = append(songsString, builder.String())
 	}
-	for k, v := range songsString {
-		fmt.Println(k, v)
+	for _, v := range songsString {
+		fmt.Println(v)
 	}
 }
