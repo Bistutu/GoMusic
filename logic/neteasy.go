@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	netEasyRegex = "https://music.163.com/#/playlist\\?.*id=\\d{10}.*"
+	netEasyRegex = "https://music.163.com/#/playlist\\?.*id=\\d{9,10}.*"
 	netEasyRedis = "net_easy:%s"
 )
 
