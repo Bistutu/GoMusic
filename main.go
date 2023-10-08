@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
 	"GoMusic/logic"
@@ -11,8 +12,10 @@ import (
 )
 
 func main() {
-	e := gin.Default()
-	e.POST("/neteasy", func(c *gin.Context) {
+	r := gin.Default()
+	r.Use(cors.Default()) // 允许所有跨域请求
+	r.StaticFile("/", "./static")
+	r.POST("/neteasy", func(c *gin.Context) {
 		link := c.PostForm("url")
 		// 如果 link 不符合网易云规则，直接返回
 		if !logic.IsNetEasyDiscover(link) {
@@ -32,5 +35,5 @@ func main() {
 			Data: netEasyDiscover,
 		})
 	})
-	e.Run(":8081")
+	r.Run(":8081")
 }

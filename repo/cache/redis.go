@@ -14,7 +14,7 @@ var (
 
 func init() {
 	rdb = redis.NewClient(&redis.Options{
-		Addr:     "", // redis 地址
+		Addr:     "", // redis 服务端地址
 		Password: "", // redis 密码
 		DB:       0,
 	})
