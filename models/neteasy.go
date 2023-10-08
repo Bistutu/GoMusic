@@ -2,6 +2,12 @@ package models
 
 import "fmt"
 
+type SongList struct {
+	// 歌单名
+	Name  string   `json:"name"`
+	Songs []string `json:"songs"`
+}
+
 type SongId struct {
 	Id uint `json:"id"`
 }
