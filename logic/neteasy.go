@@ -11,10 +11,12 @@ import (
 
 	"GoMusic/httputil"
 	"GoMusic/models"
+	"GoMusic/repo/cache"
 )
 
 const (
 	netEasyRegex = "https://music.163.com/#/playlist\\?.*id=\\d{10}.*"
+	netEasyRedis = "net_easy:%s"
 )
 
 var (
@@ -27,6 +29,25 @@ func NetEasyDiscover(link string) (*models.SongList, error) {
 		log.Printf("fail to parse url: %v", err)
 		return nil, err
 	}
+	// 检查缓存
+	key, err := cache.GetKey(fmt.Sprintf(netEasyRedis, id))
+	if err != nil {
+		log.Printf("fail to get key: %v", err)
+		return nil, err
+	}
+	// 1、如果缓存中存在的话
+	if key != "" {
+		log.Printf("命中缓存：%v", id)
+		songs := &models.SongList{}
+		err := json.Unmarshal([]byte(key), &songs)
+		if err != nil {
+			log.Printf("fail to unmarshal: %v", err)
+			return nil, err
+		}
+		return songs, nil
+	}
+
+	// 2、若缓存中不存在，取数据、缓存
 	res, err := httputil.Post("https://music.163.com/api/v6/playlist/detail", strings.NewReader("id="+id))
 	if err != nil {
 		log.Printf("fail to post: %v", err)
@@ -47,6 +68,7 @@ func NetEasyDiscover(link string) (*models.SongList, error) {
 	}
 	// 无权限访问
 	if netEasySongId.Code == 401 {
+		cache.SetKey(fmt.Sprintf(netEasyRedis, id), "") // redis 防击穿
 		log.Printf("无权限访问, link: %v", link)
 		return nil, fmt.Errorf("无权限访问")
 	}
@@ -86,10 +108,17 @@ func NetEasyDiscover(link string) (*models.SongList, error) {
 		builder.WriteString(authorsString)
 		songsString = append(songsString, builder.String())
 	}
-	return &models.SongList{
+	songList := &models.SongList{
 		Name:  SongsName,
 		Songs: songsString,
-	}, nil
+	}
+	bytes, err = json.Marshal(songList)
+	if err != nil {
+		log.Printf("fail to marshal: %v", err)
+		return nil, err
+	}
+	cache.SetKey(fmt.Sprintf(netEasyRedis, id), string(bytes))
+	return songList, nil
 }
 
 func getSongsId(link string) (string, error) {
