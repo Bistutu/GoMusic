@@ -1,4 +1,4 @@
-## 迁移网易云歌单至-AppleMusic、YoutubeMusic、Spotify
+# 迁移网易云歌单至-AppleMusic、YoutubeMusic、Spotify
 
 链接：https://music.unmeta.cn
 
@@ -16,7 +16,7 @@ rdb = redis.NewClient(&redis.Options{
 
 <img src="https://oss.thinkstu.com/typora/202310081905115.png?x-oss-process=style/optimize" alt="image-20231008190554003" style="width:60%;" />
 
-## 使用指南
+# 使用指南
 
 1. 输入网易云歌单链接，例如：https://music.163.com/#/playlist?id=8725919816
 2. 转移到 Youtube Music or Spotify or Apple Music
