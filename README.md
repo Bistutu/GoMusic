@@ -1,8 +1,10 @@
 ## 迁移网易云歌单至-AppleMusic、YoutubeMusic、Spotify
 
-链接：https://music.unmeta.cn/
+链接：https://music.unmeta.cn
 
-项目使用 Golang + Gin 开发，Redis 作为缓存中间件，使用时需到 /repo/cache/redis.go 文件下配置 redis 的连接地址。
+项目使用 Golang + Gin 开发，Redis 作为缓存中间件。
+
+如果需要使用 Redis，则应该到 /repo/cache/redis.go 配置连接地址，不使用无需配置。
 
 ```go
 rdb = redis.NewClient(&redis.Options{
@@ -12,7 +14,7 @@ rdb = redis.NewClient(&redis.Options{
 })
 ```
 
-<img src="https://oss.thinkstu.com/typora/202310081905115.png?x-oss-process=style/optimize" alt="image-20231008190554003" style="width:80%;" />
+<img src="https://oss.thinkstu.com/typora/202310081905115.png?x-oss-process=style/optimize" alt="image-20231008190554003" style="width:60%;" />
 
 ## 使用指南
 
@@ -24,6 +26,15 @@ rdb = redis.NewClient(&redis.Options{
    - STEP 3：选择 Youtube or Spotify or Apple Music作为目的地
    - STEP 4：开始移动
 
-<img src="https://oss.thinkstu.com/typora/202310081907395.png?x-oss-process=style/optimize" alt="image-20231008190713343" style="width:80%;" />
+<img src="https://oss.thinkstu.com/typora/202310081907395.png?x-oss-process=style/optimize" alt="image-20231008190713343" style="width:60%;" />
 
-<img src="https://oss.thinkstu.com/typora/202310081907435.png?x-oss-process=style/optimize" alt="image-20231008190730397" style="width:80%;" />
+<img src="https://oss.thinkstu.com/typora/202310081907435.png?x-oss-process=style/optimize" alt="image-20231008190730397" style="width:60%;" />
+
+# 如何启动程序？
+
+首先将程序克隆至本地，然后直接运行程序
+
+```shell
+git clone https://github.com/Bistutu/GoMusic.git
+```
+

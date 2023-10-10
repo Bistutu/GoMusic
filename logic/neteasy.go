@@ -2,6 +2,7 @@ package logic
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -15,12 +16,14 @@ import (
 )
 
 const (
-	netEasyRegex = "https://music.163.com/#/playlist\\?.*id=\\d{9,10}.*"
-	netEasyRedis = "net_easy:%s"
+	netEasyLongRegex  = "https://(y\\.)?music.163.com/.*playlist\\?.*id=\\d{9,10}.*"
+	netEasyShortRegex = "http://163cn.tv/\\w{6}"
+	netEasyRedis      = "net_easy:%s"
 )
 
 var (
-	netEasyPattern, _ = regexp.Compile(netEasyRegex)
+	netEasyLongPattern, _  = regexp.Compile(netEasyLongRegex)
+	netEasyShortPattern, _ = regexp.Compile(netEasyShortRegex)
 )
 
 func NetEasyDiscover(link string) (*models.SongList, error) {
@@ -33,7 +36,6 @@ func NetEasyDiscover(link string) (*models.SongList, error) {
 	key, err := cache.GetKey(fmt.Sprintf(netEasyRedis, id))
 	if err != nil {
 		log.Printf("fail to get key: %v", err)
-		return nil, err
 	}
 	// 1、如果缓存中存在的话
 	if key != "" {
@@ -117,7 +119,10 @@ func NetEasyDiscover(link string) (*models.SongList, error) {
 		log.Printf("fail to marshal: %v", err)
 		return nil, err
 	}
-	cache.SetKey(fmt.Sprintf(netEasyRedis, id), string(bytes))
+	err = cache.SetKey(fmt.Sprintf(netEasyRedis, id), string(bytes))
+	if err != nil {
+		log.Printf(err.Error())
+	}
 	return songList, nil
 }
 
@@ -131,8 +136,30 @@ func getSongsId(link string) (string, error) {
 	return query.Get("id"), nil
 }
 
-func IsNetEasyDiscover(link string) bool {
+func IsNetEasyDiscover(link string) (string, error) {
+
+	if netEasyShortPattern.MatchString(link) {
+		short, err := short2Long(link)
+		if err != nil {
+			log.Printf("短链转换失败: %v", link)
+			return "", errors.New("短链转换失败！")
+		}
+		link = short
+	}
+	if !netEasyLongPattern.MatchString(link) {
+		return "", errors.New("无效的网易云歌单链接！")
+	}
+	// http://163cn.tv/zoIxm3
 	// https://music.163.com/#/playlist\\?.*id=\\d{10}.*
 	// https://music.163.com/#/playlist?app_version=8.10.81&id=8725919816&dlt=0846&creatorId=341246998"
-	return netEasyPattern.MatchString(link)
+	// https://music.163.com/playlist?id=477577176&userid=341246998
+	return link, nil
+}
+
+func short2Long(link string) (string, error) {
+	redirectionURL, err := httputil.GetRedirectionURL(link)
+	if err != nil {
+		return "", err
+	}
+	return redirectionURL, nil
 }

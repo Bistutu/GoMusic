@@ -13,14 +13,15 @@ import (
 
 func main() {
 	r := gin.Default()
-	r.Use(cors.Default()) // 允许所有跨域请求
-	r.StaticFile("/", "./static")
+	r.Use(cors.Default())         // 允许所有跨域请求
+	r.StaticFile("/", "./static") // 加载静态资源
+
 	r.POST("/neteasy", func(c *gin.Context) {
-		link := c.PostForm("url")
-		// 如果 link 不符合网易云规则，直接返回
-		if !logic.IsNetEasyDiscover(link) {
-			log.Printf("invalid link: %s", link)
-			c.JSON(http.StatusBadRequest, &models.Result{Code: -1, Msg: "无效的网易云歌单链接~", Data: nil})
+		// 判断链接是否为网易云歌单链接并标准化
+		link, err := logic.IsNetEasyDiscover(c.PostForm("url"))
+		if err != nil {
+			log.Printf("无效的链接格式：%s", link)
+			c.JSON(http.StatusBadRequest, &models.Result{Code: -1, Msg: err.Error(), Data: nil})
 			return
 		}
 		netEasyDiscover, err := logic.NetEasyDiscover(link)

@@ -12,6 +12,7 @@ var (
 	rdb *redis.Client
 )
 
+// redis 可以不配置
 func init() {
 	rdb = redis.NewClient(&redis.Options{
 		Addr:     "", // redis 服务端地址
