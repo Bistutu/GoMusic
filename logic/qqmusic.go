@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -14,6 +13,7 @@ import (
 	"GoMusic/common/models"
 	"GoMusic/common/utils"
 	"GoMusic/httputil"
+	"GoMusic/initialize/log"
 	"GoMusic/repo/cache"
 )
 
@@ -26,64 +26,56 @@ const (
 )
 
 var (
-	qqMusicV1Regx, _ = regexp.Compile(qqMusicV1)
-	qqMusicV2Regx, _ = regexp.Compile(qqMusicV2)
-	qqMusicV3Regx, _ = regexp.Compile(qqMusicV3)
+	qqMusicV1Regx = regexp.MustCompile(qqMusicV1)
+	qqMusicV2Regx = regexp.MustCompile(qqMusicV2)
+	qqMusicV3Regx = regexp.MustCompile(qqMusicV3)
 )
 
-func QQMusicDiscover(link string) (*models.SongList, error) {
+// QQMusicDiscover 获取qq音乐歌单
+func QQMusicDiscover(link string) (string, error) {
 	tid, err := getDissTid(link)
 	if err != nil {
-		log.Printf("fail to get tid: %v", err)
-		return nil, err
+		log.Errorf("fail to get tid: %v", err)
+		return "", err
 	}
 
-	key, err := cache.GetKey(fmt.Sprintf(qqMusicRedis, tid))
+	redisCache, err := cache.GetKey(fmt.Sprintf(qqMusicRedis, tid))
 	if err != nil {
-		log.Printf("fail to get key: %v", err)
+		log.Errorf("redis connect fail: %v", err)
 	}
 	// 1、如果缓存中存在的话
-	if key != "" {
-		log.Printf("qqmusic 命中缓存：%v", tid)
-		songs := &models.SongList{}
-		err := json.Unmarshal([]byte(key), &songs)
-		if err != nil {
-			log.Printf("fail to unmarshal: %v", err)
-			return nil, err
-		}
-		return songs, nil
+	if redisCache != "" {
+		log.Infof("qqmusic 命中缓存：%v", tid)
+		return redisCache, nil
 	}
 
-	// 2、若缓存中不存在，取数据、缓存
-	// 获取参数
-	param := models.NewQQMusicReq(tid)
-	marshal, _ := json.Marshal(param)
-	// 获取签名
-	data := string(marshal)
-	sign, err := utils.GetSign(data)
+	// 2、若缓存没命中，取数据
+	// 获取请求参数与验证签名
+	paramString := models.GetQQMusicReqString(tid)
+	sign, err := utils.GetSign(paramString)
 	if err != nil {
-		log.Printf("fail to get sign: %v", err)
-		return nil, err
+		log.Errorf("fail to get sign: %v", err)
+		return "", err
 	}
 	// 构建并发送请求
 	link = fmt.Sprintf(qqMusicPattern, sign, time.Now().UnixMilli())
-	payload := strings.NewReader(string(marshal))
-	resp, err := httputil.Post(link, payload)
+	resp, err := httputil.Post(link, strings.NewReader(paramString))
 	if err != nil {
-		log.Printf("fail to get qqmusic: %v", err)
-		return nil, err
+		log.Errorf("fail to get qqmusic: %v", err)
+		return "", err
 	}
 	defer resp.Body.Close()
 	bytes, _ := io.ReadAll(resp.Body)
 	m := &models.QQMusicResp{}
 	err = json.Unmarshal(bytes, m)
 	if err != nil {
-		log.Printf("fail to unmarshal qqmusic: %v", err)
-		return nil, err
+		log.Errorf("fail to unmarshal qqmusic: %v", err)
+		return "", err
 	}
 	songsString := make([]string, 0, len(m.Req0.Data.Songlist))
+	builder := strings.Builder{}
 	for _, v := range m.Req0.Data.Songlist {
-		builder := strings.Builder{}
+		builder.Reset()
 		builder.WriteString(v.Name)
 		builder.WriteString(" - ")
 
@@ -99,46 +91,41 @@ func QQMusicDiscover(link string) (*models.SongList, error) {
 		Name:  m.Req0.Data.Dirinfo.Title,
 		Songs: songsString,
 	}
+	bytes, _ = json.Marshal(songList)
+	data := string(bytes)
 	// 3、设置缓存
-	err = cache.SetKey(fmt.Sprintf(qqMusicRedis, tid), string(bytes))
+	err = cache.SetKey(fmt.Sprintf(qqMusicRedis, tid), data)
 	if err != nil {
-		log.Printf(err.Error())
+		log.Errorf(err.Error())
 	}
-	return songList, nil
+	return data, nil
 }
 
+// GetSongsId 获取歌单id
 func getDissTid(link string) (tid int, err error) {
-	// https://c6.y.qq.com/base/fcgi-bin/u?__=4V33zWKDE3tI
-	// https://y.qq.com/n/ryqq/playlist/7364061065
-	// https://i.y.qq.com/n2/m/share/details/taoge.html?hosteuin=oKE57evqoiEPoz**&id=1596010000&appversion=120801&ADTAG=wxfshare&appshare=iphone_wx
 	if qqMusicV1Regx.MatchString(link) {
-		link, err = httputil.GetRedirectionURL(link)
+		link, err = httputil.GetRedirectLocation(link)
 		if err != nil {
-			log.Printf("fail to get redirection url: %v", err)
-			return 0, err
+			log.Errorf("fail to get redirection url: %v", err)
+			return
 		}
 	}
 	if qqMusicV2Regx.MatchString(link) {
-		tidString, err := GetSongsId(link)
+		var tidString string
+		tidString, err = utils.GetSongsId(link)
 		if err != nil {
-			log.Printf("fail to get songs id: %v", err)
-			return 0, err
+			log.Errorf("fail to get songs id: %v", err)
+			return
 		}
-		tid, err = strconv.Atoi(tidString)
-		if err != nil {
-			log.Printf("fail to convert string to int: %v", err)
-			return 0, err
-		}
-		return tid, nil
+		return strconv.Atoi(tidString)
 	}
 	if qqMusicV3Regx.MatchString(link) {
 		index := strings.Index(link, "playlist")
 		if index < 0 || index+19 > len(link) {
-			log.Printf("fail to get tid: %v", err)
-			return 0, err
+			log.Errorf("fail to get tid: %v", err)
+			return
 		}
-		tid, err = strconv.Atoi(link[index+9 : index+19])
-		return tid, nil
+		return strconv.Atoi(link[index+9 : index+19])
 	}
 	return 0, errors.New("invalid link")
 }

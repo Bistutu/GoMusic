@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <!-- <meta name="viewport" content="width=device-width, initial-scale=1.0"> -->
+    <!-- <meta name="viewport" content="width=device-width, initialize-scale=1.0"> -->
     <title>Go-Music</title>
     <link href="https://unpkg.com/element-ui@2.14.1/lib/theme-chalk/index.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/axios@0.21.1/dist/axios.min.js"></script>
@@ -72,11 +72,11 @@
                 // 清空前后空白字符，并进行正则表达式匹配
                 this.link = this.link.trim();
                 console.log("visit: " + this.link)
-                // const regex = /(^https:\/\/(y\.)?music\.163\.com\/.*playlist\?.*id=\d{9,10}.*)|(^http:\/\/163cn\.tv\/\w{6}.*)/;
-                // if (!regex.test(this.link)) {
-                //     this.result = '链接解析失败，请确认是否为正确格式！';
-                //     return;  // 直接返回，不再继续执行以下代码
-                // }
+                const regex = /(163)|(qq)/;
+                if (!regex.test(this.link)) {
+                    this.result = '链接解析失败，请确认是否为正确格式！';
+                    return;  // 直接返回，不再继续执行以下代码
+                }
 
                 const params = new URLSearchParams();
                 params.append('url', this.link);

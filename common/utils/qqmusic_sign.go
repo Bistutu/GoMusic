@@ -2,7 +2,8 @@ package utils
 
 import (
 	_ "embed"
-	"log"
+
+	"GoMusic/initialize/log"
 
 	"github.com/robertkrimen/otto"
 )
@@ -14,14 +15,15 @@ var vm = otto.New()
 
 func init() {
 	if _, err := vm.Run(qqmusicJS); err != nil {
-		log.Fatalf("fail to run js: %v", err)
+		log.Errorf("fail to run js: %v", err)
+		panic(err)
 	}
 }
 
 func GetSign(data string) (string, error) {
 	value, err := vm.Call("get_sign", nil, data)
 	if err != nil {
-		log.Printf("fail to call js: %v", err)
+		log.Errorf("fail to call js: %v", err)
 		return "", err
 	}
 	return value.String(), nil

@@ -5,10 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
-	"net/url"
 	"regexp"
 	"strings"
+
+	"GoMusic/common/utils"
+	"GoMusic/initialize/log"
 
 	"GoMusic/common/models"
 	"GoMusic/httputil"
@@ -16,71 +17,70 @@ import (
 )
 
 const (
-	netEasyLongRegex  = "https://(y\\.)?music.163.com/.*playlist\\?.*id=\\d{9,10}.*"
-	netEasyShortRegex = "http://163cn.tv/\\w{6}"
-	netEasyRedis      = "net_easy:%s"
+	netEasyV1    = `.163.` // 正常链接
+	netEasyV2    = "163cn" // 短链接
+	netEasyRedis = "net_easy:%s"
+	netEasyUrlV6 = "https://music.163.com/api/v6/playlist/detail"
+	netEasyUrlV3 = "https://music.163.com/api/v3/song/detail"
 )
 
 var (
-	netEasyLongPattern, _  = regexp.Compile(netEasyLongRegex)
-	netEasyShortPattern, _ = regexp.Compile(netEasyShortRegex)
+	netEasyV1Regx = regexp.MustCompile(netEasyV1)
+	netEasyV2Regx = regexp.MustCompile(netEasyV2)
 )
 
-func NetEasyDiscover(link string) (*models.SongList, error) {
-	// 判断链接是否为网易云歌单链接并标准化
-	link, err := IsNetEasyDiscover(link)
-	if err != nil {
-		log.Printf("无效的链接格式：%s", link)
-		return nil, err
+func NetEasyDiscover(link string) (string, error) {
+	var err error
+	// 如果是短链接，则转换为长链接
+	if netEasyV2Regx.MatchString(link) {
+		link, err = httputil.GetRedirectLocation(link)
+		if err != nil {
+			log.Errorf("fail to convert short to long: %v", err)
+			return "", err
+		}
 	}
-	id, err := GetSongsId(link)
+
+	id, err := utils.GetSongsId(link)
 	if err != nil {
-		log.Printf("fail to parse url: %v", err)
-		return nil, err
+		log.Errorf("fail to parse url: %v", err)
+		return "", err
 	}
 	// 检查缓存
-	key, err := cache.GetKey(fmt.Sprintf(netEasyRedis, id))
+	redisCache, err := cache.GetKey(fmt.Sprintf(netEasyRedis, id))
 	if err != nil {
-		log.Printf("fail to get key: %v", err)
+		log.Errorf("redis connect fail: %v", err)
 	}
 	// 1、如果缓存中存在的话
-	if key != "" {
-		log.Printf("neteasy 命中缓存：%v", id)
-		songs := &models.SongList{}
-		err := json.Unmarshal([]byte(key), &songs)
-		if err != nil {
-			log.Printf("fail to unmarshal: %v", err)
-			return nil, err
-		}
-		return songs, nil
+	if redisCache != "" {
+		log.Infof("neteasy 命中缓存：%v", id)
+		return redisCache, nil
 	}
 
 	// 2、若缓存中不存在，取数据、缓存
-	res, err := httputil.Post("https://music.163.com/api/v6/playlist/detail", strings.NewReader("id="+id))
+	res, err := httputil.Post(netEasyUrlV6, strings.NewReader("id="+id))
 	if err != nil {
-		log.Printf("fail to post: %v", err)
-		return nil, err
+		log.Errorf("fail to post: %v", err)
+		return "", err
 	}
 	defer res.Body.Close()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		log.Printf("fail to read res body: %v", err)
-		return nil, err
+		log.Errorf("fail to read res body: %v", err)
+		return "", err
 	}
 	netEasySongId := &models.NetEasySongId{}
-	err = json.Unmarshal(body, &netEasySongId)
+	err = json.Unmarshal(body, netEasySongId)
 	if err != nil {
-		log.Printf("fail to unmarshal: %v", err)
-		return nil, err
+		log.Errorf("fail to unmarshal: %v", err)
+		return "", err
 	}
 	// 无权限访问
 	if netEasySongId.Code == 401 {
 		cache.SetKey(fmt.Sprintf(netEasyRedis, id), "") // redis 防击穿
-		log.Printf("无权限访问, link: %v", link)
-		return nil, fmt.Errorf("无权限访问")
+		log.Errorf("无权限访问, link: %v", link)
+		return "", errors.New("无权限访问")
 	}
-	SongsName := netEasySongId.Playlist.Name            // 歌单名称
 	trackIds := netEasySongId.Playlist.TrackIds         // 歌单歌曲 ID 列表
 	songsId := make([]*models.SongId, 0, len(trackIds)) // 歌曲 ID To []Uint
 	for _, v := range trackIds {
@@ -88,23 +88,24 @@ func NetEasyDiscover(link string) (*models.SongList, error) {
 	}
 	marshal, _ := json.Marshal(songsId)
 
-	reader := strings.NewReader("c=" + string(marshal))
-	post, err := httputil.Post("https://music.163.com/api/v3/song/detail", reader)
+	post, err := httputil.Post(netEasyUrlV3, strings.NewReader("c="+string(marshal)))
 	if err != nil {
-		log.Printf("fail to post: %v", err)
-		return nil, err
+		log.Errorf("fail to post: %v", err)
+		return "", err
 	}
 	defer post.Body.Close()
+
 	bytes, _ := io.ReadAll(post.Body)
 	songs := &models.Songs{}
 	err = json.Unmarshal(bytes, &songs)
 	if err != nil {
-		log.Printf("fail to unmarshal: %v", err)
-		return nil, err
+		log.Errorf("fail to unmarshal: %v", err)
+		return "", err
 	}
 	songsString := make([]string, 0, len(songs.Songs))
+	builder := strings.Builder{}
 	for _, v := range songs.Songs {
-		builder := strings.Builder{}
+		builder.Reset()
 		builder.WriteString(v.Name)
 		builder.WriteString(" - ")
 
@@ -117,55 +118,19 @@ func NetEasyDiscover(link string) (*models.SongList, error) {
 		songsString = append(songsString, builder.String())
 	}
 	songList := &models.SongList{
-		Name:  SongsName,
+		Name:  netEasySongId.Playlist.Name,
 		Songs: songsString,
 	}
 	bytes, err = json.Marshal(songList)
+	data := string(bytes)
 	if err != nil {
-		log.Printf("fail to marshal: %v", err)
-		return nil, err
+		log.Errorf("fail to marshal: %v", err)
+		return "", err
 	}
 	// 3、设置缓存
-	err = cache.SetKey(fmt.Sprintf(netEasyRedis, id), string(bytes))
+	err = cache.SetKey(fmt.Sprintf(netEasyRedis, id), data)
 	if err != nil {
-		log.Printf(err.Error())
+		log.Errorf("fail to set key: %v", err)
 	}
-	return songList, nil
-}
-
-func GetSongsId(link string) (string, error) {
-	parse, err := url.ParseRequestURI(link)
-	if err != nil {
-		log.Printf("fail to parse url: %v", err)
-		return "", err
-	}
-	query, err := url.ParseQuery(parse.RawQuery)
-	return query.Get("id"), nil
-}
-
-func IsNetEasyDiscover(link string) (string, error) {
-
-	if netEasyShortPattern.MatchString(link) {
-		short, err := short2Long(link)
-		if err != nil {
-			log.Printf("短链转换失败: %v", link)
-			return "", errors.New("短链转换失败！")
-		}
-		link = short
-	}
-	if !netEasyLongPattern.MatchString(link) {
-		return "", errors.New("无效的网易云歌单链接！")
-	}
-	// http://163cn.tv/zoIxm3
-	// https://music.163.com/#/playlist?app_version=8.10.81&id=8725919816&dlt=0846&creatorId=341246998"
-	// https://music.163.com/playlist?id=477577176&userid=341246998
-	return link, nil
-}
-
-func short2Long(link string) (string, error) {
-	redirectionURL, err := httputil.GetRedirectionURL(link)
-	if err != nil {
-		return "", err
-	}
-	return redirectionURL, nil
+	return data, nil
 }

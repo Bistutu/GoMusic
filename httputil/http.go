@@ -28,7 +28,7 @@ func Post(link string, data io.Reader) (*http.Response, error) {
 	return client.Do(req)
 }
 
-func GetRedirectionURL(link string) (string, error) {
+func GetRedirectLocation(link string) (string, error) {
 	resp, err := clientNoRedirect.Get(link)
 	if err != nil {
 		return "", err

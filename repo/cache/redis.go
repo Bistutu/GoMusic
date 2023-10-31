@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
+
+	"GoMusic/common/config"
 )
 
 var (
@@ -12,17 +14,16 @@ var (
 	rdb *redis.Client
 )
 
-// redis 可以不配置
 func init() {
 	rdb = redis.NewClient(&redis.Options{
-		Addr:     "", // redis 服务端地址
-		Password: "", // redis 密码
+		Addr:     config.AllConfig.Redis.Dsn,      // redis 服务端地址
+		Password: config.AllConfig.Redis.Password, // redis 密码
 		DB:       0,
 	})
 }
 
 func SetKey(key string, value string) error {
-	err := rdb.Set(ctx, key, value, 1*time.Minute).Err() // 缓存1分钟
+	err := rdb.Set(ctx, key, value, 30*time.Second).Err() // 缓存 30 秒
 	return err
 }
 

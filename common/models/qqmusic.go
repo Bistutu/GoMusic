@@ -1,5 +1,7 @@
 package models
 
+import "encoding/json"
+
 type QQMusicReq struct {
 	Req0 struct {
 		Module string `json:"module"`
@@ -65,6 +67,12 @@ func NewQQMusicReq(disstid int) *QQMusicReq {
 			Platform: "h5",
 		},
 	}
+}
+
+func GetQQMusicReqString(disstid int) string {
+	param := NewQQMusicReq(disstid)
+	marshal, _ := json.Marshal(param)
+	return string(marshal)
 }
 
 type QQMusicResp struct {
