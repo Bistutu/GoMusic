@@ -72,18 +72,18 @@
                 // 清空前后空白字符，并进行正则表达式匹配
                 this.link = this.link.trim();
                 console.log("visit: " + this.link)
-                const regex = /(^https:\/\/(y\.)?music\.163\.com\/.*playlist\?.*id=\d{9,10}.*)|(^http:\/\/163cn\.tv\/\w{6}.*)/;
-                if (!regex.test(this.link)) {
-                    this.result = '链接解析失败，请确认是否为正确格式！';
-                    return;  // 直接返回，不再继续执行以下代码
-                }
+                // const regex = /(^https:\/\/(y\.)?music\.163\.com\/.*playlist\?.*id=\d{9,10}.*)|(^http:\/\/163cn\.tv\/\w{6}.*)/;
+                // if (!regex.test(this.link)) {
+                //     this.result = '链接解析失败，请确认是否为正确格式！';
+                //     return;  // 直接返回，不再继续执行以下代码
+                // }
 
                 const params = new URLSearchParams();
                 params.append('url', this.link);
 
                 try {
-                    const response = await axios.post('https://music.unmeta.cn/neteasy', params, {
-                    // const response = await axios.post('http://localhost/neteasy', params, {
+                    // const response = await axios.post('https://music.unmeta.cn/neteasy', params, {
+                    const response = await axios.post('http://localhost:8081/songlist', params, {
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded'
                         }

@@ -3,12 +3,23 @@ package main
 import (
 	"log"
 	"net/http"
+	"regexp"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
+	"GoMusic/common/models"
 	"GoMusic/logic"
-	"GoMusic/models"
+)
+
+const (
+	netEasy = `(163cn)|(.163.)`
+	qqMusic = `.qq.`
+)
+
+var (
+	netEasyRegx, _ = regexp.Compile(netEasy)
+	qqMusicRegx, _ = regexp.Compile(qqMusic)
 )
 
 func main() {
@@ -16,25 +27,38 @@ func main() {
 	r.Use(cors.Default())         // 允许所有跨域请求
 	r.StaticFile("/", "./static") // 加载静态资源
 
-	r.POST("/neteasy", func(c *gin.Context) {
-		// 判断链接是否为网易云歌单链接并标准化
-		link, err := logic.IsNetEasyDiscover(c.PostForm("url"))
-		if err != nil {
-			log.Printf("无效的链接格式：%s", link)
-			c.JSON(http.StatusBadRequest, &models.Result{Code: -1, Msg: err.Error(), Data: nil})
+	r.POST("/songlist", func(c *gin.Context) {
+		// 判断为网易云、QQ音乐（后续还可能扩展）
+		form := c.PostForm("url")
+		switch {
+		case netEasyRegx.MatchString(form):
+			songList, err := logic.NetEasyDiscover(form)
+			if err != nil {
+				log.Printf("fail to get net easy discover: %v", err)
+				c.JSON(http.StatusBadRequest, &models.Result{Code: -1, Msg: err.Error(), Data: nil})
+				return
+			}
+			c.JSON(200, &models.Result{
+				Code: 1,
+				Msg:  "success",
+				Data: songList,
+			})
+		case qqMusicRegx.MatchString(form):
+			songList, err := logic.QQMusicDiscover(form)
+			if err != nil {
+				log.Printf("fail to get qq music discover: %v", err)
+				c.JSON(http.StatusBadRequest, &models.Result{Code: -1, Msg: err.Error(), Data: nil})
+				return
+			}
+			c.JSON(200, &models.Result{
+				Code: 1,
+				Msg:  "success",
+				Data: songList,
+			})
 			return
+		default:
+			c.JSON(http.StatusBadRequest, nil)
 		}
-		netEasyDiscover, err := logic.NetEasyDiscover(link)
-		if err != nil {
-			log.Printf("fail to get net easy discover: %v", err)
-			c.JSON(http.StatusBadRequest, &models.Result{Code: -1, Msg: err.Error(), Data: nil})
-			return
-		}
-		c.JSON(200, &models.Result{
-			Code: 1,
-			Msg:  "success",
-			Data: netEasyDiscover,
-		})
 	})
 	r.Run(":8081")
 }

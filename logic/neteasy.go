@@ -10,8 +10,8 @@ import (
 	"regexp"
 	"strings"
 
+	"GoMusic/common/models"
 	"GoMusic/httputil"
-	"GoMusic/models"
 	"GoMusic/repo/cache"
 )
 
@@ -27,7 +27,13 @@ var (
 )
 
 func NetEasyDiscover(link string) (*models.SongList, error) {
-	id, err := getSongsId(link)
+	// 判断链接是否为网易云歌单链接并标准化
+	link, err := IsNetEasyDiscover(link)
+	if err != nil {
+		log.Printf("无效的链接格式：%s", link)
+		return nil, err
+	}
+	id, err := GetSongsId(link)
 	if err != nil {
 		log.Printf("fail to parse url: %v", err)
 		return nil, err
@@ -39,7 +45,7 @@ func NetEasyDiscover(link string) (*models.SongList, error) {
 	}
 	// 1、如果缓存中存在的话
 	if key != "" {
-		log.Printf("命中缓存：%v", id)
+		log.Printf("neteasy 命中缓存：%v", id)
 		songs := &models.SongList{}
 		err := json.Unmarshal([]byte(key), &songs)
 		if err != nil {
@@ -119,6 +125,7 @@ func NetEasyDiscover(link string) (*models.SongList, error) {
 		log.Printf("fail to marshal: %v", err)
 		return nil, err
 	}
+	// 3、设置缓存
 	err = cache.SetKey(fmt.Sprintf(netEasyRedis, id), string(bytes))
 	if err != nil {
 		log.Printf(err.Error())
@@ -126,7 +133,7 @@ func NetEasyDiscover(link string) (*models.SongList, error) {
 	return songList, nil
 }
 
-func getSongsId(link string) (string, error) {
+func GetSongsId(link string) (string, error) {
 	parse, err := url.ParseRequestURI(link)
 	if err != nil {
 		log.Printf("fail to parse url: %v", err)
@@ -150,7 +157,6 @@ func IsNetEasyDiscover(link string) (string, error) {
 		return "", errors.New("无效的网易云歌单链接！")
 	}
 	// http://163cn.tv/zoIxm3
-	// https://music.163.com/#/playlist\\?.*id=\\d{10}.*
 	// https://music.163.com/#/playlist?app_version=8.10.81&id=8725919816&dlt=0846&creatorId=341246998"
 	// https://music.163.com/playlist?id=477577176&userid=341246998
 	return link, nil

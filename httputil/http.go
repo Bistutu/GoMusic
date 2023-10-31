@@ -19,7 +19,6 @@ func init() {
 			return http.ErrUseLastResponse // 返回此错误阻止重定向
 		},
 	}
-
 }
 
 func Post(link string, data io.Reader) (*http.Response, error) {
