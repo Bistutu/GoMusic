@@ -14,7 +14,7 @@
 <div id="app"
      style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
 
-    <p style="font-size:xx-large; line-height: 1; margin: 0.25em;">迁移网易云歌单</p>
+    <p style="font-size:xx-large; line-height: 1; margin: 0.25em;">迁移网易云/QQ音乐歌单</p>
     <p style="font-size:x-large; line-height: 1; margin: 0.25em;">to</p>
     <p style="font-size:xx-large; line-height: 1; margin: 0.25em;">Apple Music、Youtube Music、Spotify</p>
 
@@ -31,7 +31,7 @@
     <div style="border: 1px solid #ddd; padding: 1em; margin: 1em; width: 50%; background-color: #f5f5f5;line-height: 1.5em">
         <h3># 使用指南</h3>
         <ol>
-            <li>输入网易云歌单链接，例如：<em>https://music.163.com/#/playlist?id=8725919816</em></li>
+            <li>输入歌单链接，例如：<em>https://music.163.com/#/playlist?id=8725919816</em></li>
             <li>转移到 Apple Music 或 Spotify 或 Youtube Music</li>
             <ul>
                 <li>Go to
@@ -82,7 +82,7 @@
                 params.append('url', this.link);
 
                 try {
-                    // const response = await axios.post('https://music.unmeta.cn/neteasy', params, {
+                    // const response = await axios.post('https://music.unmeta.cn/songlist', params, {
                     const response = await axios.post('http://localhost:8081/songlist', params, {
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded'

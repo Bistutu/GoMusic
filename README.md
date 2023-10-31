@@ -1,17 +1,19 @@
-# 迁移网易云/QQ音乐歌单至-AppleMusic、YoutubeMusic、Spotify
+# 迁移网易云/QQ音乐歌单
+
+# 至 AppleMusic、YoutubeMusic、Spotify
 
 链接：https://music.unmeta.cn
 
 项目使用 Golang + Gin 开发，Redis 作为缓存中间件（如不使用则无需配置）。
 
-```yaml
-# 默认端口 8081
-port: 8081
+redis 配置路径：`/repo/cache/redis.go`：
 
-# redis 地址、密码
-redis:
-  dsn: "127.0.0.1:6379"
-  password: "123456"
+```go
+rdb = redis.NewClient(&redis.Options{
+	Addr:     "", // redis 服务端地址
+	Password: "", // redis 密码
+	DB:       0,
+})
 ```
 
 <img src="./images/0.jpeg" alt="image-20231008190554003" style="width:60%;" />

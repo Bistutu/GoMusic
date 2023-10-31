@@ -5,8 +5,6 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
-
-	"GoMusic/common/config"
 )
 
 var (
@@ -16,8 +14,8 @@ var (
 
 func init() {
 	rdb = redis.NewClient(&redis.Options{
-		Addr:     config.AllConfig.Redis.Dsn,      // redis 服务端地址
-		Password: config.AllConfig.Redis.Password, // redis 密码
+		Addr:     "", // redis 服务端地址
+		Password: "", // redis 密码
 		DB:       0,
 	})
 }
