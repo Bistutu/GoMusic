@@ -14,7 +14,7 @@ redis:
   password: "123456"
 ```
 
-<img src="https://oss.thinkstu.com/typora/202310081905115.png?x-oss-process=style/optimize" alt="image-20231008190554003" style="width:60%;" />
+<img src="./images/0.jpeg" alt="image-20231008190554003" style="width:60%;" />
 
 # 使用指南
 
