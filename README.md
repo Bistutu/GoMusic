@@ -26,9 +26,9 @@ redis:
    - STEP 3：选择 Youtube or Spotify or Apple Music作为目的地
    - STEP 4：开始移动
 
-<img src="https://oss.thinkstu.com/typora/202310081907395.png?x-oss-process=style/optimize" alt="image-20231008190713343" style="width:60%;" />
+<img src="./images/1.jpeg" alt="image-20231008190713343" style="width:60%;" />
 
-<img src="https://oss.thinkstu.com/typora/202310081907435.png?x-oss-process=style/optimize" alt="image-20231008190730397" style="width:60%;" />
+<img src="./images/2.jpeg" alt="image-20231008190730397" style="width:60%;" />
 
 # 如何启动程序？
 
