@@ -66,15 +66,15 @@ func QQMusicDiscover(link string) (string, error) {
 	}
 	defer resp.Body.Close()
 	bytes, _ := io.ReadAll(resp.Body)
-	m := &models.QQMusicResp{}
-	err = json.Unmarshal(bytes, m)
+	qqmusicResponse := &models.QQMusicResp{}
+	err = json.Unmarshal(bytes, qqmusicResponse)
 	if err != nil {
 		log.Errorf("fail to unmarshal qqmusic: %v", err)
 		return "", err
 	}
-	songsString := make([]string, 0, len(m.Req0.Data.Songlist))
+	songsString := make([]string, 0, len(qqmusicResponse.Req0.Data.Songlist))
 	builder := strings.Builder{}
-	for _, v := range m.Req0.Data.Songlist {
+	for _, v := range qqmusicResponse.Req0.Data.Songlist {
 		builder.Reset()
 		builder.WriteString(v.Name)
 		builder.WriteString(" - ")
@@ -88,7 +88,7 @@ func QQMusicDiscover(link string) (string, error) {
 		songsString = append(songsString, builder.String())
 	}
 	songList := &models.SongList{
-		Name:  m.Req0.Data.Dirinfo.Title,
+		Name:  qqmusicResponse.Req0.Data.Dirinfo.Title,
 		Songs: songsString,
 	}
 	bytes, _ = json.Marshal(songList)

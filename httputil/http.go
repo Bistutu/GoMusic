@@ -23,7 +23,7 @@ func init() {
 
 func Post(link string, data io.Reader) (*http.Response, error) {
 	req, _ := http.NewRequest("POST", link, data)
-	req.Header.Add("User-Agent", UserAgent)
+	//req.Header.Add("User-Agent", UserAgent)
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	return client.Do(req)
 }

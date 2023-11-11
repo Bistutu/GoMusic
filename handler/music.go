@@ -24,9 +24,10 @@ var (
 )
 
 func MusicHandler(c *gin.Context) {
-	// 获取前端传过来的 url，并判断是网易云还是 qq 音乐
+	// 获取前端传过来的 url，判断是网易云还是 qq 音乐
 	link := c.PostForm("url")
 	switch {
+	// 1、网易云
 	case netEasyRegx.MatchString(link):
 		data, err := logic.NetEasyDiscover(link)
 		if err != nil {
@@ -47,6 +48,7 @@ func MusicHandler(c *gin.Context) {
 			Data: songList,
 		})
 		return
+	// 2、QQ 音乐
 	case qqMusicRegx.MatchString(link):
 		data, err := logic.QQMusicDiscover(link)
 		if err != nil {
@@ -67,6 +69,7 @@ func MusicHandler(c *gin.Context) {
 			Data: songList,
 		})
 		return
+	// 3、都不是
 	default:
 		c.JSON(http.StatusBadRequest, nil)
 	}

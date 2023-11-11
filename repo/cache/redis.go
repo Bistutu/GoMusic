@@ -14,11 +14,11 @@ var (
 
 func init() {
 	rdb = redis.NewClient(&redis.Options{
-		Addr:     "", // redis 服务端地址
-		Password: "", // redis 密码
+		Addr:     "127.0.0.1:6379", // redis 服务端地址
+		Password: "12345678",       // redis 密码
 		DB:       0,
 	})
-}1
+}
 
 func SetKey(key string, value string) error {
 	err := rdb.Set(ctx, key, value, 30*time.Second).Err() // 缓存 30 秒
