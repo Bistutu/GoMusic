@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
+
+	"GoMusic/initialize/log"
 )
 
 var (
@@ -31,4 +33,27 @@ func GetKey(key string) (string, error) {
 		return "", err
 	}
 	return val, nil
+}
+
+func MGet(keys ...string) ([]interface{}, error) {
+	result, err := rdb.MGet(ctx, keys...).Result()
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func MSet(kv map[string]interface{}) error {
+	pipeline := rdb.Pipeline()
+	for k, v := range kv {
+		// 缓存 24 小时
+		pipeline.Set(ctx, k, v, 24*time.Hour)
+	}
+	// 不关注单个命令的执行结果，只关注 pipeline 执行的结果
+	_, err := pipeline.Exec(ctx)
+	if err != nil {
+		log.Error("MSet error: ", err)
+		return err
+	}
+	return nil
 }
