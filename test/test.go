@@ -1,21 +1,17 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
+	"regexp"
 )
 
 func main() {
-	msg := `{"Name":"zs","Age":18,"Msg":"haha"}`
-	p := &P{}
-	err := json.Unmarshal([]byte(msg), p)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(p)
-}
+	bracketsPattern := `\s\(.*\)|\s【.*】`
 
-type P struct {
-	Name string
-	Age  int
+	bracketsRegex := regexp.MustCompile(bracketsPattern)
+	name := "最甜情歌 (女生版) - 一玟"
+
+	name = bracketsRegex.ReplaceAllString(name, "")
+
+	fmt.Println(name) // 输出：最甜情歌 女生版 - 一玟
 }

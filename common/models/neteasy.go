@@ -32,8 +32,10 @@ type NetEasySongId struct {
 
 type Songs struct {
 	Songs []struct {
+		Id   uint   `json:"id"`
 		Name string `json:"name"`
 		Ar   []struct {
+			Id   int64  `json:"id"`
 			Name string `json:"name"`
 		} `json:"ar"`
 	} `json:"songs"`
