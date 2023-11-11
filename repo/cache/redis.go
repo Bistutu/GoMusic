@@ -18,7 +18,7 @@ func init() {
 		Password: "", // redis 密码
 		DB:       0,
 	})
-}
+}1
 
 func SetKey(key string, value string) error {
 	err := rdb.Set(ctx, key, value, 30*time.Second).Err() // 缓存 30 秒
