@@ -14,7 +14,6 @@ import (
 	"GoMusic/common/utils"
 	"GoMusic/httputil"
 	"GoMusic/initialize/log"
-	"GoMusic/repo/cache"
 )
 
 const (
@@ -39,17 +38,6 @@ func QQMusicDiscover(link string) (string, error) {
 		return "", err
 	}
 
-	redisCache, err := cache.GetKey(fmt.Sprintf(qqMusicRedis, tid))
-	if err != nil {
-		log.Errorf("redis connect fail: %v", err)
-	}
-	// 1、如果缓存中存在的话
-	if redisCache != "" {
-		log.Infof("qqmusic 命中缓存：%v", tid)
-		return redisCache, nil
-	}
-
-	// 2、若缓存没命中，取数据
 	// 获取请求参数与验证签名
 	paramString := models.GetQQMusicReqString(tid)
 	sign, err := utils.GetSign(paramString)
@@ -76,7 +64,8 @@ func QQMusicDiscover(link string) (string, error) {
 	builder := strings.Builder{}
 	for _, v := range qqmusicResponse.Req0.Data.Songlist {
 		builder.Reset()
-		builder.WriteString(v.Name)
+		// 去除多余符号
+		builder.WriteString(bracketsRegex.ReplaceAllString(v.Name, ""))
 		builder.WriteString(" - ")
 
 		authors := make([]string, 0, len(v.Singer))
@@ -92,13 +81,7 @@ func QQMusicDiscover(link string) (string, error) {
 		Songs: songsString,
 	}
 	bytes, _ = json.Marshal(songList)
-	data := string(bytes)
-	// 3、设置缓存
-	err = cache.SetKey(fmt.Sprintf(qqMusicRedis, tid), data)
-	if err != nil {
-		log.Errorf(err.Error())
-	}
-	return data, nil
+	return string(bytes), nil
 }
 
 // GetSongsId 获取歌单id
