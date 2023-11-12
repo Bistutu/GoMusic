@@ -31,11 +31,11 @@ var (
 )
 
 // QQMusicDiscover 获取qq音乐歌单
-func QQMusicDiscover(link string) (string, error) {
+func QQMusicDiscover(link string) (*models.SongList, error) {
 	tid, err := getDissTid(link)
 	if err != nil {
 		log.Errorf("fail to get tid: %v", err)
-		return "", err
+		return nil, err
 	}
 
 	// 获取请求参数与验证签名
@@ -43,14 +43,14 @@ func QQMusicDiscover(link string) (string, error) {
 	sign, err := utils.GetSign(paramString)
 	if err != nil {
 		log.Errorf("fail to get sign: %v", err)
-		return "", err
+		return nil, err
 	}
 	// 构建并发送请求
 	link = fmt.Sprintf(qqMusicPattern, sign, time.Now().UnixMilli())
 	resp, err := httputil.Post(link, strings.NewReader(paramString))
 	if err != nil {
 		log.Errorf("fail to get qqmusic: %v", err)
-		return "", err
+		return nil, err
 	}
 	defer resp.Body.Close()
 	bytes, _ := io.ReadAll(resp.Body)
@@ -58,7 +58,7 @@ func QQMusicDiscover(link string) (string, error) {
 	err = json.Unmarshal(bytes, qqmusicResponse)
 	if err != nil {
 		log.Errorf("fail to unmarshal qqmusic: %v", err)
-		return "", err
+		return nil, err
 	}
 	songsString := make([]string, 0, len(qqmusicResponse.Req0.Data.Songlist))
 	builder := strings.Builder{}
@@ -76,12 +76,10 @@ func QQMusicDiscover(link string) (string, error) {
 		builder.WriteString(authorsString)
 		songsString = append(songsString, builder.String())
 	}
-	songList := &models.SongList{
+	return &models.SongList{
 		Name:  qqmusicResponse.Req0.Data.Dirinfo.Title,
 		Songs: songsString,
-	}
-	bytes, _ = json.Marshal(songList)
-	return string(bytes), nil
+	}, nil
 }
 
 // GetSongsId 获取歌单id

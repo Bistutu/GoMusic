@@ -25,18 +25,18 @@ const (
 	chunkSize    = 500
 )
 
-func NetEasyDiscover(link string) (string, error) {
+func NetEasyDiscover(link string) (*models.SongList, error) {
 	// 获取歌单 songListId
 	songListId, err := utils.GetSongsId(link)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// 第一次发送请求，获取歌曲 Id 列表
 	res, err := httputil.Post(netEasyUrlV6, strings.NewReader("id="+songListId))
 	if err != nil {
 		log.Errorf("fail to result: %v", err)
-		return "", err
+		return nil, err
 	}
 	defer res.Body.Close()
 	body, _ := io.ReadAll(res.Body)
@@ -44,12 +44,12 @@ func NetEasyDiscover(link string) (string, error) {
 	err = json.Unmarshal(body, SongIdsResp)
 	if err != nil {
 		log.Errorf("fail to unmarshal: %v", err)
-		return "", err
+		return nil, err
 	}
 	// 无权限访问
 	if SongIdsResp.Code == 401 {
 		log.Errorf("无权限访问, link: %v", link)
-		return "", errors.New("抱歉，您无权限访问该歌单")
+		return nil, errors.New("抱歉，您无权限访问该歌单")
 	}
 
 	trackIds := SongIdsResp.Playlist.TrackIds // 歌曲列表
@@ -78,12 +78,10 @@ func NetEasyDiscover(link string) (string, error) {
 	missSize := len(missKey)
 	if missSize == 0 {
 		log.Infof("全部命中缓存（网易云）: %v", link)
-		songList := &models.SongList{
+		return &models.SongList{
 			Name:  SongIdsResp.Playlist.Name,
 			Songs: utils.SyncMapToSortedSlice(trackIds, resultMap),
-		}
-		bytes, _ := json.Marshal(songList)
-		return string(bytes), nil
+		}, nil
 	}
 
 	// errgroup 并发编程
@@ -143,16 +141,14 @@ func NetEasyDiscover(link string) (string, error) {
 	// 等待所有 goroutine 完成
 	if err := errgroup.Wait(); err != nil {
 		log.Errorf("fail to wait: %v", err)
-		return "", err
+		return nil, err
 	}
 
 	// 写缓存
 	_ = cache.MSet(missKeyCacheMap)
 
-	songList := &models.SongList{
+	return &models.SongList{
 		Name:  SongIdsResp.Playlist.Name,
 		Songs: utils.SyncMapToSortedSlice(trackIds, resultMap),
-	}
-	bytes, _ := json.Marshal(songList)
-	return string(bytes), nil
+	}, nil
 }
