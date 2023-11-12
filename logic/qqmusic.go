@@ -65,7 +65,7 @@ func QQMusicDiscover(link string) (string, error) {
 	for _, v := range qqmusicResponse.Req0.Data.Songlist {
 		builder.Reset()
 		// 去除多余符号
-		builder.WriteString(bracketsRegex.ReplaceAllString(v.Name, ""))
+		builder.WriteString(utils.StandardSongName(v.Name))
 		builder.WriteString(" - ")
 
 		authors := make([]string, 0, len(v.Singer))
