@@ -24,8 +24,7 @@ func init() {
 }
 
 func SetKey(key string, value string) error {
-	err := rdb.Set(ctx, key, value, 30*time.Second).Err() // 缓存 30 秒
-	return err
+	return rdb.Set(ctx, key, value, 30*time.Second).Err() // 缓存 30 秒
 }
 
 func GetKey(key string) (string, error) {
@@ -37,11 +36,7 @@ func GetKey(key string) (string, error) {
 }
 
 func MGet(keys ...string) ([]interface{}, error) {
-	result, err := rdb.MGet(ctx, keys...).Result()
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
+	return rdb.MGet(ctx, keys...).Result()
 }
 
 func MSet(kv sync.Map) error {
@@ -52,8 +47,7 @@ func MSet(kv sync.Map) error {
 		return true
 	})
 	// 不关注单个命令的执行结果，只关注 pipeline 执行的结果
-	_, err := pipeline.Exec(ctx)
-	if err != nil {
+	if _, err := pipeline.Exec(ctx); err != nil {
 		log.Error("MSet error: ", err)
 		return err
 	}
