@@ -22,12 +22,14 @@ func (r *SongId) String() string {
 type NetEasySongId struct {
 	Code     int `json:"code"`
 	Playlist struct {
-		Id       int64  `json:"id"`
-		Name     string `json:"name"`
-		TrackIds []struct {
-			Id uint `json:"id"`
-		} `json:"trackIds"`
+		Id       int64     `json:"id"`
+		Name     string    `json:"name"`
+		TrackIds []TrackId `json:"trackIds"`
 	} `json:"playlist"`
+}
+
+type TrackId struct {
+	Id uint `json:"id"`
 }
 
 type Songs struct {

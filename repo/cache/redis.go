@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -43,12 +44,13 @@ func MGet(keys ...string) ([]interface{}, error) {
 	return result, nil
 }
 
-func MSet(kv map[string]interface{}) error {
+func MSet(kv sync.Map) error {
 	pipeline := rdb.Pipeline()
-	for k, v := range kv {
+	kv.Range(func(k, v any) bool {
 		// 缓存 24 小时
-		pipeline.Set(ctx, k, v, 24*time.Hour)
-	}
+		pipeline.Set(ctx, k.(string), v, 24*time.Hour)
+		return true
+	})
 	// 不关注单个命令的执行结果，只关注 pipeline 执行的结果
 	_, err := pipeline.Exec(ctx)
 	if err != nil {
