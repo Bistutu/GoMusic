@@ -34,7 +34,6 @@ var (
 func QQMusicDiscover(link string) (*models.SongList, error) {
 	tid, err := getDissTid(link)
 	if err != nil {
-		log.Errorf("fail to get tid: %v", err)
 		return nil, err
 	}
 
@@ -54,6 +53,7 @@ func QQMusicDiscover(link string) (*models.SongList, error) {
 	}
 	defer resp.Body.Close()
 	bytes, _ := io.ReadAll(resp.Body)
+
 	qqmusicResponse := &models.QQMusicResp{}
 	err = json.Unmarshal(bytes, qqmusicResponse)
 	if err != nil {
@@ -77,8 +77,9 @@ func QQMusicDiscover(link string) (*models.SongList, error) {
 		songsString = append(songsString, builder.String())
 	}
 	return &models.SongList{
-		Name:  qqmusicResponse.Req0.Data.Dirinfo.Title,
-		Songs: songsString,
+		Name:       qqmusicResponse.Req0.Data.Dirinfo.Title,
+		Songs:      songsString,
+		SongsCount: qqmusicResponse.Req0.Data.Dirinfo.Songnum,
 	}, nil
 }
 

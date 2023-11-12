@@ -79,8 +79,9 @@ func NetEasyDiscover(link string) (*models.SongList, error) {
 	if missSize == 0 {
 		log.Infof("全部命中缓存（网易云）: %v", link)
 		return &models.SongList{
-			Name:  SongIdsResp.Playlist.Name,
-			Songs: utils.SyncMapToSortedSlice(trackIds, resultMap),
+			Name:       SongIdsResp.Playlist.Name,
+			Songs:      utils.SyncMapToSortedSlice(trackIds, resultMap),
+			SongsCount: SongIdsResp.Playlist.TrackCount,
 		}, nil
 	}
 

@@ -81,7 +81,8 @@ type QQMusicResp struct {
 		Code int `json:"code"`
 		Data struct {
 			Dirinfo struct {
-				Title string `json:"title"`
+				Title   string `json:"title"`
+				Songnum int    `json:"songnum"`
 			} `json:"dirinfo"`
 			Songlist []struct {
 				Name   string `json:"name"`
