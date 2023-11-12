@@ -86,7 +86,6 @@ func NetEasyDiscover(link string) (*models.SongList, error) {
 
 	// errgroup 并发编程
 	errgroup := errgroup.Group{}
-	var mu sync.Mutex
 	chunks := make([][]*models.SongId, 0, missSize/500+1)
 	missKeyCacheMap := sync.Map{}
 
@@ -114,9 +113,6 @@ func NetEasyDiscover(link string) (*models.SongList, error) {
 				log.Errorf("fail to unmarshal: %v", err)
 				return err
 			}
-
-			mu.Lock()
-			defer mu.Unlock()
 
 			builder := strings.Builder{}
 			for _, v := range songs.Songs {
@@ -148,7 +144,8 @@ func NetEasyDiscover(link string) (*models.SongList, error) {
 	_ = cache.MSet(missKeyCacheMap)
 
 	return &models.SongList{
-		Name:  SongIdsResp.Playlist.Name,
-		Songs: utils.SyncMapToSortedSlice(trackIds, resultMap),
+		Name:       SongIdsResp.Playlist.Name,
+		Songs:      utils.SyncMapToSortedSlice(trackIds, resultMap),
+		SongsCount: SongIdsResp.Playlist.TrackCount,
 	}, nil
 }

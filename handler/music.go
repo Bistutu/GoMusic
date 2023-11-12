@@ -15,6 +15,7 @@ import (
 const (
 	netEasy = `(163cn)|(.163.)`
 	qqMusic = `.qq.`
+	SUCCESS = "success"
 )
 
 var (
@@ -36,7 +37,7 @@ func MusicHandler(c *gin.Context) {
 		}
 		c.JSON(200, &models.Result{
 			Code: 1,
-			Msg:  "success",
+			Msg:  SUCCESS,
 			Data: songList,
 		})
 		return
@@ -49,7 +50,7 @@ func MusicHandler(c *gin.Context) {
 		}
 		c.JSON(200, &models.Result{
 			Code: 1,
-			Msg:  "success",
+			Msg:  SUCCESS,
 			Data: songList,
 		})
 		return

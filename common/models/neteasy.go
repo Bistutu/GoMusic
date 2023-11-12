@@ -4,8 +4,9 @@ import "fmt"
 
 type SongList struct {
 	// 歌单名
-	Name  string   `json:"name"`
-	Songs []string `json:"songs"`
+	Name       string   `json:"name"`
+	Songs      []string `json:"songs"`
+	SongsCount int      `json:"songs_count"`
 }
 
 type SongId struct {
@@ -22,9 +23,10 @@ func (r *SongId) String() string {
 type NetEasySongId struct {
 	Code     int `json:"code"`
 	Playlist struct {
-		Id       int64     `json:"id"`
-		Name     string    `json:"name"`
-		TrackIds []TrackId `json:"trackIds"`
+		Id         int64     `json:"id"`
+		Name       string    `json:"name"`
+		TrackIds   []TrackId `json:"trackIds"`
+		TrackCount int       `json:"trackCount"`
 	} `json:"playlist"`
 }
 
