@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 
+	_ "GoMusic/repo/db"
+
 	"GoMusic/initialize"
 	"GoMusic/initialize/log"
 )
