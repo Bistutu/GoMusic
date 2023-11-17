@@ -93,10 +93,7 @@ func NetEasyDiscover(link string) (*models.SongList, error) {
 	missDbData := make([]*models.NetEasySong, 0, len(missDBKey))
 	for _, v := range missDBKey {
 		value, _ := missKeyCacheMap.Load(fmt.Sprintf(netEasyRedis, v))
-		missDbData = append(missDbData, &models.NetEasySong{
-			Id:   v,
-			Name: value.(string),
-		})
+		missDbData = append(missDbData, &models.NetEasySong{Id: v, Name: value.(string)})
 	}
 	_ = db.BatchInsertSong(missDbData)
 
