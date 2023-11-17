@@ -77,6 +77,12 @@ func NetEasyDiscover(link string) (*models.SongList, error) {
 		missDBKey = append(missDBKey, v)
 	}
 	if len(dbResultMap) == len(missCacheKey) { // 数据库全部命中
+		missKeyCacheMap := sync.Map{}
+		for k, v := range dbResultMap {
+			missKeyCacheMap.Store(fmt.Sprintf(netEasyRedis, k), v)
+		}
+		_ = cache.MSet(missKeyCacheMap)
+
 		return &models.SongList{
 			Name:       SongsListName,
 			Songs:      utils.SyncMapToSortedSlice(trackIds, resultMap),
