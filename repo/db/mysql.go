@@ -1,8 +1,6 @@
 package db
 
 import (
-	"context"
-
 	//_ "github.com/go-sql-driver/mysql"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -26,17 +24,22 @@ func init() {
 	db.AutoMigrate(&models.NetEasySong{})
 }
 
-func BatchGetSongById(ctx context.Context, ids []int) ([]*models.NetEasySong, error) {
+func BatchGetSongById(ids []uint) (map[uint]string, error) {
 	var netEasySongs []*models.NetEasySong
 	err := db.Where("id in ?", ids).Find(&netEasySongs).Error
 	if err != nil {
 		log.Errorf("查询数据库失败：%v", err)
 		return nil, err
 	}
-	return netEasySongs, nil
+	// 歌曲id:歌曲信息
+	netEasySongMap := make(map[uint]string)
+	for _, v := range netEasySongs {
+		netEasySongMap[v.Id] = v.Name
+	}
+	return netEasySongMap, nil
 }
 
-func BatchInsertSong(ctx context.Context, netEasySongs []*models.NetEasySong) error {
+func BatchInsertSong(netEasySongs []*models.NetEasySong) error {
 	// 如果 Duplicate primary key 则执行 update 操作
 	err := db.Clauses(clause.OnConflict{
 		UpdateAll: true,
@@ -47,7 +50,7 @@ func BatchInsertSong(ctx context.Context, netEasySongs []*models.NetEasySong) er
 	return err
 }
 
-func BatchDelSong(ctx context.Context, ids []int) error {
+func BatchDelSong(ids []int) error {
 	err := db.Delete(&models.NetEasySong{}, ids).Error
 	if err != nil {
 		log.Errorf("数据库删除数据失败：%v", err)
