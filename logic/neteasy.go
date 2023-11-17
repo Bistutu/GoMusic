@@ -39,6 +39,7 @@ func NetEasyDiscover(link string) (*models.SongList, error) {
 		return nil, err
 	}
 	defer res.Body.Close()
+
 	body, _ := io.ReadAll(res.Body)
 	SongIdsResp := &models.NetEasySongId{}
 	err = json.Unmarshal(body, SongIdsResp)
@@ -58,12 +59,8 @@ func NetEasyDiscover(link string) (*models.SongList, error) {
 		songCacheKey = append(songCacheKey, fmt.Sprintf(netEasyRedis, v.Id))
 	}
 
-	// 尝试获取缓存
-	cacheResult, err := cache.MGet(songCacheKey...)
-	if err != nil {
-		// 缓存获取失败，不退出
-		log.Errorf("fail to get key: %v", err)
-	}
+	// 尝试获取缓存，失败不退出
+	cacheResult, _ := cache.MGet(songCacheKey...)
 
 	missKey := make([]*models.SongId, 0)
 	resultMap := sync.Map{}
@@ -75,8 +72,7 @@ func NetEasyDiscover(link string) (*models.SongList, error) {
 		missKey = append(missKey, &models.SongId{Id: trackIds[k].Id})
 	}
 	// 全部命中，直接返回
-	missSize := len(missKey)
-	if missSize == 0 {
+	if len(missKey) == 0 {
 		log.Infof("全部命中缓存（网易云）: %v", link)
 		return &models.SongList{
 			Name:       SongIdsResp.Playlist.Name,
@@ -85,7 +81,27 @@ func NetEasyDiscover(link string) (*models.SongList, error) {
 		}, nil
 	}
 
+	// TODO 11.17 查数据库
+
+	missKeyCacheMap, err := batchGetSongs(missKey, resultMap)
+	if err != nil {
+		return nil, err
+	}
+
+	// 写缓存
+	_ = cache.MSet(missKeyCacheMap)
+
+	return &models.SongList{
+		Name:       SongIdsResp.Playlist.Name,
+		Songs:      utils.SyncMapToSortedSlice(trackIds, resultMap),
+		SongsCount: SongIdsResp.Playlist.TrackCount,
+	}, nil
+}
+
+// 批量从网易云音乐查询歌曲数据
+func batchGetSongs(missKey []*models.SongId, resultMap sync.Map) (sync.Map, error) {
 	// errgroup 并发编程
+	missSize := len(missKey)
 	errgroup := errgroup.Group{}
 	chunks := make([][]*models.SongId, 0, missSize/500+1)
 	missKeyCacheMap := sync.Map{}
@@ -106,7 +122,7 @@ func NetEasyDiscover(link string) (*models.SongList, error) {
 				log.Errorf("fail to result: %v", err)
 				return err
 			}
-			defer res.Body.Close()
+			defer resp.Body.Close()
 			bytes, _ := io.ReadAll(resp.Body)
 			songs := &models.Songs{}
 			err = json.Unmarshal(bytes, &songs)
@@ -138,15 +154,7 @@ func NetEasyDiscover(link string) (*models.SongList, error) {
 	// 等待所有 goroutine 完成
 	if err := errgroup.Wait(); err != nil {
 		log.Errorf("fail to wait: %v", err)
-		return nil, err
+		return sync.Map{}, err
 	}
-
-	// 写缓存
-	_ = cache.MSet(missKeyCacheMap)
-
-	return &models.SongList{
-		Name:       SongIdsResp.Playlist.Name,
-		Songs:      utils.SyncMapToSortedSlice(trackIds, resultMap),
-		SongsCount: SongIdsResp.Playlist.TrackCount,
-	}, nil
+	return missKeyCacheMap, nil
 }
