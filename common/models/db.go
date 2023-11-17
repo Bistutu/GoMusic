@@ -2,7 +2,7 @@ package models
 
 import "gorm.io/gorm"
 
-type NetEasySongs struct {
+type NetEasySong struct {
 	gorm.Model
 	Id    int    `gorm:"column:id"`
 	Name  string `gorm:"column:name;type:varchar(255);unique:true"`

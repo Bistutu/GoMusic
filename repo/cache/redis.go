@@ -36,7 +36,11 @@ func GetKey(key string) (string, error) {
 }
 
 func MGet(keys ...string) ([]interface{}, error) {
-	return rdb.MGet(ctx, keys...).Result()
+	result, err := rdb.MGet(ctx, keys...).Result()
+	if err != nil {
+		log.Errorf("MGet error: %v", err)
+	}
+	return result, err
 }
 
 func MSet(kv sync.Map) error {
