@@ -23,10 +23,10 @@ func (r *SongId) String() string {
 type NetEasySongId struct {
 	Code     int `json:"code"`
 	Playlist struct {
-		Id         int64     `json:"id"`
-		Name       string    `json:"name"`
-		TrackIds   []TrackId `json:"trackIds"`
-		TrackCount int       `json:"trackCount"`
+		Id         int64      `json:"id"`
+		Name       string     `json:"name"`
+		TrackIds   []*TrackId `json:"trackIds"`
+		TrackCount int        `json:"trackCount"`
 	} `json:"playlist"`
 }
 
