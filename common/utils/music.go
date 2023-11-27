@@ -59,7 +59,7 @@ func replaceCNBrackets(s string) string {
 	})
 }
 
-func SyncMapToSortedSlice(trackIds []models.TrackId, sm sync.Map) []string {
+func SyncMapToSortedSlice(trackIds []*models.TrackId, sm sync.Map) []string {
 	strings := make([]string, 0, len(trackIds))
 	for _, v := range trackIds {
 		value, _ := sm.Load(v.Id)

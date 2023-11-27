@@ -12,6 +12,7 @@ import (
 
 	"GoMusic/common/utils"
 	"GoMusic/initialize/log"
+	"GoMusic/repo/db"
 
 	"GoMusic/common/models"
 	"GoMusic/httputil"
@@ -25,66 +26,126 @@ const (
 	chunkSize    = 500
 )
 
+// NetEasyDiscover 需转发 2~3 次请求
 func NetEasyDiscover(link string) (*models.SongList, error) {
-	// 获取歌单 songListId
-	songListId, err := utils.GetSongsId(link)
+	// 批量获取歌单信息：歌单名、歌曲ids、歌曲总数
+	SongIdsResp, err := batchGetSongsId(link)
 	if err != nil {
 		return nil, err
 	}
+	SongsListName := SongIdsResp.Playlist.Name     // 歌单名
+	trackIds := SongIdsResp.Playlist.TrackIds      // 歌曲列表
+	tracksCount := SongIdsResp.Playlist.TrackCount // 歌曲列表
 
-	// 第一次发送请求，获取歌曲 Id 列表
-	res, err := httputil.Post(netEasyUrlV6, strings.NewReader("id="+songListId))
-	if err != nil {
-		log.Errorf("fail to result: %v", err)
-		return nil, err
-	}
-	defer res.Body.Close()
-	body, _ := io.ReadAll(res.Body)
-	SongIdsResp := &models.NetEasySongId{}
-	err = json.Unmarshal(body, SongIdsResp)
-	if err != nil {
-		log.Errorf("fail to unmarshal: %v", err)
-		return nil, err
-	}
-	// 无权限访问
-	if SongIdsResp.Code == 401 {
-		log.Errorf("无权限访问, link: %v", link)
-		return nil, errors.New("抱歉，您无权限访问该歌单")
-	}
-
-	trackIds := SongIdsResp.Playlist.TrackIds // 歌曲列表
 	songCacheKey := make([]string, 0, len(trackIds))
 	for _, v := range trackIds {
 		songCacheKey = append(songCacheKey, fmt.Sprintf(netEasyRedis, v.Id))
 	}
 
-	// 尝试获取缓存
-	cacheResult, err := cache.MGet(songCacheKey...)
-	if err != nil {
-		// 缓存获取失败，不退出
-		log.Errorf("fail to get key: %v", err)
-	}
+	resultMap := sync.Map{} // 结果
 
-	missKey := make([]*models.SongId, 0)
-	resultMap := sync.Map{}
+	// 1、尝试获取缓存，失败不退出
+	cacheResult, _ := cache.MGet(songCacheKey...)
+
+	missCacheKey := make([]uint, 0)
 	for k, v := range cacheResult {
 		if v != nil {
 			resultMap.Store(trackIds[k].Id, v.(string))
 			continue
 		}
-		missKey = append(missKey, &models.SongId{Id: trackIds[k].Id})
+		missCacheKey = append(missCacheKey, trackIds[k].Id)
 	}
-	// 全部命中，直接返回
-	missSize := len(missKey)
-	if missSize == 0 {
+	if len(missCacheKey) == 0 { // 缓存全部命中，直接返回
 		log.Infof("全部命中缓存（网易云）: %v", link)
 		return &models.SongList{
-			Name:       SongIdsResp.Playlist.Name,
+			Name:       SongsListName,
 			Songs:      utils.SyncMapToSortedSlice(trackIds, resultMap),
-			SongsCount: SongIdsResp.Playlist.TrackCount,
+			SongsCount: tracksCount,
 		}, nil
 	}
 
+	// 2、查询数据库，失败不退出
+	dbResultMap, _ := db.BatchGetSongById(missCacheKey)
+
+	missDBKey := make([]uint, 0)
+
+	for _, v := range missCacheKey {
+		if val, ok := dbResultMap[v]; ok {
+			resultMap.Store(v, val)
+			continue
+		}
+		missDBKey = append(missDBKey, v)
+	}
+	if len(dbResultMap) == len(missCacheKey) { // 数据库全部命中
+		missKeyCacheMap := sync.Map{}
+		for k, v := range dbResultMap {
+			missKeyCacheMap.Store(fmt.Sprintf(netEasyRedis, k), v)
+		}
+		_ = cache.MSet(missKeyCacheMap)
+
+		return &models.SongList{
+			Name:       SongsListName,
+			Songs:      utils.SyncMapToSortedSlice(trackIds, resultMap),
+			SongsCount: tracksCount,
+		}, nil
+	}
+
+	missKeyCacheMap, err := batchGetSongs(missDBKey, resultMap)
+	if err != nil {
+		return nil, err
+	}
+
+	// 写数据库
+	missDbData := make([]*models.NetEasySong, 0, len(missDBKey))
+	for _, v := range missDBKey {
+		value, _ := missKeyCacheMap.Load(fmt.Sprintf(netEasyRedis, v))
+		missDbData = append(missDbData, &models.NetEasySong{Id: v, Name: value.(string)})
+	}
+	_ = db.BatchInsertSong(missDbData)
+
+	// 写缓存
+	_ = cache.MSet(missKeyCacheMap)
+
+	return &models.SongList{
+		Name:       SongsListName,
+		Songs:      utils.SyncMapToSortedSlice(trackIds, resultMap),
+		SongsCount: tracksCount,
+	}, nil
+}
+
+func batchGetSongsId(link string) (*models.NetEasySongId, error) {
+	songListId, err := utils.GetSongsId(link)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := httputil.Post(netEasyUrlV6, strings.NewReader("id="+songListId))
+	if err != nil {
+		log.Errorf("fail to result: %v", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	SongIdsResp := &models.NetEasySongId{}
+	err = json.Unmarshal(body, SongIdsResp)
+	switch {
+	case err != nil:
+		log.Errorf("fail to unmarshal: %v", err)
+		return nil, err
+	case SongIdsResp.Code == 401:
+		log.Errorf("无权限访问, songList id: %v", songListId)
+		return nil, errors.New("抱歉，您无权限访问该歌单")
+	}
+	return SongIdsResp, nil
+}
+
+// 批量从网易云音乐查询歌曲数据
+func batchGetSongs(missKey []uint, resultMap sync.Map) (sync.Map, error) {
+	missSongIds := make([]*models.SongId, 0, len(missKey))
+	for _, v := range missKey {
+		missSongIds = append(missSongIds, &models.SongId{Id: v})
+	}
+	missSize := len(missSongIds)
 	// errgroup 并发编程
 	errgroup := errgroup.Group{}
 	chunks := make([][]*models.SongId, 0, missSize/500+1)
@@ -95,7 +156,7 @@ func NetEasyDiscover(link string) (*models.SongList, error) {
 		if end > missSize {
 			end = missSize
 		}
-		chunks = append(chunks, missKey[i:end])
+		chunks = append(chunks, missSongIds[i:end])
 	}
 	for _, v := range chunks {
 		chunk := v
@@ -106,7 +167,7 @@ func NetEasyDiscover(link string) (*models.SongList, error) {
 				log.Errorf("fail to result: %v", err)
 				return err
 			}
-			defer res.Body.Close()
+			defer resp.Body.Close()
 			bytes, _ := io.ReadAll(resp.Body)
 			songs := &models.Songs{}
 			err = json.Unmarshal(bytes, &songs)
@@ -138,15 +199,7 @@ func NetEasyDiscover(link string) (*models.SongList, error) {
 	// 等待所有 goroutine 完成
 	if err := errgroup.Wait(); err != nil {
 		log.Errorf("fail to wait: %v", err)
-		return nil, err
+		return sync.Map{}, err
 	}
-
-	// 写缓存
-	_ = cache.MSet(missKeyCacheMap)
-
-	return &models.SongList{
-		Name:       SongIdsResp.Playlist.Name,
-		Songs:      utils.SyncMapToSortedSlice(trackIds, resultMap),
-		SongsCount: SongIdsResp.Playlist.TrackCount,
-	}, nil
+	return missKeyCacheMap, nil
 }
