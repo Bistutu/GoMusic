@@ -24,8 +24,11 @@ var (
 )
 
 func MusicHandler(c *gin.Context) {
-	// 获取前端传过来的 url，判断是网易云还是 qq 音乐
+
 	link := c.PostForm("url")
+
+	log.Infof("歌单请求：%v", link)
+
 	switch {
 	// 1、网易云
 	case netEasyRegx.MatchString(link):
