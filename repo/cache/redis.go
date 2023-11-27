@@ -17,7 +17,7 @@ var (
 
 func init() {
 	rdb = redis.NewClient(&redis.Options{
-		Addr:     "127.0.0.1:6379",   // redis 服务端地址
+		Addr:     "127.0.0.1:16379",  // redis 服务端地址
 		Password: "SzW7fh2Fs5d2ypwT", // redis 密码
 		DB:       0,
 	})
@@ -46,8 +46,8 @@ func MGet(keys ...string) ([]interface{}, error) {
 func MSet(kv sync.Map) error {
 	pipeline := rdb.Pipeline()
 	kv.Range(func(k, v any) bool {
-		// 缓存 24 小时
-		pipeline.Set(ctx, k.(string), v, 24*time.Hour)
+		// 缓存 72 小时
+		pipeline.Set(ctx, k.(string), v, 72*time.Hour)
 		return true
 	})
 	// 不关注单个命令的执行结果，只关注 pipeline 执行的结果
