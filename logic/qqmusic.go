@@ -39,11 +39,8 @@ func QQMusicDiscover(link string) (*models.SongList, error) {
 
 	// 获取请求参数与验证签名
 	paramString := models.GetQQMusicReqString(tid)
-	sign, err := utils.GetSign(paramString)
-	if err != nil {
-		log.Errorf("fail to get sign: %v", err)
-		return nil, err
-	}
+	sign := utils.Encrypt(paramString)
+
 	// 构建并发送请求
 	link = fmt.Sprintf(qqMusicPattern, sign, time.Now().UnixMilli())
 	resp, err := httputil.Post(link, strings.NewReader(paramString))
