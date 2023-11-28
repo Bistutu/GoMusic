@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,4 +14,22 @@ func TestSet(t *testing.T) {
 	rs, err := GetKey(msg[0])
 	assert.NoError(t, err)
 	assert.Equal(t, msg[1], rs)
+}
+
+// 测试布隆过滤器性能
+func BenchmarkBloom(b *testing.B) {
+
+	b.Run("common", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			SetKey(strconv.Itoa(i), strconv.Itoa(i))
+			rs, err := GetKey(strconv.Itoa(i))
+			assert.NoError(b, err)
+			assert.Equal(b, strconv.Itoa(i), rs)
+		}
+	})
+	b.Run("bloom", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+
+		}
+	})
 }
