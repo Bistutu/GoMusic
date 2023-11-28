@@ -29,13 +29,14 @@ const (
 // NetEasyDiscover 需转发 2~3 次请求
 func NetEasyDiscover(link string) (*models.SongList, error) {
 	// 批量获取歌单信息：歌单名、歌曲ids、歌曲总数
-	SongIdsResp, err := batchGetSongsId(link)
+	SongIdsResp, err := getSongsInfo(link)
 	if err != nil {
 		return nil, err
 	}
+
 	SongsListName := SongIdsResp.Playlist.Name     // 歌单名
 	trackIds := SongIdsResp.Playlist.TrackIds      // 歌曲列表
-	tracksCount := SongIdsResp.Playlist.TrackCount // 歌曲列表
+	tracksCount := SongIdsResp.Playlist.TrackCount // 歌曲总数
 
 	songCacheKey := make([]string, 0, len(trackIds))
 	for _, v := range trackIds {
@@ -68,7 +69,6 @@ func NetEasyDiscover(link string) (*models.SongList, error) {
 	dbResultMap, _ := db.BatchGetSongById(missCacheKey)
 
 	missDBKey := make([]uint, 0)
-
 	for _, v := range missCacheKey {
 		if val, ok := dbResultMap[v]; ok {
 			resultMap.Store(v, val)
@@ -83,11 +83,7 @@ func NetEasyDiscover(link string) (*models.SongList, error) {
 		}
 		_ = cache.MSet(missKeyCacheMap)
 
-		return &models.SongList{
-			Name:       SongsListName,
-			Songs:      utils.SyncMapToSortedSlice(trackIds, resultMap),
-			SongsCount: tracksCount,
-		}, nil
+		return NewSongList(SongsListName, trackIds, resultMap, tracksCount), nil
 	}
 
 	missKeyCacheMap, err := batchGetSongs(missDBKey, resultMap)
@@ -113,7 +109,15 @@ func NetEasyDiscover(link string) (*models.SongList, error) {
 	}, nil
 }
 
-func batchGetSongsId(link string) (*models.NetEasySongId, error) {
+func NewSongList(SongsListName string, trackIds []*models.TrackId, resultMap sync.Map, tracksCount int) *models.SongList {
+	return &models.SongList{
+		Name:       SongsListName,
+		Songs:      utils.SyncMapToSortedSlice(trackIds, resultMap),
+		SongsCount: tracksCount,
+	}
+}
+
+func getSongsInfo(link string) (*models.NetEasySongId, error) {
 	songListId, err := utils.GetSongsId(link)
 	if err != nil {
 		return nil, err
