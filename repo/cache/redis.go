@@ -46,31 +46,8 @@ func MGet(keys ...string) ([]interface{}, error) {
 func MSet(kv sync.Map) error {
 	pipeline := rdb.Pipeline()
 	kv.Range(func(k, v any) bool {
-		// 缓存 24 小时
-		pipeline.Set(ctx, k.(string), v, 24*time.Hour)
-		return true
-	})
-	// 不关注单个命令的执行结果，只关注 pipeline 执行的结果
-	if _, err := pipeline.Exec(ctx); err != nil {
-		log.Error("MSet error: ", err)
-		return err
-	}
-	return nil
-}
-
-func MGetBloom(keys ...string) ([]interface{}, error) {
-	result, err := rdb.MGet(ctx, keys...).Result()
-	if err != nil {
-		log.Errorf("MGet error: %v", err)
-	}
-	return result, err
-}
-
-func MSetBloom(kv sync.Map) error {
-	pipeline := rdb.Pipeline()
-	kv.Range(func(k, v any) bool {
-		// 缓存 24 小时
-		pipeline.Set(ctx, k.(string), v, 24*time.Hour)
+		// 缓存 72 小时
+		pipeline.Set(ctx, k.(string), v, 72*time.Hour)
 		return true
 	})
 	// 不关注单个命令的执行结果，只关注 pipeline 执行的结果
