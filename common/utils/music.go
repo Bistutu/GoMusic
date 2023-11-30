@@ -22,7 +22,26 @@ var (
 	netEasyV2Regex = regexp.MustCompile(netEasyV2)
 )
 
-func GetSongsId(link string) (string, error) {
+func GetQQMusicParam(link string) (string, string, error) {
+	parse, err := url.ParseRequestURI(link)
+	if err != nil {
+		log.Errorf("fail to parse url: %v", err)
+		return "", "", err
+	}
+	query, err := url.ParseQuery(parse.RawQuery)
+	if err != nil {
+		log.Errorf("fail to parse query: %v", err)
+		return "", "", err
+	}
+	id := query.Get("id")
+	platform := query.Get("platform")
+	if platform == "" {
+		platform = "h5"
+	}
+	return id, platform, nil
+}
+
+func GetNetEasyParam(link string) (string, error) {
 	link, err := standardUrl(link)
 	if err != nil {
 		log.Errorf("fail to standard url: %v", err)
@@ -34,6 +53,10 @@ func GetSongsId(link string) (string, error) {
 		return "", err
 	}
 	query, err := url.ParseQuery(parse.RawQuery)
+	if err != nil {
+		log.Errorf("fail to parse query: %v", err)
+		return "", err
+	}
 	return query.Get("id"), nil
 }
 

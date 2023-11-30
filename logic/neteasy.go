@@ -118,7 +118,7 @@ func NewSongList(SongsListName string, trackIds []*models.TrackId, resultMap syn
 }
 
 func getSongsInfo(link string) (*models.NetEasySongId, error) {
-	songListId, err := utils.GetSongsId(link)
+	songListId, err := utils.GetNetEasyParam(link)
 	if err != nil {
 		return nil, err
 	}

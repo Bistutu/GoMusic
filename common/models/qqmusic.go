@@ -23,7 +23,7 @@ type QQMusicReq struct {
 	} `json:"comm"`
 }
 
-func NewQQMusicReq(disstid int) *QQMusicReq {
+func NewQQMusicReq(disstid int, platform string) *QQMusicReq {
 	return &QQMusicReq{
 		Req0: struct {
 			Module string `json:"module"`
@@ -64,13 +64,13 @@ func NewQQMusicReq(disstid int) *QQMusicReq {
 			GTk:      5381,
 			Uin:      0,
 			Format:   "json",
-			Platform: "h5",
+			Platform: platform,
 		},
 	}
 }
 
-func GetQQMusicReqString(disstid int) string {
-	param := NewQQMusicReq(disstid)
+func GetQQMusicReqString(disstid int, platform string) string {
+	param := NewQQMusicReq(disstid, platform)
 	marshal, _ := json.Marshal(param)
 	return string(marshal)
 }

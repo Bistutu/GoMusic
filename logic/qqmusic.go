@@ -32,13 +32,13 @@ var (
 
 // QQMusicDiscover 获取qq音乐歌单
 func QQMusicDiscover(link string) (*models.SongList, error) {
-	tid, err := getDissTid(link)
+	tid, platform, err := getParams(link)
 	if err != nil {
 		return nil, err
 	}
 
 	// 获取请求参数与验证签名
-	paramString := models.GetQQMusicReqString(tid)
+	paramString := models.GetQQMusicReqString(tid, platform)
 	sign := utils.Encrypt(paramString)
 
 	// 构建并发送请求
@@ -80,8 +80,8 @@ func QQMusicDiscover(link string) (*models.SongList, error) {
 	}, nil
 }
 
-// GetSongsId 获取歌单id
-func getDissTid(link string) (tid int, err error) {
+// GetNetEasyParam 获取歌单id
+func getParams(link string) (tid int, platform string, err error) {
 	if qqMusicV1Regx.MatchString(link) {
 		link, err = httputil.GetRedirectLocation(link)
 		if err != nil {
@@ -91,12 +91,17 @@ func getDissTid(link string) (tid int, err error) {
 	}
 	if qqMusicV2Regx.MatchString(link) {
 		var tidString string
-		tidString, err = utils.GetSongsId(link)
+		tidString, platform, err = utils.GetQQMusicParam(link)
 		if err != nil {
 			log.Errorf("fail to get songs id: %v", err)
 			return
 		}
-		return strconv.Atoi(tidString)
+		tid, err = strconv.Atoi(tidString)
+		if err != nil {
+			log.Errorf("fail to convert tid: %v", err)
+			return
+		}
+		return tid, platform, nil
 	}
 	if qqMusicV3Regx.MatchString(link) {
 		index := strings.Index(link, "playlist")
@@ -104,7 +109,8 @@ func getDissTid(link string) (tid int, err error) {
 			log.Errorf("fail to get tid: %v", err)
 			return
 		}
-		return strconv.Atoi(link[index+9 : index+19])
+		tid, err = strconv.Atoi(link[index+9 : index+19])
+		return tid, "h5", nil
 	}
-	return 0, errors.New("invalid link")
+	return 0, "", errors.New("invalid link")
 }
