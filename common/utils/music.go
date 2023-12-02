@@ -14,12 +14,14 @@ const (
 	bracketsPattern = `（|）`     // 去除特殊符号
 	miscPattern     = `\s?【.*】` // 去除特殊符号
 	netEasyV2       = "163cn"   // 短链接
+	shardModel      = `http[s]?://[^ ]+`
 )
 
 var (
-	bracketsRegex  = regexp.MustCompile(bracketsPattern)
-	miscRegex      = regexp.MustCompile(miscPattern)
-	netEasyV2Regex = regexp.MustCompile(netEasyV2)
+	bracketsRegex   = regexp.MustCompile(bracketsPattern)
+	miscRegex       = regexp.MustCompile(miscPattern)
+	netEasyV2Regex  = regexp.MustCompile(netEasyV2)
+	shardModelRegex = regexp.MustCompile(shardModel)
 )
 
 func GetQQMusicParam(link string) (string, string, error) {
@@ -61,6 +63,9 @@ func GetNetEasyParam(link string) (string, error) {
 }
 
 func standardUrl(link string) (string, error) {
+	// 格式化带中文的分享链接
+	link = shardModelRegex.FindString(link)
+	// 短链转换
 	if netEasyV2Regex.MatchString(link) {
 		return httputil.GetRedirectLocation(link)
 	}
