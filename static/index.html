@@ -69,12 +69,26 @@
         methods: {
             async fetchLinkDetails() {
 
+                let errRs = '❌链接解析失败，请确认是否为正确格式！';
+
                 // 清空前后空白字符，并进行正则表达式匹配
                 this.link = this.link.trim();
-                console.log("visit: " + this.link)
+
+                // 新增：使用正则表达式提取 URL
+                const urlRegex = /http[s]?:\/\/[^\s]+/;
+                const matchedUrl = this.link.match(urlRegex);
+
+                if (matchedUrl && matchedUrl[0]) {
+                    console.log("visit: " + this.link)
+                    this.link = matchedUrl[0];
+                } else {
+                    this.result = errRs;
+                    return; // 如果没有找到 URL，不继续执行以下代码
+                }
+
                 const regex = /(163)|(qq)/;
                 if (!regex.test(this.link)) {
-                    this.result = '链接解析失败，请确认是否为正确格式！';
+                    this.result = errRs;
                     return;  // 直接返回，不再继续执行以下代码
                 }
 
@@ -95,7 +109,7 @@
                     }
                 } catch (error) {
                     console.log(error);
-                    this.result = '链接解析失败，请确认是否为正确格式！'
+                    this.result = errRs
                 }
             },
             copyResult() {
