@@ -13,7 +13,7 @@ import (
 var db *gorm.DB
 
 func init() {
-	dsn := "go_music:12345678@tcp(127.0.0.1:3306)/go_music?charset=utf8mb4&parseTime=True&loc=Local"
+	dsn := "root:12345678@tcp(127.0.0.1:3306)/go_music?charset=utf8mb4&parseTime=True&loc=Local"
 	open, err := gorm.Open(mysql.Open(dsn))
 	if err != nil {
 		log.Errorf("数据库连接失败：%v", err)
@@ -22,6 +22,16 @@ func init() {
 	db = open
 	// 自动创建表
 	db.AutoMigrate(&models.NetEasySong{})
+
+	// 调用自定义迁移函数修改表结构
+	if err := MigrateNameField(db); err != nil {
+		log.Errorf("failed to migrate database: %v", err)
+	}
+}
+
+func MigrateNameField(db *gorm.DB) error {
+	// 使用原生 SQL 来修改字段长度
+	return db.Exec("ALTER TABLE net_easy_songs MODIFY name VARCHAR(512);").Error
 }
 
 func BatchGetSongById(ids []uint) (map[uint]string, error) {
