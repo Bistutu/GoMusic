@@ -1,6 +1,4 @@
-# 迁移网易云/QQ音乐歌单
-
-# 至 Apple/Youtube/Spotify Music
+# 迁移网易云/QQ音乐歌单至 Apple/Youtube/Spotify Music
 
 链接：https://music.unmeta.cn
 
