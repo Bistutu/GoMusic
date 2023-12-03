@@ -3,59 +3,117 @@
 
 <head>
     <meta charset="UTF-8">
-    <!-- <meta name="viewport" content="width=device-width, initialize-scale=1.0"> -->
+    <meta name="viewport" content="width=device-width, initialize-scale=1.0">
     <title>Go-Music</title>
     <link href="https://unpkg.com/element-ui@2.14.1/lib/theme-chalk/index.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/axios@0.21.1/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
 
+    <style>
+        /* github tag*/
+        .github-badge-container {
+            text-align: center; /* 水平居中 */
+            margin-top: 5px; /* 添加一些上下边距 */
+        }
+
+        /* overall */
+        .el-header {
+            font-size: xx-large;
+            text-align: center;
+            margin-top: 10px;
+            margin-bottom: 1em;
+        }
+
+        .button-center {
+            margin: 0 auto;
+            display: block; /* 按钮水平居中 */
+        }
+
+        .el-input, .el-textarea {
+            width: 50%;
+            margin: 0 auto;
+            display: block; /* 输入框水平居中 */
+        }
+
+        .el-collapse-item__header {
+            font-size: large;
+        }
+
+        .el-collapse {
+            width: 50%; /* 默认占据50%的屏幕宽度 */
+            margin: 0 auto; /* 水平居中显示 */
+        }
+
+        .el-collapse-item ol li {
+            font-size: medium; /* 或者你可以使用具体的像素大小，例如 '16px' */
+        }
+
+
+        /* 媒体查询，当屏幕宽度小于或等于600px时 */
+        @media (max-width: 600px) {
+            .el-header, .el-footer {
+                font-size: large;
+                text-align: center;
+                margin-top: 10px;
+            }
+
+            .el-collapse {
+                width: 100%; /* 在手机端时占据90%的屏幕宽度 */
+            }
+
+            .el-input, .el-textarea {
+                width: 100%;
+                margin: 0 auto;
+                display: block; /* 输入框水平居中 */
+            }
+        }
+    </style>
 </head>
 
+
 <body>
-<div id="app"
-     style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
-
-    <p style="font-size:xx-large; line-height: 1; margin: 0.25em;">迁移网易云/QQ音乐歌单</p>
-    <p style="font-size:x-large; line-height: 1; margin: 0.25em;">to</p>
-    <p style="font-size:xx-large; line-height: 1; margin: 0.25em;">Apple Music、Youtube Music、Spotify</p>
-
-
-    <el-input v-model="link" placeholder="请输入歌单链接~" style="width: 25%;margin: 0.5em;"></el-input>
-    <br>
-    <el-button type="primary" @click="fetchLinkDetails">获取歌单</el-button>
-    <br>
-    <el-input type="textarea" v-model="result" :rows="15" placeholder="结果会显示在这里" style="width: 36%;"></el-input>
-    <br>
-    <el-button @click="copyResult">复制结果</el-button>
-
-    <!-- 使用指南 -->
-    <div style="border: 1px solid #ddd; padding: 1em; margin: 1em; width: 50%; background-color: #f5f5f5;line-height: 1.5em">
-        <h3># 使用指南</h3>
-        <ol>
-            <li>输入歌单链接，例如：<em>https://music.163.com/#/playlist?id=8725919816</em></li>
-            <li>转移到 Apple Music 或 Spotify 或 Youtube Music</li>
-            <ul>
-                <li>Go to
-                    <el-button type="success" size="mini">
-                        <a href="https://www.tunemymusic.com/zh-CN/transfer"
-                           style="color: #fff;font-size: small">TunemyMusic</a></el-button>
-                </li>
-                <li>STEP 1：选择来源从「任意文本」</li>
-                <li>STEP 2：粘贴刚刚复制的内容到文本框中</li>
-                <li>STEP 3：选择 Apple Music 或 Spotify 或 Youtube Music 作为目的地</li>
-                <li>STEP 4：开始移动</li>
-            </ul>
-        </ol>
-    </div>
-    <div style="bottom: 10px; width: 100%; text-align: center;">
-
-        <a href="https://github.com/Bistutu/GoMusic" target="_blank" style="text-decoration: none; color: black;">
-            项目已开源
-            <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" alt="GitHub Logo"
-                 style="height: 1em;">
-            View on GitHub
+<el-container id="app">
+    <el-header>迁移网易云/QQ音乐歌单<br>至 Apple/Youtube/Spotify Music</el-header>
+    <div class="github-badge-container">
+        <a href="https://github.com/Bistutu/GoMusic" target="_blank">
+            <img src="https://img.shields.io/github/stars/Bistutu/GoMusic?style=flat-square&logo=github&label=Star"
+                 alt="GitHub stars">
         </a>
     </div>
-</div>
+
+
+    <el-main>
+        <el-form>
+            <el-form-item>
+                <el-input v-model="link"
+                          placeholder="输入任意歌单链接，如：http://163cn.tv/zoIxm3"></el-input>
+            </el-form-item>
+            <el-form-item>
+                <el-button type="danger" class="button-center" @click="fetchLinkDetails">获取歌单</el-button>
+                </el-button>
+
+            </el-form-item>
+            <el-form-item>
+                <el-input type="textarea" v-model="result" :rows="15" placeholder="结果会显示在这里"></el-input>
+            </el-form-item>
+            <el-form-item>
+                <el-button @click="copyResult" class="button-center">复制结果</el-button>
+            </el-form-item>
+        </el-form>
+        <el-collapse v-model="activeNames">
+            <el-collapse-item title="《使用指南》" name="first">
+                <ol>
+                    <li>输入歌单链接，如：http://163cn.tv/zoIxm3</li>
+                    <li>复制查询结果</li>
+                    <li>打开 <b><a href="https://www.tunemymusic.com/zh-CN/transfer">TunemyMusic</a></b>
+                        网站</el-button></li>
+                    <li>选择歌单来源“任意文本”，将刚刚复制的歌单粘贴进去，选择 Apple/Youtube/Spotify Music
+                        作为目的地，确认迁移
+                    </li>
+                </ol>
+            </el-collapse-item>
+        </el-collapse>
+    </el-main>
+</el-container>
 
 <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
 <script src="https://unpkg.com/element-ui@2.14.1/lib/index.js"></script>
@@ -63,67 +121,69 @@
     new Vue({
         el: '#app',
         data: {
-            link: '',
-            result: ''
+            activeNames: ['first'], // 控制折叠面板的打开状态
+            link: '', // 用户输入的链接
+            result: '', // 显示处理结果或错误消息
         },
         methods: {
-            async fetchLinkDetails() {
-
-                let errRs = '❌链接解析失败，请确认是否为正确格式！';
-
-                // 清空前后空白字符，并进行正则表达式匹配
-                this.link = this.link.trim();
-
-                // 新增：使用正则表达式提取 URL
+            // 验证输入的 URL 是否有效
+            isValidUrl(url) {
                 const urlRegex = /http[s]?:\/\/[^\s]+/;
-                const matchedUrl = this.link.match(urlRegex);
+                return urlRegex.test(url);
+            },
+            // 检查 URL 是否属于支持的平台（网易云或QQ音乐）
+            isSupportedPlatform(url) {
+                const supportedPlatformsRegex = /(163)|(qq)/;
+                return supportedPlatformsRegex.test(url);
+            },
 
-                if (matchedUrl && matchedUrl[0]) {
-                    console.log("visit: " + this.link)
-                    this.link = matchedUrl[0];
-                } else {
-                    this.result = errRs;
-                    return; // 如果没有找到 URL，不继续执行以下代码
+            // 异步函数，用于获取链接的详细信息
+            async fetchLinkDetails() {
+                this.link = this.link.trim(); // 去除输入链接的首尾空白字符
+
+                // 检查链接是否有效
+                if (!this.isValidUrl(this.link)) {
+                    this.result = '❌链接无效，请输入有效的网址。';
+                    return;
                 }
 
-                const regex = /(163)|(qq)/;
-                if (!regex.test(this.link)) {
-                    this.result = errRs;
-                    return;  // 直接返回，不再继续执行以下代码
+                // 检查链接是否属于支持的平台
+                if (!this.isSupportedPlatform(this.link)) {
+                    this.result = '❌不支持的平台，请输入网易云或QQ音乐歌单链接。';
+                    return;
                 }
 
+                // 准备发送请求的参数
                 const params = new URLSearchParams();
                 params.append('url', this.link);
 
                 try {
-                    // const response = await axios.post('https://music.unmeta.cn/songlist', params, {
-                        const response = await axios.post('http://localhost:8081/songlist', params, {
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded'
-                        }
+                    // 发送 POST 请求并处理响应
+                    const response = await axios.post('http://localhost:8081/songlist', params, {
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'}
                     });
-                    if (response.data) {
-                        this.result = response.data.data.songs.join('\n');
-                    } else {
-                        this.result = '请求失败，请稍后再试~';
-                    }
+                    // 设置结果，如果响应中有数据则显示歌曲列表，否则显示失败信息
+                    this.result = response.data ? response.data.data.songs.join('\n') : '请求失败，请稍后再试~';
                 } catch (error) {
-                    console.log(error);
-                    this.result = errRs
+                    // 如果请求过程中发生错误，记录错误并显示错误消息
+                    console.error(error);
+                    this.result = '❌请求过程中发生错误，请稍后重试~';
                 }
             },
+            // 复制结果到剪贴板的方法
             copyResult() {
-                const textarea = document.createElement('textarea');
-                textarea.value = this.result;
-                document.body.appendChild(textarea);
-                textarea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textarea);
-                this.$message.success('已复制到剪贴板');
+                const textarea = document.createElement('textarea'); // 创建一个临时的 textarea 元素
+                textarea.value = this.result; // 设置 textarea 的值为结果文本
+                document.body.appendChild(textarea); // 将 textarea 添加到文档中
+                textarea.select(); // 选中 textarea 的内容
+                document.execCommand('copy'); // 执行复制命令
+                document.body.removeChild(textarea); // 从文档中移除 textarea
+                this.$message.success('已复制到剪贴板'); // 显示复制成功的消息
             }
         }
     });
 </script>
+<script src="https://cdn.jsdelivr.net/npm/axios@0.21.1/dist/axios.min.js"></script>
 </body>
 
 </html>
