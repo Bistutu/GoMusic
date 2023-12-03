@@ -21,13 +21,15 @@ const (
 var (
 	netEasyRegx, _ = regexp.Compile(netEasy)
 	qqMusicRegx, _ = regexp.Compile(qqMusic)
+	requestCount   = 0
 )
 
 func MusicHandler(c *gin.Context) {
 
 	link := c.PostForm("url")
 
-	log.Infof("歌单请求：%v", link)
+	log.Infof("第 %v 次歌单请求：%v", requestCount, link)
+	requestCount++
 
 	switch {
 	// 1、网易云
