@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
@@ -17,7 +18,7 @@ var (
 
 func init() {
 	rdb = redis.NewClient(&redis.Options{
-		Addr:     "127.0.0.1:16379",  // redis 服务端地址
+		Addr:     "127.0.0.1:6379",   // redis 服务端地址
 		Password: "SzW7fh2Fs5d2ypwT", // redis 密码
 		DB:       0,
 	})
@@ -36,6 +37,9 @@ func GetKey(key string) (string, error) {
 }
 
 func MGet(keys ...string) ([]interface{}, error) {
+	if len(keys) == 0 {
+		return nil, errors.New("keys is empty")
+	}
 	result, err := rdb.MGet(ctx, keys...).Result()
 	if err != nil {
 		log.Errorf("MGet error: %v", err)

@@ -15,13 +15,15 @@ const (
 	miscPattern     = `\s?【.*】` // 去除特殊符号
 	netEasyV2       = "163cn"   // 短链接
 	shardModel      = `http[s]?://[^ ]+`
+	restfulModel    = `playlist/(\d+)`
 )
 
 var (
-	bracketsRegex   = regexp.MustCompile(bracketsPattern)
-	miscRegex       = regexp.MustCompile(miscPattern)
-	netEasyV2Regex  = regexp.MustCompile(netEasyV2)
-	shardModelRegex = regexp.MustCompile(shardModel)
+	bracketsRegex    = regexp.MustCompile(bracketsPattern)
+	miscRegex        = regexp.MustCompile(miscPattern)
+	netEasyV2Regex   = regexp.MustCompile(netEasyV2)
+	shardModelRegex  = regexp.MustCompile(shardModel)
+	restfulModeRegex = regexp.MustCompile(restfulModel)
 )
 
 func GetQQMusicParam(link string) (string, string, error) {
@@ -68,6 +70,10 @@ func standardUrl(link string) (string, error) {
 	// 短链转换
 	if netEasyV2Regex.MatchString(link) {
 		return httputil.GetRedirectLocation(link)
+	}
+	// 匹配 restful 链接
+	if match := restfulModeRegex.FindStringSubmatch(link); len(match) > 1 {
+		link = "https://music.163.com/playlist?id=" + match[1]
 	}
 	return link, nil
 }
