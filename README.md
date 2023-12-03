@@ -1,36 +1,25 @@
 # 迁移网易云/QQ音乐歌单
 
-# 至 AppleMusic、YoutubeMusic、Spotify
+# 至 Apple/Youtube/Spotify Music
 
 链接：https://music.unmeta.cn
 
-项目使用 Golang + Gin 开发，Redis 作为缓存中间件（如不使用则无需配置）。
+项目后端使用 Golang + Gin 开发，前端使用 Vue + ElementUI 编写。
 
-redis 配置路径：`/repo/cache/redis.go`：
+<img src="./images/0.png" alt="image-20231008190554003" style="width:60%; border: 1px solid black;" />
 
-```go
-rdb = redis.NewClient(&redis.Options{
-	Addr:     "", // redis 服务端地址
-	Password: "", // redis 密码
-	DB:       0,
-})
-```
 
-<img src="./images/0.jpeg" alt="image-20231008190554003" style="width:60%;" />
 
 # 使用指南
 
-1. 输入歌单链接，例如：https://music.163.com/#/playlist?id=8725919816
-2. 转移到 Youtube Music or Spotify or Apple Music
-   - Go to [TuneMyMusic](https://www.tunemymusic.com/zh-CN/transfer)
-   - STEP 1：选择来源从「任意文本」
-   - STEP 2：粘贴刚刚复制的内容到文本框中
-   - STEP 3：选择 Youtube or Spotify or Apple Music作为目的地
-   - STEP 4：开始移动
+1. 输入歌单链接，如：http://163cn.tv/zoIxm3
+2. 复制查询结果
+3. 打开 **[TunemyMusic](https://www.tunemymusic.com/zh-CN/transfer)** 网站
+4. 选择歌单来源“任意文本”，将刚刚复制的歌单粘贴进去，选择 Apple/Youtube/Spotify Music 作为目的地，确认迁移
 
-<img src="./images/1.jpeg" alt="image-20231008190713343" style="width:60%;" />
+<img src="./images/1.png" alt="image-20231008190713343" style="width:60%; border: 1px solid black;"/>
 
-<img src="./images/2.jpeg" alt="image-20231008190730397" style="width:60%;" />
+
 
 # 如何启动程序？
 
