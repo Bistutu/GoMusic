@@ -21,7 +21,7 @@ const (
 var (
 	netEasyRegx, _ = regexp.Compile(netEasy)
 	qqMusicRegx, _ = regexp.Compile(qqMusic)
-	requestCount   = 0
+	requestCount   = 1
 )
 
 func MusicHandler(c *gin.Context) {

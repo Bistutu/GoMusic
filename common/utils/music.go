@@ -97,7 +97,9 @@ func SyncMapToSortedSlice(trackIds []*models.TrackId, sm sync.Map) []string {
 	strings := make([]string, 0, len(trackIds))
 	for _, v := range trackIds {
 		value, _ := sm.Load(v.Id)
-		strings = append(strings, value.(string))
+		if elems, ok := value.(string); ok {
+			strings = append(strings, elems)
+		}
 	}
 	return strings
 }
