@@ -95,7 +95,7 @@
                           placeholder="输入任意歌单链接，如：http://163cn.tv/zoIxm3"></el-input>
             </el-form-item>
             <el-form-item>
-                <el-button type="danger" class="button-center" @click="fetchLinkDetails">获取歌单</el-button>
+                <el-button type="danger" class="button-center lang-song-list-btn" @click="fetchLinkDetails">获取歌单</el-button>
                 </el-button>
 
             </el-form-item>
@@ -103,7 +103,7 @@
                 <el-input type="textarea" v-model="result" :rows="15" placeholder="结果会显示在这里"></el-input>
             </el-form-item>
             <el-form-item>
-                <el-button @click="copyResult" class="button-center">复制结果</el-button>
+                <el-button @click="copyResult" class="button-center lang-copy-btn">复制结果</el-button>
             </el-form-item>
         </el-form>
         <el-collapse v-model="activeNames">
@@ -189,41 +189,45 @@
                 this.$message.success('已复制到剪贴板'); // 显示复制成功的消息
             },
             toggleLanguage() {
-                    this.isEnglish = !this.isEnglish;
-                    
-                    const headerElement = this.$el.querySelector('.el-header');
-                    const buttonElement = this.$el.querySelector('.el-button');
-                    const inputElement = this.$el.querySelector('.el-input__inner');
-                    const textareaElement = this.$el.querySelector('.el-textarea__inner');
-                    const collapseItemHeaderElement = this.$el.querySelector('.el-collapse-item__header');
-                    const collapseItemElement = this.$el.querySelector('.el-collapse-item ol li');
-                    const collapseElement = this.$el.querySelector('.el-collapse');
-                    const copyButtonElement = this.$el.querySelector('.el-button--success');
+                this.isEnglish = !this.isEnglish;
 
-                    if (this.isEnglish) {
-                        headerElement.textContent = 'Migrate NetEase Cloud / QQ Music Playlists to Apple / Youtube / Spotify Music';
-                        buttonElement.textContent = '中文';
-                        inputElement.placeholder = 'Enter any playlist link, such as: http://163cn.tv/zoIxm3';
-                        textareaElement.placeholder = 'The result will be displayed here';
-                        collapseItemHeaderElement.textContent = '《User Guide》';
-                        collapseItemElement.textContent = 'Enter the playlist link, such as: http://163cn.tv/zoIxm3';
-                        collapseItemElement.textContent = 'Copy the query result';
-                        collapseItemElement.textContent = 'Open <b><a href="https://www.tunemymusic.com/zh-CN/transfer">TunemyMusic</a></b> website';
-                        collapseItemElement.textContent = 'Select the playlist source "Any Text", paste the playlist just copied, select Apple / Youtube / Spotify Music as the destination, and confirm the migration';
-                        copyButtonElement.textContent = 'Copy Result';
-                    } else {
-                        headerElement.textContent = '迁移网易云/QQ音乐歌单至 Apple/Youtube/Spotify Music';
-                        buttonElement.textContent = '英文';
-                        inputElement.placeholder = '输入任意歌单链接，如：http://163cn.tv/zoIxm3';
-                        textareaElement.placeholder = '结果会显示在这里';
-                        collapseItemHeaderElement.textContent = '《使用指南》';
-                        collapseItemElement.textContent = '输入歌单链接，如：http://163cn.tv/zoIxm3';
-                        collapseItemElement.textContent = '复制查询结果';
-                        collapseItemElement.textContent = '打开 <b><a href="https://www.tunemymusic.com/zh-CN/transfer">TunemyMusic</a></b> 网站';
-                        collapseItemElement.textContent = '选择歌单来源“任意文本”，将刚刚复制的歌单粘贴进去，选择 Apple/Youtube/Spotify Music 作为目的地，确认迁移';
-                        copyButtonElement.textContent = '复制结果';
-                    }
+                const headerElement = this.$el.querySelector('.el-header');
+                const buttonElement = this.$el.querySelector('.header-layout .el-button');
+                const inputElement = this.$el.querySelector('.el-input__inner');
+                const textareaElement = this.$el.querySelector('.el-textarea__inner');
+                const collapseItemHeaderElement = this.$el.querySelector('.el-collapse-item__header');
+                const collapseItemElements = this.$el.querySelectorAll('.el-collapse-item ol li');
+                const collapseElement = this.$el.querySelector('.el-collapse');
+                const songListButtonElement = this.$el.querySelector('.lang-song-list-btn');
+                const copyButtonElement = this.$el.querySelector('.lang-copy-btn');
+                
+                if (this.isEnglish) {
+                    headerElement.textContent = 'Migrate NetEase Cloud / QQ Music Playlists to Apple / Youtube / Spotify Music';
+                    buttonElement.textContent = '中文';
+                    inputElement.setAttribute('placeholder', 'Enter any playlist link, such as: http://163cn.tv/zoIxm3');
+                    textareaElement.setAttribute('placeholder', 'The result will be displayed here');
+                    collapseItemHeaderElement.textContent = '《User Guide》';
+                    collapseItemElements[0].textContent = 'Enter the playlist link, such as: http://163cn.tv/zoIxm3';
+                    collapseItemElements[1].textContent = 'Copy the query result';
+                    collapseItemElements[2].innerHTML = 'Open <b><a href="https://www.tunemymusic.com/zh-CN/transfer">TunemyMusic</a></b> website';
+                    collapseItemElements[3].textContent = 'Select the playlist source "Any Text", paste the playlist just copied, select Apple/Youtube/Spotify Music as the destination, and confirm the migration';
+                    songListButtonElement.textContent = 'Get Song List';
+                    copyButtonElement.textContent = 'Copy Result';
+                } else {
+                    headerElement.textContent = '迁移网易云/QQ音乐歌单至 Apple/Youtube/Spotify Music';
+                    buttonElement.textContent = 'English';
+                    inputElement.setAttribute('placeholder', '输入任意歌单链接，如：http://163cn.tv/zoIxm3');
+                    textareaElement.setAttribute('placeholder', '结果会显示在这里');
+                    collapseItemHeaderElement.textContent = '《使用指南》';
+                    collapseItemElements[0].textContent = '输入歌单链接，如：http://163cn.tv/zoIxm3';
+                    collapseItemElements[1].textContent = '复制结果';
+                    collapseItemElements[2].innerHTML = '打开 <b><a href="https://www.tunemymusic.com/zh-CN/transfer">TunemyMusic</a></b> 网站';
+                    collapseItemElements[3].textContent = '选择歌单来源“任意文本”，将刚刚复制的歌单粘贴进去，选择 Apple/Youtube/Spotify Music 作为目的地，确认迁移';
+                    songListButtonElement.textContent = '获取歌单';
+                    copyButtonElement.textContent = '复制结果';
                 }
+            }
+
         }
     });
 </script>
