@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	netEasy = `(163cn)|(.163.)`
+	netEasy = `(163cn)|(\.163\.)`
 	qqMusic = `.qq.`
 	SUCCESS = "success"
 )
