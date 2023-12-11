@@ -22,7 +22,7 @@ const (
 	qqMusicV1      = `fcgi-bin`
 	qqMusicV2      = `details`
 	qqMusicV3      = `playlist`
-	qqMusicV4      = `id=\d{10}`
+	qqMusicV4      = `id=[89]\d{9}`
 )
 
 var (
@@ -95,7 +95,7 @@ func getParams(link string) (tid int, platform string, err error) {
 			log.Errorf("fail to convert tid: %v", err)
 			return
 		}
-		return tid, "pc", nil
+		return tid, "android", nil
 	}
 	if qqMusicV1Regx.MatchString(link) {
 		link, err = httputil.GetRedirectLocation(link)
