@@ -22,12 +22,14 @@ const (
 	qqMusicV1      = `fcgi-bin`
 	qqMusicV2      = `details`
 	qqMusicV3      = `playlist`
+	qqMusicV4      = `id=\d{10}`
 )
 
 var (
 	qqMusicV1Regx = regexp.MustCompile(qqMusicV1)
 	qqMusicV2Regx = regexp.MustCompile(qqMusicV2)
 	qqMusicV3Regx = regexp.MustCompile(qqMusicV3)
+	qqMusicV4Regx = regexp.MustCompile(qqMusicV4)
 )
 
 // QQMusicDiscover 获取qq音乐歌单
@@ -82,6 +84,19 @@ func QQMusicDiscover(link string) (*models.SongList, error) {
 
 // GetNetEasyParam 获取歌单id
 func getParams(link string) (tid int, platform string, err error) {
+	if qqMusicV4Regx.MatchString(link) {
+		index := strings.Index(link, "id=")
+		if index < 0 || index+3 > len(link) {
+			log.Errorf("fail to get tid: %v", err)
+			return
+		}
+		tid, err = strconv.Atoi(link[index+3 : index+13])
+		if err != nil {
+			log.Errorf("fail to convert tid: %v", err)
+			return
+		}
+		return tid, "pc", nil
+	}
 	if qqMusicV1Regx.MatchString(link) {
 		link, err = httputil.GetRedirectLocation(link)
 		if err != nil {
