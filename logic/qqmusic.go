@@ -23,6 +23,7 @@ const (
 	qqMusicV2      = `details`
 	qqMusicV3      = `playlist`
 	qqMusicV4      = `id=[89]\d{9}`
+	qqMusicV5      = `.*playlist/7\d{9}$`
 )
 
 var (
@@ -30,6 +31,7 @@ var (
 	qqMusicV2Regx = regexp.MustCompile(qqMusicV2)
 	qqMusicV3Regx = regexp.MustCompile(qqMusicV3)
 	qqMusicV4Regx = regexp.MustCompile(qqMusicV4)
+	qqMusicV5Regx = regexp.MustCompile(qqMusicV5)
 )
 
 // QQMusicDiscover 获取qq音乐歌单
@@ -84,6 +86,16 @@ func QQMusicDiscover(link string) (*models.SongList, error) {
 
 // GetNetEasyParam 获取歌单id
 func getParams(link string) (tid int, platform string, err error) {
+	if qqMusicV5Regx.MatchString(link) {
+		index := strings.Index(link, "playlist")
+		if index < 0 || index+19 > len(link) {
+			log.Errorf("fail to get tid: %v", err)
+			return
+		}
+		tid, err = strconv.Atoi(link[index+9 : index+19])
+		return tid, "android", nil
+	}
+
 	if qqMusicV4Regx.MatchString(link) {
 		index := strings.Index(link, "id=")
 		if index < 0 || index+3 > len(link) {
