@@ -31,3 +31,8 @@ cd GoMusic
 go build &&./GoMusic
 ```
 
+## star 历史记录
+
+[![Star History Chart](https://api.star-history.com/svg?repos=Bistutu/GoMusic&type=Date)](https://star-history.com/#Bistutu/GoMusic&Date)
+
+
