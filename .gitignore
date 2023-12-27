@@ -8,3 +8,4 @@ GoMusic
 *.meta
 *.xml
 *.iml
+.DS_Store

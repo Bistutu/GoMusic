@@ -1,5 +1,7 @@
 # 迁移网易云/QQ音乐歌单至 Apple/Youtube/Spotify Music
 
+简体中文| [English](README_EN.md) 
+
 链接：https://music.unmeta.cn
 
 项目后端使用 Golang + Gin 开发，前端使用 Vue + ElementUI 编写。
@@ -34,5 +36,4 @@ go build &&./GoMusic
 ## star 历史记录
 
 [![Star History Chart](https://api.star-history.com/svg?repos=Bistutu/GoMusic&type=Date)](https://star-history.com/#Bistutu/GoMusic&Date)
-
 
