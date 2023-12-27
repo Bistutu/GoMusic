@@ -4,7 +4,7 @@
 
 项目后端使用 Golang + Gin 开发，前端使用 Vue + ElementUI 编写。
 
-<img src="common/images/0.png" alt="image-20231008190554003" style="width:60%; border: 1px solid black;" />
+<img src="misc/images/0.png" style="width:60%; border: 1px solid black;" />
 
 
 
@@ -15,7 +15,7 @@
 3. 打开 **[TunemyMusic](https://www.tunemymusic.com/zh-CN/transfer)** 网站
 4. 选择歌单来源“任意文本”，将刚刚复制的歌单粘贴进去，选择 Apple/Youtube/Spotify Music 作为目的地，确认迁移
 
-<img src="common/images/1.png" alt="image-20231008190713343" style="width:60%; border: 1px solid black;"/>
+<img src="misc/images/1.png" style="width:60%; border: 1px solid black;"/>
 
 
 
