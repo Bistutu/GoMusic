@@ -4,9 +4,9 @@ import (
 	"net/url"
 	"regexp"
 
-	"GoMusic/common/models"
-	"GoMusic/httputil"
-	"GoMusic/initialize/log"
+	"GoMusic/misc/httputil"
+	"GoMusic/misc/log"
+	"GoMusic/misc/models"
 )
 
 const (

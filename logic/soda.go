@@ -1,6 +1,6 @@
 package logic
 
-import "GoMusic/common/models"
+import "GoMusic/misc/models"
 
 // 汽水音乐
 

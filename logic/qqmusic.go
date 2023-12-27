@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"GoMusic/common/models"
-	"GoMusic/common/utils"
-	"GoMusic/httputil"
-	"GoMusic/initialize/log"
+	"GoMusic/misc/httputil"
+	"GoMusic/misc/log"
+	"GoMusic/misc/models"
+	"GoMusic/misc/utils"
 )
 
 const (

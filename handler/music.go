@@ -4,12 +4,11 @@ import (
 	"net/http"
 	"regexp"
 
-	"GoMusic/initialize/log"
-
 	"github.com/gin-gonic/gin"
 
-	"GoMusic/common/models"
 	"GoMusic/logic"
+	"GoMusic/misc/log"
+	"GoMusic/misc/models"
 )
 
 const (

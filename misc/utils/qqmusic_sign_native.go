@@ -3,9 +3,9 @@ package utils
 import (
 	_ "embed"
 
-	"GoMusic/initialize/log"
-
 	"github.com/robertkrimen/otto"
+
+	"GoMusic/misc/log"
 )
 
 //go:embed qqmusic_encrypt.js

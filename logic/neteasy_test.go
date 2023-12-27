@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"GoMusic/common/utils"
+	"GoMusic/misc/utils"
 )
 
 const (

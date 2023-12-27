@@ -10,12 +10,12 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"GoMusic/common/utils"
-	"GoMusic/initialize/log"
+	"GoMusic/misc/httputil"
+	"GoMusic/misc/log"
+	"GoMusic/misc/utils"
 	"GoMusic/repo/db"
 
-	"GoMusic/common/models"
-	"GoMusic/httputil"
+	"GoMusic/misc/models"
 	"GoMusic/repo/cache"
 )
 

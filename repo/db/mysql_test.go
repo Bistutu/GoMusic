@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"GoMusic/common/models"
+	"GoMusic/misc/models"
 )
 
 func TestBatchDelAndSet(t *testing.T) {

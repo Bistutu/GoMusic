@@ -1,10 +1,8 @@
-package initialize
+package handler
 
 import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-
-	"GoMusic/handler"
 )
 
 func NewRouter() *gin.Engine {
@@ -14,6 +12,6 @@ func NewRouter() *gin.Engine {
 	// 加载静态资源
 	router.StaticFile("/", "./static")
 	// 绑定路由
-	router.POST("/songlist", handler.MusicHandler)
+	router.POST("/songlist", MusicHandler)
 	return router
 }

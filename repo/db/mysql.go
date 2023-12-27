@@ -6,14 +6,14 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	"GoMusic/common/models"
-	"GoMusic/initialize/log"
+	"GoMusic/misc/log"
+	"GoMusic/misc/models"
 )
 
 var db *gorm.DB
 
 func init() {
-	dsn := "root:12345678@tcp(127.0.0.1:3306)/go_music?charset=utf8mb4&parseTime=True&loc=Local"
+	dsn := "go_music:12345678@tcp(127.0.0.1:3306)/go_music?charset=utf8mb4&parseTime=True&loc=Local"
 	open, err := gorm.Open(mysql.Open(dsn))
 	if err != nil {
 		log.Errorf("数据库连接失败：%v", err)
