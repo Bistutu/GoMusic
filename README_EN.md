@@ -1,6 +1,6 @@
 # Transfer NetEase/QQ Music Playlists to Apple/Youtube/Spotify Music
 
- [简体中文](README.md)| English
+>  [简体中文](README.md)| English | [한국어](README_KO.md)
 
 Link: [https://music.unmeta.cn](https://music.unmeta.cn)
 
@@ -12,7 +12,7 @@ This project's backend is developed using Golang + Gin, and the frontend is buil
 
 1. Enter the playlist link, for example: http://163cn.tv/zoIxm3
 2. Copy the search results.
-3. Open the **[TunemyMusic](https://www.tunemymusic.com/en/transfer)** website.
+3. Open the **[TunemyMusic](https://www.tunemymusic.com/transfer)** website.
 4. Choose "Any Text" as the playlist source, paste the copied playlist, select Apple/Youtube/Spotify Music as the destination, and confirm the transfer.
 
 <img src="misc/images/1.png" style="width:60%; border: 1px solid black;"/>

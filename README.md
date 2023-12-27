@@ -1,6 +1,7 @@
 # 迁移网易云/QQ音乐歌单至 Apple/Youtube/Spotify Music
 
-简体中文| [English](README_EN.md) 
+> 简体中文| [English](README_EN.md) | [한국어](README_KO.md)
+>
 
 链接：https://music.unmeta.cn
 
