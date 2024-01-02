@@ -26,23 +26,19 @@ var (
 	restfulModeRegex = regexp.MustCompile(restfulModel)
 )
 
-func GetQQMusicParam(link string) (string, string, error) {
+func GetQQMusicParam(link string) (string, error) {
 	parse, err := url.ParseRequestURI(link)
 	if err != nil {
 		log.Errorf("fail to parse url: %v", err)
-		return "", "", err
+		return "", err
 	}
 	query, err := url.ParseQuery(parse.RawQuery)
 	if err != nil {
 		log.Errorf("fail to parse query: %v", err)
-		return "", "", err
+		return "", err
 	}
 	id := query.Get("id")
-	platform := query.Get("platform")
-	if platform == "" {
-		platform = "h5"
-	}
-	return id, platform, nil
+	return id, nil
 }
 
 func GetNetEasyParam(link string) (string, error) {

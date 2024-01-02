@@ -36,7 +36,9 @@ var (
 
 // QQMusicDiscover 获取qq音乐歌单
 func QQMusicDiscover(link string) (*models.SongList, error) {
-	tid, platform, err := getParams(link)
+	tid, err := getParams(link)
+	// platform 写死为-1
+	platform := "-1"
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +87,7 @@ func QQMusicDiscover(link string) (*models.SongList, error) {
 }
 
 // GetNetEasyParam 获取歌单id
-func getParams(link string) (tid int, platform string, err error) {
+func getParams(link string) (tid int, err error) {
 	if qqMusicV5Regx.MatchString(link) {
 		index := strings.Index(link, "playlist")
 		if index < 0 || index+19 > len(link) {
@@ -93,7 +95,7 @@ func getParams(link string) (tid int, platform string, err error) {
 			return
 		}
 		tid, err = strconv.Atoi(link[index+9 : index+19])
-		return tid, "android", nil
+		return tid, nil
 	}
 
 	if qqMusicV4Regx.MatchString(link) {
@@ -107,7 +109,7 @@ func getParams(link string) (tid int, platform string, err error) {
 			log.Errorf("fail to convert tid: %v", err)
 			return
 		}
-		return tid, "android", nil
+		return tid, nil
 	}
 	if qqMusicV1Regx.MatchString(link) {
 		link, err = httputil.GetRedirectLocation(link)
@@ -118,7 +120,7 @@ func getParams(link string) (tid int, platform string, err error) {
 	}
 	if qqMusicV2Regx.MatchString(link) {
 		var tidString string
-		tidString, platform, err = utils.GetQQMusicParam(link)
+		tidString, err = utils.GetQQMusicParam(link)
 		if err != nil {
 			log.Errorf("fail to get songs id: %v", err)
 			return
@@ -128,7 +130,7 @@ func getParams(link string) (tid int, platform string, err error) {
 			log.Errorf("fail to convert tid: %v", err)
 			return
 		}
-		return tid, platform, nil
+		return tid, nil
 	}
 	if qqMusicV3Regx.MatchString(link) {
 		index := strings.Index(link, "playlist")
@@ -137,7 +139,7 @@ func getParams(link string) (tid int, platform string, err error) {
 			return
 		}
 		tid, err = strconv.Atoi(link[index+9 : index+19])
-		return tid, "iphone", nil
+		return tid, nil
 	}
-	return 0, "", errors.New("invalid link")
+	return 0, errors.New("invalid link")
 }
