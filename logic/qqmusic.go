@@ -92,14 +92,12 @@ func getQQMusicResponse(tid int) ([]byte, error) {
 
 		resp, err = httputil.Post(link, strings.NewReader(paramString))
 		if err != nil {
+			resp.Body.Close()
 			continue
 		}
-		defer resp.Body.Close()
 
-		bytes, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, err // Handle read error
-		}
+		bytes, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
 
 		// 108 代表返回了错误的信息，并没有获取到歌曲
 		if len(bytes) != 108 { // Check for a valid response
