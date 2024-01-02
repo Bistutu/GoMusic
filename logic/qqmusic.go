@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
@@ -32,30 +33,22 @@ var (
 	qqMusicV3Regx = regexp.MustCompile(qqMusicV3)
 	qqMusicV4Regx = regexp.MustCompile(qqMusicV4)
 	qqMusicV5Regx = regexp.MustCompile(qqMusicV5)
+	platforms     = []string{"-1", "android", "iphone", "h5"}
 )
 
 // QQMusicDiscover 获取qq音乐歌单
 func QQMusicDiscover(link string) (*models.SongList, error) {
 	tid, err := getParams(link)
 	// platform 写死为-1
-	platform := "-1"
 	if err != nil {
 		return nil, err
 	}
 
-	// 获取请求参数与验证签名
-	paramString := models.GetQQMusicReqString(tid, platform)
-	sign := utils.Encrypt(paramString)
-
-	// 构建并发送请求
-	link = fmt.Sprintf(qqMusicPattern, sign, time.Now().UnixMilli())
-	resp, err := httputil.Post(link, strings.NewReader(paramString))
+	bytes, err := getQQMusicResponse(tid)
 	if err != nil {
-		log.Errorf("fail to get qqmusic: %v", err)
+		log.Errorf("fail to get qqmusic response: %v", err)
 		return nil, err
 	}
-	defer resp.Body.Close()
-	bytes, _ := io.ReadAll(resp.Body)
 
 	qqmusicResponse := &models.QQMusicResp{}
 	err = json.Unmarshal(bytes, qqmusicResponse)
@@ -84,6 +77,36 @@ func QQMusicDiscover(link string) (*models.SongList, error) {
 		Songs:      songsString,
 		SongsCount: qqmusicResponse.Req0.Data.Dirinfo.Songnum,
 	}, nil
+}
+
+// 适配不同的平台
+func getQQMusicResponse(tid int) ([]byte, error) {
+	platforms := []string{"-1", "android", "iphone", "h5", "windows"}
+	var resp *http.Response
+	var err error
+
+	for _, platform := range platforms {
+		paramString := models.GetQQMusicReqString(tid, platform)
+		sign := utils.Encrypt(paramString)
+		link := fmt.Sprintf(qqMusicPattern, sign, time.Now().UnixMilli())
+
+		resp, err = httputil.Post(link, strings.NewReader(paramString))
+		if err != nil {
+			continue
+		}
+		defer resp.Body.Close()
+
+		bytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err // Handle read error
+		}
+
+		// 108 代表返回了错误的信息，并没有获取到歌曲
+		if len(bytes) != 108 { // Check for a valid response
+			return bytes, nil
+		}
+	}
+	return nil, fmt.Errorf("failed to get qqmusic after trying all platforms: %v", err)
 }
 
 // GetNetEasyParam 获取歌单id

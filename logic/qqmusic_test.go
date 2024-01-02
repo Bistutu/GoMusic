@@ -16,6 +16,8 @@ func TestQQMusicDiscover(t *testing.T) {
 	// https://i.y.qq.com/n2/m/share/details/taoge.html?id=8177163754
 	// https://y.qq.com/n/ryqq/playlist/1953563505
 	// https://i.y.qq.com/n2/m/share/details/taoge.html?id=9115464345&hosteuin=
+	// https://i.y.qq.com/n2/m/share/details/taoge.html?hosteuin=owEkNKSzNK65&id=930054744&appversion=130000&ADTAG=qfshare&source=qq&appshare=iphone
+	// https://c6.y.qq.com/base/fcgi-bin/u?__=XogXh1TLpP1t
 
 	t.Run("v1", func(t *testing.T) {
 		discover, err := QQMusicDiscover("https://c6.y.qq.com/base/fcgi-bin/u?__=4V33zWKDE3tI")
@@ -54,6 +56,16 @@ func TestQQMusicDiscover(t *testing.T) {
 	})
 	t.Run("v8", func(t *testing.T) {
 		discover, err := QQMusicDiscover("https://i.y.qq.com/n2/m/share/details/taoge.html?id=9115464345&hosteuin=")
+		assert.NoError(t, err)
+		fmt.Println(discover)
+	})
+	t.Run("v9", func(t *testing.T) {
+		discover, err := QQMusicDiscover("https://i.y.qq.com/n2/m/share/details/taoge.html?hosteuin=owEkNKSzNK65&id=930054744&appversion=130000&ADTAG=qfshare&source=qq&appshare=iphone")
+		assert.NoError(t, err)
+		fmt.Println(discover)
+	})
+	t.Run("v10", func(t *testing.T) {
+		discover, err := QQMusicDiscover("https://c6.y.qq.com/base/fcgi-bin/u?__=XogXh1TLpP1t")
 		assert.NoError(t, err)
 		fmt.Println(discover)
 	})
