@@ -137,7 +137,7 @@ func getParams(link string) (tid int, platform string, err error) {
 			return
 		}
 		tid, err = strconv.Atoi(link[index+9 : index+19])
-		return tid, "h5", nil
+		return tid, "iphone", nil
 	}
 	return 0, "", errors.New("invalid link")
 }
