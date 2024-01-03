@@ -18,6 +18,7 @@ func TestQQMusicDiscover(t *testing.T) {
 	// https://i.y.qq.com/n2/m/share/details/taoge.html?id=9115464345&hosteuin=
 	// https://i.y.qq.com/n2/m/share/details/taoge.html?hosteuin=owEkNKSzNK65&id=930054744&appversion=130000&ADTAG=qfshare&source=qq&appshare=iphone
 	// https://c6.y.qq.com/base/fcgi-bin/u?__=XogXh1TLpP1t
+	// https://i.y.qq.com/n2/m/share/details/taoge.html?hosteuin=ownioivi7wvq7n**&id=8683730831&appversion=120801&ADTAG=wxfshare&appshare=iphone_wx
 
 	t.Run("v1", func(t *testing.T) {
 		discover, err := QQMusicDiscover("https://c6.y.qq.com/base/fcgi-bin/u?__=4V33zWKDE3tI")
@@ -66,6 +67,11 @@ func TestQQMusicDiscover(t *testing.T) {
 	})
 	t.Run("v10", func(t *testing.T) {
 		discover, err := QQMusicDiscover("https://c6.y.qq.com/base/fcgi-bin/u?__=XogXh1TLpP1t")
+		assert.NoError(t, err)
+		fmt.Println(discover)
+	})
+	t.Run("V11", func(t *testing.T) {
+		discover, err := QQMusicDiscover("https://i.y.qq.com/n2/m/share/details/taoge.html?hosteuin=ownioivi7wvq7n**&id=8683730831&appversion=120801&ADTAG=wxfshare&appshare=iphone_wx")
 		assert.NoError(t, err)
 		fmt.Println(discover)
 	})
