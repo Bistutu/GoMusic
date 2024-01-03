@@ -110,7 +110,7 @@
             <el-form-item>
                 <el-input type="textarea" v-model="result" :rows="15" placeholder="结果会显示在这里"></el-input>
             </el-form-item>
-            <el-form-item  class="songs-count-display">
+            <el-form-item class="songs-count-display">
                 <div v-show="songsCount > 0">歌曲总数: {{ songsCount }}</div>
             </el-form-item>
 
@@ -190,7 +190,11 @@
                 } catch (error) {
                     // 如果请求过程中发生错误，记录错误并显示错误消息
                     console.error(error);
-                    this.result = '❌请求过程中发生错误，请稍后重试~';
+                    if (error.response.data.code = -1) {
+                        this.result = '❌' + error.response.data.msg;
+                    } else {
+                        this.result = '❌请求过程中发生错误，请稍后重试~';
+                    }
                 }
             },
             // 复制结果到剪贴板的方法

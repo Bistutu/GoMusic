@@ -138,7 +138,7 @@ func getSongsInfo(link string) (*models.NetEasySongId, error) {
 	}
 	if SongIdsResp.Code == 401 {
 		log.Errorf("无权限访问, songList id: %v", songListId)
-		return nil, errors.New("抱歉，您无权限访问该歌单")
+		return nil, errors.New("无权限访问该歌单")
 	}
 	return SongIdsResp, nil
 }
