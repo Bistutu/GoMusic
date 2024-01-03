@@ -45,7 +45,7 @@ go build &&./GoMusic
 
 # 请作者喝杯咖啡☕️
 
-如果你觉得程序对你有所帮助，不妨请作者喝杯咖啡~
+如果觉得程序对你有所帮助，不妨请作者喝杯咖啡~
 
 <img src="misc/images/praise.jpeg" style="width:50%; border: 1px solid black;"/>
 
@@ -53,4 +53,6 @@ go build &&./GoMusic
 
 # 特别鸣谢
 
-……
+1. ThinkStu，程序开拓者 👩🏻‍🚀
+2. aptheparker，多语言版本贡献者
+3. …
