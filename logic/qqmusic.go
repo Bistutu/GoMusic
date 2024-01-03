@@ -80,10 +80,10 @@ func QQMusicDiscover(link string) (*models.SongList, error) {
 }
 
 // 适配不同的平台
-func getQQMusicResponse(tid int) ([]byte, error) {
-	platforms := []string{"-1", "android", "iphone", "h5", "windows"}
+func getQQMusicResponse(tid int) (bytes []byte, err error) {
+	platforms := []string{"-1", "android", "iphone", "h5", "wxfshare", "iphone_wx", "windows"}
+
 	var resp *http.Response
-	var err error
 
 	for _, platform := range platforms {
 		paramString := models.GetQQMusicReqString(tid, platform)
@@ -92,11 +92,11 @@ func getQQMusicResponse(tid int) ([]byte, error) {
 
 		resp, err = httputil.Post(link, strings.NewReader(paramString))
 		if err != nil {
-			resp.Body.Close()
+			log.Errorf("http error: %+v", err)
 			continue
 		}
 
-		bytes, _ := io.ReadAll(resp.Body)
+		bytes, _ = io.ReadAll(resp.Body)
 		resp.Body.Close()
 
 		// 108 代表返回了错误的信息，并没有获取到歌曲

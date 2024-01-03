@@ -132,11 +132,11 @@ func getSongsInfo(link string) (*models.NetEasySongId, error) {
 	body, _ := io.ReadAll(resp.Body)
 	SongIdsResp := &models.NetEasySongId{}
 	err = json.Unmarshal(body, SongIdsResp)
-	switch {
-	case err != nil:
+	if err != nil {
 		log.Errorf("fail to unmarshal: %v", err)
 		return nil, err
-	case SongIdsResp.Code == 401:
+	}
+	if SongIdsResp.Code == 401 {
 		log.Errorf("无权限访问, songList id: %v", songListId)
 		return nil, errors.New("抱歉，您无权限访问该歌单")
 	}

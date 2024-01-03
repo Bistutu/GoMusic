@@ -21,7 +21,7 @@ func Encrypt(param string) string {
 	t1 := selectChars(md5Str, []int{21, 4, 9, 26, 16, 20, 27, 30})
 	t3 := selectChars(md5Str, []int{18, 11, 3, 2, 1, 7, 6, 25})
 
-	var ls2 []int
+	ls2 := make([]int, 0, 16)
 	for i := 0; i < 16; i++ {
 		x1 := k1[string(md5Str[i*2])]
 		x2 := k1[string(md5Str[i*2+1])]
@@ -29,7 +29,7 @@ func Encrypt(param string) string {
 		ls2 = append(ls2, x3)
 	}
 
-	var ls3 []string
+	ls3 := make([]string, 0, 7)
 	for i := 0; i < 6; i++ {
 		if i == 5 {
 			ls3 = append(ls3, string(t[ls2[len(ls2)-1]>>2]), string(t[(ls2[len(ls2)-1]&3)<<4]))

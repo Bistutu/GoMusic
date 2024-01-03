@@ -3,6 +3,8 @@ package httputil
 import (
 	"io"
 	"net/http"
+
+	"GoMusic/misc/log"
 )
 
 const (
@@ -22,7 +24,11 @@ func init() {
 }
 
 func Post(link string, data io.Reader) (*http.Response, error) {
-	req, _ := http.NewRequest("POST", link, data)
+	req, err := http.NewRequest("POST", link, data)
+	if err != nil {
+		log.Errorf("http NewRequest error: %+v", err)
+		return nil, err
+	}
 	//req.Header.Add("User-Agent", UserAgent)
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	return client.Do(req)
