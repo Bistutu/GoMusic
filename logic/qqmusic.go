@@ -162,5 +162,5 @@ func getParams(link string) (tid int, err error) {
 		tid, err = strconv.Atoi(link[index+9 : index+19])
 		return tid, nil
 	}
-	return 0, errors.New("invalid link")
+	return 0, errors.New("无效的歌单链接")
 }

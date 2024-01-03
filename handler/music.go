@@ -51,12 +51,10 @@ func MusicHandler(c *gin.Context) {
 		if err != nil {
 			log.Errorf("fail to get qqmusic discover: %v", err)
 			c.JSON(http.StatusBadRequest, &models.Result{Code: -1, Msg: err.Error(), Data: nil})
+		} else {
+			c.JSON(200, &models.Result{Code: 1, Msg: SUCCESS, Data: songList})
 		}
-		c.JSON(200, &models.Result{
-			Code: 1,
-			Msg:  SUCCESS,
-			Data: songList,
-		})
+
 		return
 	// 3、都不是
 	default:
