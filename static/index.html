@@ -8,6 +8,13 @@
     <link href="https://unpkg.com/element-ui@2.14.1/lib/theme-chalk/index.css" rel="stylesheet">
 
     <style>
+        .songs-count-display {
+            text-align: center;
+            margin-top: -1.25em;
+            color: #333;
+            height: 1em;
+        }
+
         /* github tag*/
         .github-badge-container {
             text-align: center; /* 水平居中 */
@@ -95,15 +102,20 @@
                           placeholder="输入任意歌单链接，如：http://163cn.tv/zoIxm3"></el-input>
             </el-form-item>
             <el-form-item>
-                <el-button type="danger" class="button-center lang-song-list-btn" @click="fetchLinkDetails">获取歌单</el-button>
+                <el-button type="danger" class="button-center lang-song-list-btn" @click="fetchLinkDetails">获取歌单
+                </el-button>
                 </el-button>
 
             </el-form-item>
             <el-form-item>
                 <el-input type="textarea" v-model="result" :rows="15" placeholder="结果会显示在这里"></el-input>
             </el-form-item>
+            <el-form-item  class="songs-count-display">
+                <div v-show="songsCount > 0">歌曲总数: {{ songsCount }}</div>
+            </el-form-item>
+
             <el-form-item>
-                <el-button @click="copyResult" class="button-center lang-copy-btn">复制结果</el-button>
+                <el-button @click="copyResult" class="button-center">复制结果</el-button>
             </el-form-item>
         </el-form>
         <el-collapse v-model="activeNames">
@@ -131,7 +143,8 @@
             activeNames: ['first'], // 控制折叠面板的打开状态
             link: '', // 用户输入的链接
             result: '', // 显示处理结果或错误消息
-            isEnglish: false // Add a data property to track language state
+            isEnglish: false, // Add a data property to track language state
+            songsCount: 0    // 歌曲总数
         },
         methods: {
             // 验证输入的 URL 是否有效
@@ -173,6 +186,7 @@
                     });
                     // 设置结果，如果响应中有数据则显示歌曲列表，否则显示失败信息
                     this.result = response.data ? response.data.data.songs.join('\n') : '请求失败，请稍后再试~';
+                    this.songsCount = response.data ? response.data.data.songs_count : 0
                 } catch (error) {
                     // 如果请求过程中发生错误，记录错误并显示错误消息
                     console.error(error);
@@ -201,7 +215,7 @@
                 const collapseElement = this.$el.querySelector('.el-collapse');
                 const songListButtonElement = this.$el.querySelector('.lang-song-list-btn');
                 const copyButtonElement = this.$el.querySelector('.lang-copy-btn');
-                
+
                 if (this.isEnglish) {
                     headerElement.textContent = 'Migrate NetEase Cloud / QQ Music Playlists to Apple / Youtube / Spotify Music';
                     buttonElement.textContent = '中文';
