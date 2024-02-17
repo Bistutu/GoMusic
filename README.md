@@ -43,16 +43,22 @@ go build &&./GoMusic
 
 
 
-# 请作者喝杯咖啡☕️
+# 最重要的事情！
 
-如果觉得程序对你有所帮助，不妨请作者喝杯咖啡~
+**春招求职！**
 
-<img src="misc/images/praise.jpeg" style="width:50%; border: 1px solid black;"/>
+姓名：Chen Miankang
 
+院校：北京信息科技大学 计算机专业  2024 届本科毕业生
 
+专业技能：熟悉 Go 以及 Java 生态
 
-# 特别鸣谢
+实习经历：米哈游（半年）
 
-1. ThinkStu，程序开拓者 👩🏻‍🚀
-2. aptheparker，多语言版本贡献者
-3. …
+独立开发者作品：[流畅阅读](https://github.com/Bistutu/FluentRead)、[音乐迁移网站](https://github.com/Bistutu/gomusic)、[空闲教室查询应用](https://github.com/Bistutu/BistuEmpty)
+
+**在线简历**：[点击查看](https://thinkstu-typora.oss-cn-hangzhou.aliyuncs.com/typora/%E9%99%88%E7%BB%B5%E5%BA%B7-%E7%AE%80%E5%8E%86.pdf)
+
+**联系方式**：1914493943@qq.com
+
+<img src="./misc/images/wechat.jpg" alt="wechat" style="width: 35%; max-width: 100%;border: 1px solid black;">
