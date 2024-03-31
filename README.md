@@ -47,7 +47,7 @@ go build &&./GoMusic
 
 如果您希望向作者给予鼓励，请扫描下面二维码，您的名字将会出现在我们的赞助名单上。
 
-<img src="./misc/images/approve.jpg" alt="wechat" style="width: 35%; max-width: 100%;border: 1px solid black;">
+<img src="./misc/images/approve.png" alt="wechat" style="width: 35%; max-width: 100%;border: 1px solid black;">
 
 | 序号 |        🌼赞助者🌼        | 赞助金额 |
 | :--: | :--------------------: | :------: |
