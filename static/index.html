@@ -117,7 +117,7 @@
             </el-form-item>
 
             <el-form-item>
-                <el-button @click="copyResult" class="button-center">复制结果</el-button>
+                <el-button @click="copyResult" class="button-center lang-copy-btn">复制结果</el-button>
             </el-form-item>
         </el-form>
         <el-collapse v-model="activeNames">
@@ -126,7 +126,8 @@
                     <li>输入歌单链接，如：http://163cn.tv/zoIxm3</li>
                     <li>复制查询结果</li>
                     <li>打开 <b><a href="https://www.tunemymusic.com/zh-CN/transfer">TunemyMusic</a></b>
-                        网站</li>
+                        网站
+                    </li>
                     <li>选择歌单来源“任意文本”，将刚刚复制的歌单粘贴进去，选择 Apple/Youtube/Spotify Music
                         作为目的地，确认迁移
                     </li>
@@ -207,7 +208,8 @@
                 textarea.select(); // 选中 textarea 的内容
                 document.execCommand('copy'); // 执行复制命令
                 document.body.removeChild(textarea); // 从文档中移除 textarea
-                this.$message.success('已复制到剪贴板'); // 显示复制成功的消息
+                if (this.isEnglish) this.$message.success('Copied to clipboard'); // 显示复制成功的消息
+                else this.$message.success('已复制到剪贴板'); // 显示复制成功的消息
             },
             toggleLanguage() {
                 this.isEnglish = !this.isEnglish;
