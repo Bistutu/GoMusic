@@ -223,7 +223,7 @@
                 const copyButtonElement = this.$el.querySelector('.lang-copy-btn');
 
                 if (this.isEnglish) {
-                    headerElement.textContent = 'Migrate NetEase Cloud / QQ Music Playlists to Apple / Youtube / Spotify Music';
+                    headerElement.innerHTML = 'Migrate NetEase Cloud / QQ Music Playlists <br>to Apple / Youtube / Spotify Music';
                     buttonElement.textContent = '中文';
                     inputElement.setAttribute('placeholder', 'Enter any playlist link, such as: http://163cn.tv/zoIxm3');
                     textareaElement.setAttribute('placeholder', 'The result will be displayed here');
@@ -235,7 +235,7 @@
                     songListButtonElement.textContent = 'Get Song List';
                     copyButtonElement.textContent = 'Copy Result';
                 } else {
-                    headerElement.textContent = '迁移网易云/QQ音乐歌单至 Apple/Youtube/Spotify Music';
+                    headerElement.innerHTML = '迁移网易云/QQ音乐歌单至<br> Apple/Youtube/Spotify Music';
                     buttonElement.textContent = 'English';
                     inputElement.setAttribute('placeholder', '输入任意歌单链接，如：http://163cn.tv/zoIxm3');
                     textareaElement.setAttribute('placeholder', '结果会显示在这里');
