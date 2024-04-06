@@ -22,7 +22,7 @@
 
       <el-row justify="center" @submit.prevent="fetchLinkDetails">
         <el-col :md="12">
-          <el-form-item >
+          <el-form-item>
             <el-input v-model="state.link" size="large"
                       :placeholder="state.isEnglish ? i18n.inputPlaceholder.en : i18n.inputPlaceholder.zh"
                       @keyup.enter="fetchLinkDetails">
@@ -66,16 +66,31 @@
         <el-col :md="12">
           <el-collapse v-model="activeNames">
             <el-collapse-item :title="state.isEnglish ? i18n.guide.en : i18n.guide.zh" name="first">
-              <ol>
+              <ol class="middle-font">
                 <li>{{ state.isEnglish ? i18n.guideFirst.en : i18n.guideFirst.zh }}</li>
                 <li>{{ state.isEnglish ? i18n.guideSecond.en : i18n.guideSecond.zh }}</li>
                 <li>{{ state.isEnglish ? i18n.guideThird_1.en : i18n.guideThird_1.zh }}
                   <b><a :href="state.isEnglish ? i18n.TunemyMusicUrl.en: i18n.TunemyMusicUrl.zh" target="_blank">TunemyMusic</a></b>
+                  or <b><a href="https://spotlistr.com" target="_blank">Spotlistr</a></b>
                   {{ state.isEnglish ? i18n.guideThird_2.en : i18n.guideThird_2.zh }}
                 </li>
                 <li>{{ state.isEnglish ? i18n.guideFourth.en : i18n.guideFourth.zh }}</li>
               </ol>
             </el-collapse-item>
+
+            <el-collapse-item :title=" state.isEnglish ? i18n.sponsor.en : i18n.sponsor.zh " name="second">
+              <div class="middle-font">
+                <p>{{ state.isEnglish ? i18n.sponsorHint.en : i18n.sponsorHint.zh }}</p>
+                <img src="@/assets/approve.png" style="width: 35%;max-width: 80%">
+                <el-table :data="sponsorData" border stripe style="width: 80%;max-width: 100%">
+                  <el-table-column prop="no" :label=" state.isEnglish ? i18n.no.en : i18n.no.zh "/>
+                  <el-table-column prop="name" :label=" state.isEnglish ? i18n.sponsorName.en : i18n.sponsorName.zh "/>
+                  <el-table-column prop="sponsorship"
+                                   :label=" state.isEnglish ? i18n.sponsorship.en : i18n.sponsorship.zh "/>
+                </el-table>
+              </div>
+            </el-collapse-item>
+
           </el-collapse>
         </el-col>
       </el-row>
@@ -85,13 +100,13 @@
 </template>
 
 <script setup>
-import {reactive, ref} from 'vue';
+import {reactive} from 'vue';
 import axios from 'axios';
 import {ElMessage} from 'element-plus';
 import {isSupportedPlatform, isValidUrl} from "@/utils/utils";
 import {sendErrorMessage, sendSuccessMessage} from "@/utils/tip";
 
-const activeNames = ref(['first']);
+const activeNames = reactive(['first', 'second']);
 const state = reactive({
   link: '',
   result: '',
@@ -168,8 +183,39 @@ const i18n = {
     en: 'Copied to clipboard',
     zh: '已复制到剪贴板',
   },
+  sponsor: {
+    en: 'Sponsor List',
+    zh: '《赞助名单》',
+  },
+  sponsorHint: {
+    en: 'The website is completely free and open source. If you would like to encourage the author, please scan the following QR code with WeChat, and your name will appear on our sponsor list.',
+    zh: '网站完全免费和开源，如果您希望向作者给予鼓励，请使用微信扫描以下二维码，您的名字将会出现在我们的赞助名单上。',
+  },
+  no: {
+    en: 'No.',
+    zh: '序号',
+  },
+  sponsorName: {
+    en: '🌼Sponsor🌼',
+    zh: '🌼赞助者🌼',
+  },
+  sponsorship: {
+    en: 'Sponsorship ￥',
+    zh: '赞助金额￥',
+  },
 }
 
+// sponsor table data
+const sponsorData = [
+  {'no': '1', 'name': '什么长发及腰不如短发凉', 'sponsorship': '87'},
+  {'no': '2', 'name': 'Youyo🍊', 'sponsorship': '66'},
+  {'no': '3', 'name': '安分wa', 'sponsorship': '50'},
+  {'no': '4', 'name': '迷失了就不酷了', 'sponsorship': '30'},
+  {'no': '5', 'name': '︷.噓.低調', 'sponsorship': '16'},
+  {'no': '6', 'name': '汤晴', 'sponsorship': '6.6'},
+  {'no': '7', 'name': 'autism゛', 'sponsorship': '3'},
+  {'no': '8', 'name': '…', 'sponsorship': '…'}
+]
 
 function reset(msg) {
   sendErrorMessage(msg)
@@ -230,6 +276,31 @@ const toggleLanguage = () => {
   state.isEnglish = !state.isEnglish;
 };
 
+const debounce = (fn, delay) => {
+  let timer = null;
+
+  return function () {
+    let context = this;
+
+    let args = arguments;
+
+    clearTimeout(timer);
+
+    timer = setTimeout(function () {
+      fn.apply(context, args);
+    }, delay);
+  };
+};
+
+const _ResizeObserver = window.ResizeObserver;
+
+window.ResizeObserver = class ResizeObserver extends _ResizeObserver {
+  constructor(callback) {
+    callback = debounce(callback, 16);
+    super(callback);
+  }
+};
+
 </script>
 
 
@@ -283,7 +354,7 @@ const toggleLanguage = () => {
   display: flex !important; /* 输入框水平居中 */
 }
 
-.el-collapse-item ol li {
+.middle-font {
   font-size: medium;
 }
 
