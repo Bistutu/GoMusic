@@ -189,7 +189,7 @@ const i18n = {
   },
   sponsorHint: {
     en: 'The website is completely free and open source. If you would like to encourage the author, please scan the following QR code with WeChat, and your name will appear on our sponsor list.',
-    zh: '网站完全免费和开源，如果您希望向作者给予鼓励，请使用微信扫描以下二维码，您的名字将会出现在我们的赞助名单上。',
+    zh: '网站完全免费和开源，如果您希望向作者给予鼓励，请使用微信扫描以下二维码，您的名字将会出现在我们的赞助名单上（最近更新 2024.5.6）。',
   },
   no: {
     en: 'No.',
@@ -211,11 +211,12 @@ const sponsorData = [
   {'no': '2', 'name': 'Youyo🍊', 'sponsorship': '66'},
   {'no': '3', 'name': '安分wa', 'sponsorship': '50'},
   {'no': '4', 'name': '迷失了就不酷了', 'sponsorship': '30'},
-  {'no': '5', 'name': '︷.噓.低調', 'sponsorship': '16'},
-  {'no': '6', 'name': '汤晴', 'sponsorship': '6.6'},
-  {'no': '7', 'name': 'autism゛', 'sponsorship': '3'},
-  {'no': '8', 'name': '木木子', 'sponsorship': '1'},
-  {'no': '9', 'name': '…', 'sponsorship': '…'}
+  {'no': '5', 'name': '廿四味', 'sponsorship': '20'},
+  {'no': '6', 'name': '︷.噓.低調', 'sponsorship': '16'},
+  {'no': '7', 'name': '汤晴', 'sponsorship': '6.6'},
+  {'no': '8', 'name': 'autism゛', 'sponsorship': '3'},
+  {'no': '9', 'name': '木木子', 'sponsorship': '1'},
+  {'no': '10', 'name': '…', 'sponsorship': '…'}
 ]
 
 function reset(msg) {
