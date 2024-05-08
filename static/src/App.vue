@@ -215,8 +215,9 @@ const sponsorData = [
   {'no': '6', 'name': '︷.噓.低調', 'sponsorship': '16'},
   {'no': '7', 'name': '汤晴', 'sponsorship': '6.6'},
   {'no': '8', 'name': 'autism゛', 'sponsorship': '3'},
-  {'no': '9', 'name': '木木子', 'sponsorship': '1'},
-  {'no': '10', 'name': '…', 'sponsorship': '…'}
+  {'no': '9', 'name': '王传坤', 'sponsorship': '1'},
+  {'no': '10', 'name': '木木子', 'sponsorship': '1'},
+  {'no': '11', 'name': '…', 'sponsorship': '…'}
 ]
 
 function reset(msg) {
