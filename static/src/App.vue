@@ -76,6 +76,13 @@
                 </li>
                 <li>{{ state.isEnglish ? i18n.guideFourth.en : i18n.guideFourth.zh }}</li>
               </ol>
+<!--              备注元素-->
+              <blockquote>
+              <p>
+                {{ state.isEnglish ? 'How to migrate to NetEase Cloud Music/QQ Music' : '想在网易云/QQ音乐之间实现音乐互转？' }}
+                {{ state.isEnglish ? 'See GitHub issue: ' : '见：' }}<a href="https://github.com/Bistutu/GoMusic/issues/17" target="_blank">GitHub issue</a>
+              </p>
+              </blockquote>
             </el-collapse-item>
 
             <el-collapse-item :title=" state.isEnglish ? i18n.sponsor.en : i18n.sponsor.zh " name="second">
@@ -165,7 +172,7 @@ const i18n = {
   },
   guideFourth: {
     en: 'Select playlist source as "Any Text", paste the copied playlist, select Apple/Youtube/Spotify Music as destination, confirm migration',
-    zh: '选择歌单来源“任意文本”，将刚刚复制的歌单粘贴进去，选择 Apple/Youtube/Spotify Music 作为目的地，确认迁移',
+    zh: '选择歌单来源“任意文本”，将刚刚复制的歌单文本粘贴进去，选择 Apple/Youtube/Spotify Music 作为目的地，确认迁移',
   },
   about: {
     en: 'About author',
@@ -188,8 +195,8 @@ const i18n = {
     zh: '《赞助名单》',
   },
   sponsorHint: {
-    en: 'The website is completely free and open source. If you would like to encourage the author, please scan the following QR code with WeChat, and your name will appear on our sponsor list.',
-    zh: '网站完全免费和开源，如果您希望向作者给予鼓励，请使用微信扫描以下二维码，您的名字将会出现在我们的赞助名单上（最近更新 2024.5.6）。',
+    en: 'The website is free and open-source, kept simple, and aims to provide value to more people. If you want to support the author, please scan the sponsor code with WeChat. Your name will appear on the sponsor list (updated on 2024.5.18).',
+    zh: '网站免费开源、保持简单，旨在为更多人带来价值。如果您想支持作者，请用微信扫描赞赏码，您的名字将出现在赞助名单上（更新于 2024.5.18）',
   },
   no: {
     en: 'No.',
