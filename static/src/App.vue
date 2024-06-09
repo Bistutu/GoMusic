@@ -204,7 +204,7 @@ const i18n = {
   },
   sponsorHint: {
     en: 'The website is free and open-source, kept simple, and aims to provide value to more people. If you want to support the author, please scan the sponsor code with WeChat. Your name will appear on the sponsor list (updated on 2024.5.18).',
-    zh: '网站免费开源、保持简单，旨在为更多人带来价值。如果您想支持作者，请用微信扫描赞赏码，您的名字将出现在赞助名单上（更新于 2024.5.18）',
+    zh: '网站免费开源、保持简单，旨在为更多人带来价值。如果您想支持作者，请用微信扫描赞赏码，您的名字将出现在赞助名单上（更新于 2024.6.09）',
   },
   no: {
     en: 'No.',
