@@ -225,16 +225,19 @@ const sponsorData = [
   {'no': '1', 'name': '什么长发及腰不如短发凉', 'sponsorship': '87'},
   {'no': '2', 'name': 'Youyo🍊', 'sponsorship': '66'},
   {'no': '3', 'name': '安分wa', 'sponsorship': '50'},
-  {'no': '4', 'name': '迷失了就不酷了', 'sponsorship': '30'},
-  {'no': '5', 'name': '廿四味', 'sponsorship': '20'},
-  {'no': '6', 'name': '︷.噓.低調', 'sponsorship': '16'},
-  {'no': '7', 'name': '汤晴', 'sponsorship': '6.6'},
-  {'no': '8', 'name': 'autism゛', 'sponsorship': '3'},
-  {'no': '9', 'name': 'Jack', 'sponsorship': '1'},
-  {'no': '10', 'name': 'HK记者', 'sponsorship': '1'},
-  {'no': '11', 'name': '王传坤', 'sponsorship': '1'},
-  {'no': '12', 'name': '木木子', 'sponsorship': '1'},
-  {'no': '13', 'name': '…', 'sponsorship': '…'}
+  {'no': '4', 'name': '匿名用户', 'sponsorship': '30'},
+  {'no': '5', 'name': '迷失了就不酷了', 'sponsorship': '30'},
+  {'no': '6', 'name': '廿四味', 'sponsorship': '20'},
+  {'no': '7', 'name': '︷.噓.低調', 'sponsorship': '16'},
+  {'no': '8', 'name': '汤晴', 'sponsorship': '6.6'},
+  {'no': '9', 'name': 'autism゛', 'sponsorship': '3'},
+  {'no': '10', 'name': 'Jack', 'sponsorship': '1'},
+  {'no': '11', 'name': 'HK记者', 'sponsorship': '1'},
+  {'no': '12', 'name': '王传坤', 'sponsorship': '1'},
+  {'no': '13', 'name': '木木子', 'sponsorship': '1'},
+  {'no': '14', 'name': 'young', 'sponsorship': '1'},
+  {'no': '15', 'name': '拍视频的🐠', 'sponsorship': '1'},
+  {'no': '16', 'name': '…', 'sponsorship': '…'}
 ]
 
 function reset(msg) {
