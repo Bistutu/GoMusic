@@ -204,7 +204,7 @@ const i18n = {
   },
   sponsorHint: {
     en: 'The website is free and open-source, kept simple, and aims to provide value to more people. If you want to support the author, please scan the sponsor code with WeChat. Your name will appear on the sponsor list (updated on 2024.5.18).',
-    zh: '网站免费开源、保持简单，旨在为更多人带来价值。如果您想支持作者，请用微信扫描赞赏码，您的名字将出现在赞助名单上（更新于 2024.6.26）',
+    zh: '网站免费、开源、保持简单，旨在帮助更多人。如果你想支持作者，请使用微信扫描赞赏码，您的名字将出现在赞助名单（更新于 2024.7.3）',
   },
   no: {
     en: 'No.',
@@ -229,16 +229,18 @@ const sponsorData = [
   {'no': '5', 'name': '迷失了就不酷了', 'sponsorship': '30'},
   {'no': '6', 'name': '廿四味', 'sponsorship': '20'},
   {'no': '7', 'name': '︷.噓.低調', 'sponsorship': '16'},
-  {'no': '8', 'name': 'DSH', 'sponsorship': '10'},
-  {'no': '9', 'name': '汤晴', 'sponsorship': '6.6'},
-  {'no': '10', 'name': 'autism゛', 'sponsorship': '3'},
-  {'no': '11', 'name': 'Jack', 'sponsorship': '1'},
-  {'no': '12', 'name': 'HK记者', 'sponsorship': '1'},
-  {'no': '13', 'name': '王传坤', 'sponsorship': '1'},
-  {'no': '14', 'name': '木木子', 'sponsorship': '1'},
-  {'no': '15', 'name': 'young', 'sponsorship': '1'},
-  {'no': '16', 'name': '拍视频的🐠', 'sponsorship': '1'},
-  {'no': '17', 'name': '…', 'sponsorship': '…'}
+  {'no': '8', 'name': '歪脖子树（Zircon）', 'sponsorship':'10'},
+  {'no': '9', 'name': 'DSH', 'sponsorship': '10'},
+  {'no': '10', 'name': '汤晴', 'sponsorship': '6.6'},
+  {'no': '11', 'name': 'autism゛', 'sponsorship': '3'},
+  {'no': '12', 'name': 'Jack', 'sponsorship': '1'},
+  {'no': '13', 'name': 'HK记者', 'sponsorship': '1'},
+  {'no': '14', 'name': '王传坤', 'sponsorship': '1'},
+  {'no': '15', 'name': '木木子', 'sponsorship': '1'},
+  {'no': '16', 'name': 'young', 'sponsorship': '1'},
+  {'no': '17', 'name': '拍视频的🐠', 'sponsorship': '1'},
+  {'no': '18', 'name': '良人眷', 'sponsorship': '1'},
+  {'no': '19', 'name': '…', 'sponsorship': '…'}
 ]
 
 function reset(msg) {
