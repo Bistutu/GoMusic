@@ -231,16 +231,17 @@ const sponsorData = [
   {'no': '7', 'name': '︷.噓.低調', 'sponsorship': '16'},
   {'no': '8', 'name': '歪脖子树（Zircon）', 'sponsorship':'10'},
   {'no': '9', 'name': 'DSH', 'sponsorship': '10'},
-  {'no': '10', 'name': '汤晴', 'sponsorship': '6.6'},
-  {'no': '11', 'name': 'autism゛', 'sponsorship': '3'},
-  {'no': '12', 'name': 'Jack', 'sponsorship': '1'},
-  {'no': '13', 'name': 'HK记者', 'sponsorship': '1'},
-  {'no': '14', 'name': '王传坤', 'sponsorship': '1'},
-  {'no': '15', 'name': '木木子', 'sponsorship': '1'},
-  {'no': '16', 'name': 'young', 'sponsorship': '1'},
-  {'no': '17', 'name': '拍视频的🐠', 'sponsorship': '1'},
-  {'no': '18', 'name': '良人眷', 'sponsorship': '1'},
-  {'no': '19', 'name': '…', 'sponsorship': '…'}
+  {'no': '10', 'name': '渡人', 'sponsorship': '10'},
+  {'no': '11', 'name': '汤晴', 'sponsorship': '6.6'},
+  {'no': '12', 'name': 'autism゛', 'sponsorship': '3'},
+  {'no': '13', 'name': 'Jack', 'sponsorship': '1'},
+  {'no': '14', 'name': 'HK记者', 'sponsorship': '1'},
+  {'no': '15', 'name': '王传坤', 'sponsorship': '1'},
+  {'no': '16', 'name': '木木子', 'sponsorship': '1'},
+  {'no': '17', 'name': 'young', 'sponsorship': '1'},
+  {'no': '18', 'name': '拍视频的🐠', 'sponsorship': '1'},
+  {'no': '19', 'name': '良人眷', 'sponsorship': '1'},
+  {'no': '20', 'name': '…', 'sponsorship': '…'}
 ]
 
 function reset(msg) {
