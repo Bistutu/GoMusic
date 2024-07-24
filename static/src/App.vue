@@ -203,8 +203,8 @@ const i18n = {
     zh: '《赞助名单》',
   },
   sponsorHint: {
-    en: 'The website is free and open-source, kept simple, and aims to provide value to more people. If you want to support the author, please scan the sponsor code with WeChat. Your name will appear on the sponsor list (updated on 2024.5.18).',
-    zh: '网站免费、开源、保持简单，旨在帮助更多人。如果你想支持作者，请使用微信扫描赞赏码，您的名字将出现在赞助名单（更新于 2024.7.3）',
+    en: 'The website is free and open-source, kept simple, and aims to provide value to more people. If you want to support the author, please scan the sponsor code with WeChat. Your name will appear on the sponsor list (updated on 2024.7.24).',
+    zh: '网站免费、开源、保持简单，旨在帮助更多人。如果你想支持作者，请使用微信扫描赞赏码，您的名字将出现在赞助名单（更新于 2024.7.24）',
   },
   no: {
     en: 'No.',

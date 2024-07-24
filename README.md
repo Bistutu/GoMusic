@@ -41,7 +41,7 @@ go build &&./GoMusic
 
 # 赞赏码
 
-网站免费、开源、保持简单，旨在帮助更多人。如果你想支持作者，请使用微信扫描赞赏码，您的名字将出现在赞助名单（最后更新 2024.7.3）。
+网站免费、开源、保持简单，旨在帮助更多人。如果你想支持作者，请使用微信扫描赞赏码，您的名字将出现在赞助名单（最后更新 2024.7.24）。
 
 <img src="./misc/images/approve.png" alt="wechat" style="width: 35%; max-width: 100%;border: 1px solid black;">
 
