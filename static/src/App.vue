@@ -204,7 +204,7 @@ const i18n = {
   },
   sponsorHint: {
     en: 'The website is free and open-source, kept simple, and aims to provide value to more people. If you want to support the author, please scan the sponsor code with WeChat. Your name will appear on the sponsor list (updated on 2024.7.24).',
-    zh: '网站免费、开源、保持简单，旨在帮助更多人。如果你想支持作者，请使用微信扫描赞赏码，您的名字将出现在赞助名单（更新于 2024.7.24）',
+    zh: '网站免费、开源、保持简单，如果你想支持作者，请使用微信扫描赞赏码，以下是赞赏榜的前10名赞助者（最后更新 2024.9.6）。',
   },
   no: {
     en: 'No.',
@@ -232,18 +232,7 @@ const sponsorData = [
   {'no': '8', 'name': '王云鹏', 'sponsorship': '10'},
   {'no': '9', 'name': '歪脖子树（Zircon）', 'sponsorship': '10'},
   {'no': '10', 'name': 'DSH', 'sponsorship': '10'},
-  {'no': '11', 'name': '渡人', 'sponsorship': '10'},
-  {'no': '12', 'name': '汤晴', 'sponsorship': '6.6'},
-  {'no': '13', 'name': 'autism゛', 'sponsorship': '3'},
-  {'no': '14', 'name': 'Jack', 'sponsorship': '1'},
-  {'no': '15', 'name': 'HK记者', 'sponsorship': '1'},
-  {'no': '16', 'name': '王传坤', 'sponsorship': '1'},
-  {'no': '17', 'name': '木木子', 'sponsorship': '1'},
-  {'no': '18', 'name': 'young', 'sponsorship': '1'},
-  {'no': '19', 'name': '拍视频的🐠', 'sponsorship': '1'},
-  {'no': '20', 'name': '良人眷', 'sponsorship': '1'},
-  {'no': '21', 'name': '王康', 'sponsorship': '1'},
-  {'no': '22', 'name': '…', 'sponsorship': '…'}
+  {'no': '...', 'name': '…', 'sponsorship': '…'}
 ]
 
 function reset(msg) {

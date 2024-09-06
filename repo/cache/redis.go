@@ -11,6 +11,10 @@ import (
 	"GoMusic/misc/log"
 )
 
+const (
+	month = 30 * 24 * time.Hour
+)
+
 var (
 	ctx = context.Background()
 	rdb *redis.Client
@@ -50,8 +54,8 @@ func MGet(keys ...string) ([]interface{}, error) {
 func MSet(kv sync.Map) error {
 	pipeline := rdb.Pipeline()
 	kv.Range(func(k, v any) bool {
-		// 缓存 72 小时
-		pipeline.Set(ctx, k.(string), v, 72*time.Hour)
+		// 缓存 30 天
+		pipeline.Set(ctx, k.(string), v, month)
 		return true
 	})
 	// 不关注单个命令的执行结果，只关注 pipeline 执行的结果

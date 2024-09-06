@@ -3,8 +3,7 @@ package models
 import "fmt"
 
 type SongList struct {
-	// 歌单名
-	Name       string   `json:"name"`
+	Name       string   `json:"name"` // 歌单名称
 	Songs      []string `json:"songs"`
 	SongsCount int      `json:"songs_count"`
 }

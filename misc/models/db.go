@@ -2,6 +2,7 @@ package models
 
 import "gorm.io/gorm"
 
+// NetEasySong 网易云歌曲
 type NetEasySong struct {
 	gorm.Model
 	Id    uint   `gorm:"column:id"`
