@@ -203,8 +203,8 @@ const i18n = {
     zh: '《赞助名单》',
   },
   sponsorHint: {
-    en: 'The website is free and open-source, kept simple, and aims to provide value to more people. If you want to support the author, please scan the sponsor code with WeChat. Your name will appear on the sponsor list (updated on 2024.7.24).',
-    zh: '网站免费、开源、保持简单，如果你想支持作者，请使用微信扫描赞赏码，以下是赞赏榜的前10名赞助者（最后更新 2024.9.6）。',
+    en: 'The website is free, open-source, and kept simple. If you want to support the author, please scan the sponsor code with WeChat. Below are the top 10 sponsors (last updated on 2024.10.4)',
+    zh: '网站免费、开源、保持简单，如果你想支持作者，请使用微信扫描赞赏码，以下是赞赏榜的前10名赞助者（最后更新 2024.10.4）',
   },
   no: {
     en: 'No.',
@@ -225,13 +225,13 @@ const sponsorData = [
   {'no': '1', 'name': '什么长发及腰不如短发凉', 'sponsorship': '87'},
   {'no': '2', 'name': 'Youyo🍊', 'sponsorship': '66'},
   {'no': '3', 'name': '安分wa', 'sponsorship': '50'},
-  {'no': '4', 'name': '匿名用户', 'sponsorship': '30'},
-  {'no': '5', 'name': '迷失了就不酷了', 'sponsorship': '30'},
-  {'no': '6', 'name': '廿四味', 'sponsorship': '20'},
-  {'no': '7', 'name': '︷.噓.低調', 'sponsorship': '16'},
-  {'no': '8', 'name': '王云鹏', 'sponsorship': '10'},
-  {'no': '9', 'name': '歪脖子树（Zircon）', 'sponsorship': '10'},
-  {'no': '10', 'name': 'DSH', 'sponsorship': '10'},
+  {'no': '4', 'name': '平', 'sponsorship': '30'},
+  {'no': '5', 'name': '匿名用户', 'sponsorship': '30'},
+  {'no': '6', 'name': '迷失了就不酷了', 'sponsorship': '30'},
+  {'no': '7', 'name': '廿四味', 'sponsorship': '20'},
+  {'no': '8', 'name': '︷.噓.低調', 'sponsorship': '16'},
+  {'no': '9', 'name': '王云鹏', 'sponsorship': '10'},
+  {'no': '10', 'name': '歪脖子树（Zircon）', 'sponsorship': '10'},
   {'no': '...', 'name': '…', 'sponsorship': '…'}
 ]
 
