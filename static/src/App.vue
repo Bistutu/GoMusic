@@ -247,7 +247,7 @@ const fetchLinkDetails = async () => {
   state.link = state.link.trim();
 
   if (!isValidUrl(state.link) || !isSupportedPlatform(state.link)) {
-    reset(state.isEnglish ? 'Invalid link, only support Netease and QQ Music' : '链接无效，平台仅支持网易云音乐和QQ音乐');
+    reset(state.isEnglish ? 'Invalid link, only support Netease and QQ Music' : '链接无效，平台仅支持网易云音乐QQ音乐和汽水音乐');
     return;
   }
 
