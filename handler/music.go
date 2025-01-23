@@ -1,26 +1,27 @@
 package handler
 
 import (
+	"GoMusic/logic"
+	"GoMusic/misc/log"
+	"GoMusic/misc/models"
 	"net/http"
 	"regexp"
 
 	"github.com/gin-gonic/gin"
-
-	"GoMusic/logic"
-	"GoMusic/misc/log"
-	"GoMusic/misc/models"
 )
 
 const (
-	netEasy = `(163cn)|(\.163\.)`
-	qqMusic = `.qq.`
-	SUCCESS = "success"
+	netEasy     = `(163cn)|(\.163\.)`
+	qqMusic     = `.qq.`
+	qishuiMusic = `/qishui`
+	SUCCESS     = "success"
 )
 
 var (
-	netEasyRegx, _ = regexp.Compile(netEasy)
-	qqMusicRegx, _ = regexp.Compile(qqMusic)
-	requestCount   = 1
+	netEasyRegx, _     = regexp.Compile(netEasy)
+	qqMusicRegx, _     = regexp.Compile(qqMusic)
+	qishuiMusicRegx, _ = regexp.Compile(qishuiMusic)
+	requestCount       = 1
 )
 
 func MusicHandler(c *gin.Context) {
@@ -56,7 +57,16 @@ func MusicHandler(c *gin.Context) {
 		}
 
 		return
-	// 3、都不是
+	// 3、汽水音乐
+	case qishuiMusicRegx.MatchString(link):
+		songList, err := logic.QiShuiMusicDiscover(link)
+		if err != nil {
+			log.Errorf("fail to get qqmusic discover: %v", err)
+			c.JSON(http.StatusBadRequest, &models.Result{Code: -1, Msg: err.Error(), Data: nil})
+		} else {
+			c.JSON(200, &models.Result{Code: 1, Msg: SUCCESS, Data: songList})
+		}
+	//4、都不是
 	default:
 		c.JSON(http.StatusBadRequest, nil)
 	}
