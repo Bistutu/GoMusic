@@ -21,57 +21,57 @@ func TestQQMusicDiscover(t *testing.T) {
 	// https://i.y.qq.com/n2/m/share/details/taoge.html?hosteuin=ownioivi7wvq7n**&id=8683730831&appversion=120801&ADTAG=wxfshare&appshare=iphone_wx
 
 	t.Run("v1", func(t *testing.T) {
-		discover, err := QQMusicDiscover("https://c6.y.qq.com/base/fcgi-bin/u?__=4V33zWKDE3tI")
+		discover, err := QQMusicDiscover("https://c6.y.qq.com/base/fcgi-bin/u?__=4V33zWKDE3tI", false)
 		assert.NoError(t, err)
 		fmt.Println(discover)
 	})
 	t.Run("v2", func(t *testing.T) {
-		discover, err := QQMusicDiscover("https://y.qq.com/n/ryqq/playlist/7364061065")
+		discover, err := QQMusicDiscover("https://y.qq.com/n/ryqq/playlist/7364061065", false)
 		assert.NoError(t, err)
 		fmt.Println(discover)
 	})
 	t.Run("v3", func(t *testing.T) {
-		discover, err := QQMusicDiscover("https://i.y.qq.com/n2/m/share/details/taoge.html?hosteuin=oKE57evqoiEPoz**&id=1596010000&appversion=120801&ADTAG=wxfshare&appshare=iphone_wx")
+		discover, err := QQMusicDiscover("https://i.y.qq.com/n2/m/share/details/taoge.html?hosteuin=oKE57evqoiEPoz**&id=1596010000&appversion=120801&ADTAG=wxfshare&appshare=iphone_wx", false)
 		assert.NoError(t, err)
 		fmt.Println(discover)
 	})
 	t.Run("v4", func(t *testing.T) {
-		discover, err := QQMusicDiscover("https://i.y.qq.com/n2/m/share/details/taoge.html?platform=11&appshare=android_qq&appversion=12090008&hosteuin=oK6kowEAoK4z7eSk7eEloKCFoz**&id=5204875759&ADTAG=wxfshare")
+		discover, err := QQMusicDiscover("https://i.y.qq.com/n2/m/share/details/taoge.html?platform=11&appshare=android_qq&appversion=12090008&hosteuin=oK6kowEAoK4z7eSk7eEloKCFoz**&id=5204875759&ADTAG=wxfshare", false)
 		assert.NoError(t, err)
 		fmt.Println(discover)
 	})
 	t.Run("v5", func(t *testing.T) {
-		discover, err := QQMusicDiscover("https://i.y.qq.com/n2/m/share/details/taoge.html?id=9094523921")
+		discover, err := QQMusicDiscover("https://i.y.qq.com/n2/m/share/details/taoge.html?id=9094523921", false)
 		assert.NoError(t, err)
 		fmt.Println(discover)
 	})
 	t.Run("v6", func(t *testing.T) {
-		discover, err := QQMusicDiscover("https://i.y.qq.com/n2/m/share/details/taoge.html?id=8177163754")
+		discover, err := QQMusicDiscover("https://i.y.qq.com/n2/m/share/details/taoge.html?id=8177163754", false)
 		assert.NoError(t, err)
 		fmt.Println(discover)
 	})
 	t.Run("v7", func(t *testing.T) {
-		discover, err := QQMusicDiscover("https://y.qq.com/n/ryqq/playlist/1953563505")
+		discover, err := QQMusicDiscover("https://y.qq.com/n/ryqq/playlist/1953563505", false)
 		assert.NoError(t, err)
 		fmt.Println(discover)
 	})
 	t.Run("v8", func(t *testing.T) {
-		discover, err := QQMusicDiscover("https://i.y.qq.com/n2/m/share/details/taoge.html?id=9115464345&hosteuin=")
+		discover, err := QQMusicDiscover("https://i.y.qq.com/n2/m/share/details/taoge.html?id=9115464345&hosteuin=", false						)
 		assert.NoError(t, err)
 		fmt.Println(discover)
 	})
 	t.Run("v9", func(t *testing.T) {
-		discover, err := QQMusicDiscover("https://i.y.qq.com/n2/m/share/details/taoge.html?hosteuin=owEkNKSzNK65&id=930054744&appversion=130000&ADTAG=qfshare&source=qq&appshare=iphone")
+		discover, err := QQMusicDiscover("https://i.y.qq.com/n2/m/share/details/taoge.html?hosteuin=owEkNKSzNK65&id=930054744&appversion=130000&ADTAG=qfshare&source=qq&appshare=iphone", false)
 		assert.NoError(t, err)
 		fmt.Println(discover)
 	})
 	t.Run("v10", func(t *testing.T) {
-		discover, err := QQMusicDiscover("https://c6.y.qq.com/base/fcgi-bin/u?__=XogXh1TLpP1t")
+		discover, err := QQMusicDiscover("https://c6.y.qq.com/base/fcgi-bin/u?__=XogXh1TLpP1t", false)
 		assert.NoError(t, err)
 		fmt.Println(discover)
 	})
 	t.Run("V11", func(t *testing.T) {
-		discover, err := QQMusicDiscover("https://i.y.qq.com/n2/m/share/details/taoge.html?hosteuin=ownioivi7wvq7n**&id=8683730831&appversion=120801&ADTAG=wxfshare&appshare=iphone_wx")
+		discover, err := QQMusicDiscover("https://i.y.qq.com/n2/m/share/details/taoge.html?hosteuin=ownioivi7wvq7n**&id=8683730831&appversion=120801&ADTAG=wxfshare&appshare=iphone_wx", false)
 		assert.NoError(t, err)
 		fmt.Println(discover)
 	})

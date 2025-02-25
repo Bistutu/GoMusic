@@ -31,6 +31,16 @@
         </el-col>
       </el-row>
 
+      <el-row justify="center">
+        <el-col :md="12">
+          <el-form-item>
+            <el-checkbox v-model="state.useDetailedSongName">
+              {{ state.isEnglish ? i18n.detailedSongName.en : i18n.detailedSongName.zh }}
+            </el-checkbox>
+          </el-form-item>
+        </el-col>
+      </el-row>
+
       <el-form-item>
         <el-button type="danger" class="button-center lang-song-list-btn" @click="fetchLinkDetails">
           {{ state.isEnglish ? i18n.fetchSongList.en : i18n.fetchSongList.zh }}
@@ -119,6 +129,7 @@ const state = reactive({
   result: '',
   isEnglish: false,
   songsCount: 0,
+  useDetailedSongName: false,
 });
 
 const i18n = {
@@ -172,7 +183,7 @@ const i18n = {
   },
   guideFourth: {
     en: 'Select playlist source as "Any Text", paste the copied playlist, select Apple/Youtube/Spotify Music as destination, confirm migration',
-    zh: '选择歌单来源“任意文本”，将刚刚复制的歌单文本粘贴进去，选择 Apple/Youtube/Spotify Music 作为目的地，确认迁移',
+    zh: '选择歌单来源"任意文本"，将刚刚复制的歌单文本粘贴进去，选择 Apple/Youtube/Spotify Music 作为目的地，确认迁移',
   },
   tipBetweenNetEaseAndQQ: {
     en: 'How to migrate to NetEase Cloud Music/QQ Music',
@@ -218,6 +229,10 @@ const i18n = {
     en: 'Sponsorship ￥',
     zh: '赞助金额￥',
   },
+  detailedSongName: {
+    en: 'Use detailed song name (original song name without processing)',
+    zh: '使用详细歌曲名（未经处理的原始歌曲名）',
+  },
 }
 
 // sponsor table data
@@ -255,9 +270,13 @@ const fetchLinkDetails = async () => {
   params.append('url', state.link);
 
   try {
-    // const resp = await axios.post('https://music.unmeta.cn/songlist', params, {
-    const resp = await axios.post('https://sss.unmeta.cn/songlist', params, {
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'}
+    // 本地开发环境URL
+    const resp = await axios.post('http://127.0.0.1:8081/songlist'+ (state.useDetailedSongName ? '?detailed=true' : ''), params, {
+    // 生产环境URL
+    // const resp = await axios.post('https://sss.unmeta.cn/songlist' + (state.useDetailedSongName ? '?detailed=true' : ''), params, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
     });
 
     console.log(resp.data)
