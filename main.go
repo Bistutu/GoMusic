@@ -1,12 +1,11 @@
 package main
 
 import (
-	"fmt"
-
 	"GoMusic/handler"
 	"GoMusic/misc/log"
 	"GoMusic/misc/models"
 	_ "GoMusic/repo/db"
+	"fmt"
 )
 
 func main() {

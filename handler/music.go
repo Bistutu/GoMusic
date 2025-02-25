@@ -1,29 +1,27 @@
 package handler
 
 import (
+	"GoMusic/logic"
+	"GoMusic/misc/log"
+	"GoMusic/misc/models"
 	"net/http"
 	"regexp"
 	"sync/atomic"
 
 	"github.com/gin-gonic/gin"
-
-	"GoMusic/logic"
-	"GoMusic/misc/log"
-	"GoMusic/misc/models"
 )
 
 const (
-	// 正则表达式模式
-	netEasyPattern = `(163cn)|(\.163\.)`
-	qqMusicPattern = `.qq.`
-
-	// 响应消息
-	successMsg = "success"
+	netEasy     = `(163cn)|(\.163\.)`
+	qqMusic     = `.qq.`
+	qishuiMusic = `/qishui`
+	SUCCESS     = "success"
 )
 
 var (
-	netEasyRegx, _ = regexp.Compile(netEasyPattern)
-	qqMusicRegx, _ = regexp.Compile(qqMusicPattern)
+	netEasyRegx, _     = regexp.Compile(netEasy)
+	qqMusicRegx, _     = regexp.Compile(qqMusic)
+	qishuiMusicRegx, _ = regexp.Compile(qishuiMusic)
 	counter        atomic.Int64 // request counter
 )
 
@@ -41,6 +39,14 @@ func MusicHandler(c *gin.Context) {
 		handleNetEasyMusic(c, link, detailed)
 	case qqMusicRegx.MatchString(link):
 		handleQQMusic(c, link, detailed)
+	case qishuiMusicRegx.MatchString(link):
+		songList, err := logic.QiShuiMusicDiscover(link)
+		if err != nil {
+			log.Errorf("fail to get qqmusic discover: %v", err)
+			c.JSON(http.StatusBadRequest, &models.Result{Code: -1, Msg: err.Error(), Data: nil})
+		} else {
+			c.JSON(200, &models.Result{Code: 1, Msg: SUCCESS, Data: songList})
+		}
 	default:
 		log.Warnf("不支持的音乐链接格式: %s", link)
 		c.JSON(http.StatusBadRequest, &models.Result{Code: models.FailureCode, Msg: "不支持的音乐链接格式", Data: nil})
