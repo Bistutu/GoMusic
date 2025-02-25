@@ -6,7 +6,7 @@ const isValidUrl = (url) => {
 
 // 检查是否为支持的平台
 const isSupportedPlatform = (url) => {
-    const supportedPlatformsRegex = /(163)|(qq)|(douyin)/;
+    const supportedPlatformsRegex = /(163)|(qq)|(qishui\.douyin\.com)/;
     return supportedPlatformsRegex.test(url);
 };
 

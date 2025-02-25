@@ -3,6 +3,7 @@ package logic
 import (
 	"GoMusic/misc/httputil"
 	"GoMusic/misc/models"
+	"GoMusic/misc/utils"
 	"fmt"
 	"io"
 	"net/url"
@@ -16,11 +17,13 @@ import (
 const (
 	qishuiMusicV1 = `https?://[a-zA-Z0-9./?=&_-]+`
 	qishuiMusicV2 = `playlist_id=`
+	qishuiMusicV3 = `https?://qishui\.douyin\.com/s/[a-zA-Z0-9]+/?` // 匹配汽水音乐分享链接
 )
 
 var (
 	qishuiMusicV1Regx, _ = regexp.Compile(qishuiMusicV1)
 	qishuiMusicV2Regx, _ = regexp.Compile(qishuiMusicV2)
+	qishuiMusicV3Regx, _ = regexp.Compile(qishuiMusicV3) // 专门匹配汽水音乐链接
 )
 
 // 歌曲信息列表#root > div > div > div > div > div:nth-child(2) > div > div > div > div > div 下的子元素nth-child
@@ -28,8 +31,15 @@ var (
 // 歌曲作者 div:nth-child(2) > div:nth-child(2) > p
 
 // QiShuiMusicDiscover 解析歌单
-func QiShuiMusicDiscover(link string) (*models.SongList, error) {
-
+// link: 歌单链接
+// detailed: 是否使用详细歌曲名（原始歌曲名，不去除括号等内容）
+func QiShuiMusicDiscover(link string, detailed bool) (*models.SongList, error) {
+	// 从文本中提取汽水音乐链接
+	extractedLink := qishuiMusicV3Regx.FindString(link)
+	if extractedLink != "" {
+		link = extractedLink
+	}
+	
 	params, err := getQiShuiParams(link)
 	if err != nil {
 		return nil, err
@@ -39,7 +49,7 @@ func QiShuiMusicDiscover(link string) (*models.SongList, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	songList, err := ParseSongList(resp.Body)
+	songList, err := ParseSongList(resp.Body, detailed)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +76,8 @@ func getQiShuiParams(link string) (string, error) {
 }
 
 // ParseSongList 解析网页
-func ParseSongList(body io.Reader) (*models.SongList, error) {
+// detailed: 是否使用详细歌曲名（原始歌曲名，不去除括号等内容）
+func ParseSongList(body io.Reader, detailed bool) (*models.SongList, error) {
 	docDetail, err := goquery.NewDocumentFromReader(body)
 	if err != nil {
 		return nil, err
@@ -81,8 +92,18 @@ func ParseSongList(body io.Reader) (*models.SongList, error) {
 		func(i int, s *goquery.Selection) {
 			title := s.Find("div:nth-child(2) > div:nth-child(1) > p").Text()
 			artist := s.Find("div:nth-child(2) > div:nth-child(2) > p").Text()
-			songName := fmt.Sprintf("%s-%s", title, artist)
-			songList.Songs = append(songList.Songs, songName)
+			
+			// 根据detailed参数决定是否使用原始歌曲名
+			var songName string
+			if detailed {
+				songName = title // 使用原始歌曲名
+			} else {
+				songName = utils.StandardSongName(title) // 使用标准化的歌曲名
+			}
+			
+			// 按照网易云音乐的格式化方式: "歌曲名 - 歌手"
+			formattedSong := fmt.Sprintf("%s - %s", songName, artist)
+			songList.Songs = append(songList.Songs, formattedSong)
 			songList.SongsCount++
 		},
 	)

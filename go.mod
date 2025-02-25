@@ -9,7 +9,6 @@ require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/go-sql-driver/mysql v1.7.1
-	github.com/jmoiron/sqlx v1.3.5
 	github.com/robertkrimen/otto v0.2.1
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/zap v1.26.0

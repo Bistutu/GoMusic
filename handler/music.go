@@ -1,12 +1,13 @@
 package handler
 
 import (
-	"GoMusic/logic"
-	"GoMusic/misc/log"
-	"GoMusic/misc/models"
 	"net/http"
 	"regexp"
 	"sync/atomic"
+
+	"GoMusic/logic"
+	"GoMusic/misc/log"
+	"GoMusic/misc/models"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,7 +15,7 @@ import (
 const (
 	netEasy     = `(163cn)|(\.163\.)`
 	qqMusic     = `.qq.`
-	qishuiMusic = `/qishui`
+	qishuiMusic = `qishui\.douyin\.com`
 	SUCCESS     = "success"
 )
 
@@ -22,7 +23,7 @@ var (
 	netEasyRegx, _     = regexp.Compile(netEasy)
 	qqMusicRegx, _     = regexp.Compile(qqMusic)
 	qishuiMusicRegx, _ = regexp.Compile(qishuiMusic)
-	counter        atomic.Int64 // request counter
+	counter            atomic.Int64 // request counter
 )
 
 // MusicHandler handler for music request
@@ -40,14 +41,14 @@ func MusicHandler(c *gin.Context) {
 	case qqMusicRegx.MatchString(link):
 		handleQQMusic(c, link, detailed)
 	case qishuiMusicRegx.MatchString(link):
-		songList, err := logic.QiShuiMusicDiscover(link)
-		if err != nil {
-			log.Errorf("fail to get qqmusic discover: %v", err)
-			c.JSON(http.StatusBadRequest, &models.Result{Code: -1, Msg: err.Error(), Data: nil})
-		} else {
-			c.JSON(200, &models.Result{Code: 1, Msg: SUCCESS, Data: songList})
-		}
+		handleQiShuiMusic(c, link, detailed)
 	default:
+		// 尝试从文本中提取汽水音乐链接
+		if qishuiRegx := regexp.MustCompile(`https?://qishui\.douyin\.com/s/[a-zA-Z0-9]+/?`); qishuiRegx.MatchString(link) {
+			handleQiShuiMusic(c, link, detailed)
+			return
+		}
+		
 		log.Warnf("不支持的音乐链接格式: %s", link)
 		c.JSON(http.StatusBadRequest, &models.Result{Code: models.FailureCode, Msg: "不支持的音乐链接格式", Data: nil})
 	}
@@ -62,7 +63,7 @@ func handleNetEasyMusic(c *gin.Context, link string, detailed bool) {
 		return
 	}
 
-	c.JSON(http.StatusOK, &models.Result{Code: models.SuccessCode, Msg: successMsg, Data: songList})
+	c.JSON(http.StatusOK, &models.Result{Code: models.SuccessCode, Msg: SUCCESS, Data: songList})
 }
 
 // 处理QQ音乐链接
@@ -74,5 +75,16 @@ func handleQQMusic(c *gin.Context, link string, detailed bool) {
 		return
 	}
 
-	c.JSON(http.StatusOK, &models.Result{Code: models.SuccessCode, Msg: successMsg, Data: songList})
+	c.JSON(http.StatusOK, &models.Result{Code: models.SuccessCode, Msg: SUCCESS, Data: songList})
+}
+
+// handleQiShuiMusic 处理汽水音乐歌单
+func handleQiShuiMusic(c *gin.Context, link string, detailed bool) {
+	songList, err := logic.QiShuiMusicDiscover(link, detailed)
+	if err != nil {
+		log.Errorf("fail to get qishui music discover: %v", err)
+		c.JSON(http.StatusBadRequest, &models.Result{Code: -1, Msg: err.Error(), Data: nil})
+	} else {
+		c.JSON(200, &models.Result{Code: 1, Msg: SUCCESS, Data: songList})
+	}
 }

@@ -37,6 +37,13 @@
             <el-checkbox v-model="state.useDetailedSongName">
               {{ state.isEnglish ? i18n.detailedSongName.en : i18n.detailedSongName.zh }}
             </el-checkbox>
+            <el-tooltip
+              :content="state.isEnglish ? i18n.detailedSongNameTip.en : i18n.detailedSongNameTip.zh"
+              placement="top"
+              effect="light"
+            >
+              <el-icon class="info-icon"><InfoFilled /></el-icon>
+            </el-tooltip>
           </el-form-item>
         </el-col>
       </el-row>
@@ -122,6 +129,7 @@ import axios from 'axios';
 import {ElMessage} from 'element-plus';
 import {isSupportedPlatform, isValidUrl} from "@/utils/utils";
 import {sendErrorMessage, sendSuccessMessage} from "@/utils/tip";
+import { InfoFilled } from '@element-plus/icons-vue';
 
 const activeNames = reactive(['first', 'second']);
 const state = reactive({
@@ -134,8 +142,8 @@ const state = reactive({
 
 const i18n = {
   title_first: {
-    en: 'Migrate Netease/QQ Music Playlist',
-    zh: '迁移网易云/QQ音乐歌单',
+    en: 'Migrate Netease/Qishui/QQ Music Playlist',
+    zh: '迁移网易云/汽水/QQ音乐歌单',
   },
   title_second: {
     en: 'To Apple/Youtube/Spotify Music',
@@ -233,6 +241,14 @@ const i18n = {
     en: 'Use detailed song name (original song name without processing)',
     zh: '使用详细歌曲名（未经处理的原始歌曲名）',
   },
+  detailedSongNameTip: {
+    en: 'By default, this option is unchecked for better compatibility with music platforms. The processed song names have better matching rates when migrating to other platforms.',
+    zh: '默认不勾选此项是一种优化选择，处理后的歌曲名在迁移到其他平台时有更好的匹配率',
+  },
+  emptyPlaylist: {
+    en: 'Empty playlist or failed to parse the playlist. Please check your link and try again.',
+    zh: '歌单为空或解析失败，请检查链接是否正确并重试。',
+  }
 }
 
 // sponsor table data
@@ -262,7 +278,7 @@ const fetchLinkDetails = async () => {
   state.link = state.link.trim();
 
   if (!isValidUrl(state.link) || !isSupportedPlatform(state.link)) {
-    reset(state.isEnglish ? 'Invalid link, only support Netease and QQ Music' : '链接无效，平台仅支持网易云音乐QQ音乐和汽水音乐');
+    reset(state.isEnglish ? 'Invalid link, only support Netease, QQ Music and Qishui Music' : '链接无效，平台仅支持网易云音乐、QQ音乐和汽水音乐');
     return;
   }
 
@@ -271,9 +287,9 @@ const fetchLinkDetails = async () => {
 
   try {
     // 本地开发环境URL
-    const resp = await axios.post('http://127.0.0.1:8081/songlist'+ (state.useDetailedSongName ? '?detailed=true' : ''), params, {
+    // const resp = await axios.post('http://127.0.0.1:8081/songlist'+ (state.useDetailedSongName ? '?detailed=true' : ''), params, {
     // 生产环境URL
-    // const resp = await axios.post('https://sss.unmeta.cn/songlist' + (state.useDetailedSongName ? '?detailed=true' : ''), params, {
+    const resp = await axios.post('https://sss.unmeta.cn/songlist' + (state.useDetailedSongName ? '?detailed=true' : ''), params, {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded'
       },
@@ -284,13 +300,20 @@ const fetchLinkDetails = async () => {
       reset(state.isEnglish ? "Request failed, please try again later~" : "请求失败，请稍后再试~");
       return;
     }
+    
+    // 检查是否为空歌单
+    if (!resp.data.data.songs || resp.data.data.songs.length === 0 || resp.data.data.songs_count === 0) {
+      reset(state.isEnglish ? i18n.emptyPlaylist.en : i18n.emptyPlaylist.zh);
+      return;
+    }
+    
     sendSuccessMessage(state.isEnglish ? "Song list fetched successfully" : "歌单获取成功");
     state.result = resp.data.data.songs.join('\n')
     state.songsCount = resp.data.data.songs_count;
   } catch (err) {
     console.error(err);
     // 后端规定的错误格式 err.response.data.msg
-    reset(err.response.data.msg || state.isEnglish ? "Request failed, please try again later~" : "请求失败，请稍后再试~");
+    reset(err.response.data.msg || (state.isEnglish ? "Request failed, please try again later~" : "请求失败，请稍后再试~"));
   }
 };
 
@@ -393,6 +416,14 @@ window.ResizeObserver = class ResizeObserver extends _ResizeObserver {
 
 .middle-font {
   font-size: medium;
+}
+
+.info-icon {
+  margin-left: 5px;
+  color: #909399;
+  cursor: help;
+  font-size: 16px;
+  vertical-align: middle;
 }
 
 </style>
