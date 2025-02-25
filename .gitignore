@@ -9,3 +9,8 @@ GoMusic
 *.xml
 *.iml
 .DS_Store
+static/dist
+static/node_modules
+static/package-lock.json
+static/pnpm-lock.yaml
+
