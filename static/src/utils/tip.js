@@ -10,10 +10,10 @@ function _sendSuccessMessage(message) {
     ElMessage({message: prefix + message, type: 'success'});
 }
 
-// 修改防抖限流函数（允许传递参数）
+// limit the frequency of function calls
 export function throttle(fn, interval) {
     let last = 0;   // 维护上次执行的时间
-    return function (...args) {  // 使用 rest 参数来传递所有参数
+    return function (...args) {
         const now = Date.now();
         if (now - last >= interval) {
             last = now;

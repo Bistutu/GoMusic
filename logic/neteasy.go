@@ -164,13 +164,13 @@ func batchGetSongs(missKey []uint, resultMap sync.Map) (sync.Map, error) {
 		chunks[i/chunkSize] = missSongIds[i:end]
 	}
 
-	// 使用 errgroup 并发处理
-	var errgroup errgroup.Group
+	// 使用 eg 并发处理
+	var eg errgroup.Group
 	missKeyCacheMap := sync.Map{}
 
 	for _, chunk := range chunks {
 		chunk := chunk // 创建 chunk 的副本以避免闭包问题
-		errgroup.Go(func() error {
+		eg.Go(func() error {
 			marshal, _ := json.Marshal(chunk)
 			resp, err := httputil.Post(netEasyUrlV3, strings.NewReader("c="+string(marshal)))
 			if err != nil {
@@ -204,7 +204,7 @@ func batchGetSongs(missKey []uint, resultMap sync.Map) (sync.Map, error) {
 	}
 
 	// 等待所有 goroutine 完成
-	if err := errgroup.Wait(); err != nil {
+	if err := eg.Wait(); err != nil {
 		log.Errorf("fail to wait: %v", err)
 		return sync.Map{}, err
 	}

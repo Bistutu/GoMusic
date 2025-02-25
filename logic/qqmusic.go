@@ -36,7 +36,7 @@ var (
 	platforms     = []string{"-1", "android", "iphone", "h5"}
 )
 
-// QQMusicDiscover 获取qq音乐歌单
+// QQMusicDiscover ...
 func QQMusicDiscover(link string) (*models.SongList, error) {
 	tid, err := getParams(link)
 	// platform 写死为-1

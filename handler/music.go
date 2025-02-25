@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 	"regexp"
+	"sync/atomic"
 
 	"github.com/gin-gonic/gin"
 
@@ -12,52 +13,59 @@ import (
 )
 
 const (
-	netEasy = `(163cn)|(\.163\.)`
-	qqMusic = `.qq.`
-	SUCCESS = "success"
+	// 正则表达式模式
+	netEasyPattern = `(163cn)|(\.163\.)`
+	qqMusicPattern = `.qq.`
+
+	// 响应消息
+	successMsg = "success"
 )
 
 var (
-	netEasyRegx, _ = regexp.Compile(netEasy)
-	qqMusicRegx, _ = regexp.Compile(qqMusic)
-	requestCount   = 1
+	netEasyRegx, _ = regexp.Compile(netEasyPattern)
+	qqMusicRegx, _ = regexp.Compile(qqMusicPattern)
+	counter        atomic.Int64 // request counter
 )
 
+// MusicHandler handler for music request
 func MusicHandler(c *gin.Context) {
-
 	link := c.PostForm("url")
+	currentCount := counter.Add(1)
 
-	log.Infof("第 %v 次歌单请求：%v", requestCount, link)
-	requestCount++
+	log.Infof("第 %v 次歌单请求：%v", currentCount, link)
 
+	// router to different music service
 	switch {
-	// 1、网易云
 	case netEasyRegx.MatchString(link):
-		songList, err := logic.NetEasyDiscover(link)
-		if err != nil {
-			log.Errorf("fail to get neteasy discover: %v", err)
-			c.JSON(http.StatusBadRequest, &models.Result{Code: -1, Msg: err.Error(), Data: nil})
-			return
-		}
-		c.JSON(200, &models.Result{
-			Code: 1,
-			Msg:  SUCCESS,
-			Data: songList,
-		})
-		return
-	// 2、QQ 音乐
+		handleNetEasyMusic(c, link)
 	case qqMusicRegx.MatchString(link):
-		songList, err := logic.QQMusicDiscover(link)
-		if err != nil {
-			log.Errorf("fail to get qqmusic discover: %v", err)
-			c.JSON(http.StatusBadRequest, &models.Result{Code: -1, Msg: err.Error(), Data: nil})
-		} else {
-			c.JSON(200, &models.Result{Code: 1, Msg: SUCCESS, Data: songList})
-		}
-
-		return
-	// 3、都不是
+		handleQQMusic(c, link)
 	default:
-		c.JSON(http.StatusBadRequest, nil)
+		log.Warnf("不支持的音乐链接格式: %s", link)
+		c.JSON(http.StatusBadRequest, &models.Result{Code: models.FailureCode, Msg: "不支持的音乐链接格式", Data: nil})
 	}
+}
+
+// handle net easy music
+func handleNetEasyMusic(c *gin.Context, link string) {
+	songList, err := logic.NetEasyDiscover(link)
+	if err != nil {
+		log.Errorf("获取网易云音乐歌单失败: %v", err)
+		c.JSON(http.StatusBadRequest, &models.Result{Code: models.FailureCode, Msg: err.Error(), Data: nil})
+		return
+	}
+
+	c.JSON(http.StatusOK, &models.Result{Code: models.SuccessCode, Msg: successMsg, Data: songList})
+}
+
+// 处理QQ音乐链接
+func handleQQMusic(c *gin.Context, link string) {
+	songList, err := logic.QQMusicDiscover(link)
+	if err != nil {
+		log.Errorf("获取QQ音乐歌单失败: %v", err)
+		c.JSON(http.StatusBadRequest, &models.Result{Code: models.FailureCode, Msg: err.Error(), Data: nil})
+		return
+	}
+
+	c.JSON(http.StatusOK, &models.Result{Code: models.SuccessCode, Msg: successMsg, Data: songList})
 }
