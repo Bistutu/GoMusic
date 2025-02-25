@@ -36,8 +36,8 @@ var (
 	platforms     = []string{"-1", "android", "iphone", "h5"}
 )
 
-// QQMusicDiscover 获取qq音乐歌单
-func QQMusicDiscover(link string) (*models.SongList, error) {
+// QQMusicDiscover ...
+func QQMusicDiscover(link string, detailed bool) (*models.SongList, error) {
 	tid, err := getParams(link)
 	// platform 写死为-1
 	if err != nil {
@@ -60,8 +60,16 @@ func QQMusicDiscover(link string) (*models.SongList, error) {
 	builder := strings.Builder{}
 	for _, v := range qqmusicResponse.Req0.Data.Songlist {
 		builder.Reset()
-		// 去除多余符号
-		builder.WriteString(utils.StandardSongName(v.Name))
+		
+		// 根据detailed参数决定是否使用原始歌曲名
+		if detailed {
+			// 使用原始歌曲名
+			builder.WriteString(v.Name)
+		} else {
+			// 去除多余符号
+			builder.WriteString(utils.StandardSongName(v.Name))
+		}
+		
 		builder.WriteString(" - ")
 
 		authors := make([]string, 0, len(v.Singer))

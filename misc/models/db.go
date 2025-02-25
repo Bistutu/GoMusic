@@ -2,7 +2,7 @@ package models
 
 import "gorm.io/gorm"
 
-// NetEasySong 网易云歌曲
+// NetEasySong NetEasy song, the table will be created automatically if successful run the program
 type NetEasySong struct {
 	gorm.Model
 	Id    uint   `gorm:"column:id"`

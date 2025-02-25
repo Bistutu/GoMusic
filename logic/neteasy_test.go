@@ -56,7 +56,7 @@ func TestBracketRegex(t *testing.T) {
 func TestDiscover(t *testing.T) {
 	sample := []string{V1, V2, V3, V4, V5}
 	for _, v := range sample {
-		discover, err := NetEasyDiscover(v)
+		discover, err := NetEasyDiscover(v, false)
 		assert.NoError(t, err)
 		t.Log(discover)
 	}

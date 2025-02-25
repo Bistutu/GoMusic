@@ -31,6 +31,16 @@
         </el-col>
       </el-row>
 
+      <el-row justify="center">
+        <el-col :md="12">
+          <el-form-item>
+            <el-checkbox v-model="state.useDetailedSongName">
+              {{ state.isEnglish ? i18n.detailedSongName.en : i18n.detailedSongName.zh }}
+            </el-checkbox>
+          </el-form-item>
+        </el-col>
+      </el-row>
+
       <el-form-item>
         <el-button type="danger" class="button-center lang-song-list-btn" @click="fetchLinkDetails">
           {{ state.isEnglish ? i18n.fetchSongList.en : i18n.fetchSongList.zh }}
@@ -119,6 +129,7 @@ const state = reactive({
   result: '',
   isEnglish: false,
   songsCount: 0,
+  useDetailedSongName: false,
 });
 
 const i18n = {
@@ -172,7 +183,7 @@ const i18n = {
   },
   guideFourth: {
     en: 'Select playlist source as "Any Text", paste the copied playlist, select Apple/Youtube/Spotify Music as destination, confirm migration',
-    zh: '选择歌单来源“任意文本”，将刚刚复制的歌单文本粘贴进去，选择 Apple/Youtube/Spotify Music 作为目的地，确认迁移',
+    zh: '选择歌单来源"任意文本"，将刚刚复制的歌单文本粘贴进去，选择 Apple/Youtube/Spotify Music 作为目的地，确认迁移',
   },
   tipBetweenNetEaseAndQQ: {
     en: 'How to migrate to NetEase Cloud Music/QQ Music',
@@ -203,8 +214,8 @@ const i18n = {
     zh: '《赞助名单》',
   },
   sponsorHint: {
-    en: 'The website is free, open-source, and kept simple. If you want to support the author, please scan the sponsor code with WeChat. Below are the top 10 sponsors (last updated on 2024.10.4)',
-    zh: '网站免费、开源、保持简单，如果你想支持作者，请使用微信扫描赞赏码，以下是赞赏榜的前10名赞助者（最后更新 2024.10.4）',
+    en: 'The website is free, open-source, and kept simple. If you want to support the author, please scan the sponsor code with WeChat. Below are the top 10 sponsors (last updated on 2025.1.21)',
+    zh: '网站免费、开源、保持简单，如果你想支持作者，请使用微信扫描赞赏码，以下是赞赏榜的前10名赞助者（最后更新 2025.2.26）',
   },
   no: {
     en: 'No.',
@@ -218,20 +229,24 @@ const i18n = {
     en: 'Sponsorship ￥',
     zh: '赞助金额￥',
   },
+  detailedSongName: {
+    en: 'Use detailed song name (original song name without processing)',
+    zh: '使用详细歌曲名（未经处理的原始歌曲名）',
+  },
 }
 
 // sponsor table data
 const sponsorData = [
-  {'no': '1', 'name': '什么长发及腰不如短发凉', 'sponsorship': '87'},
-  {'no': '2', 'name': 'Youyo🍊', 'sponsorship': '66'},
-  {'no': '3', 'name': '安分wa', 'sponsorship': '50'},
-  {'no': '4', 'name': '平', 'sponsorship': '30'},
-  {'no': '5', 'name': '匿名用户', 'sponsorship': '30'},
-  {'no': '6', 'name': '迷失了就不酷了', 'sponsorship': '30'},
-  {'no': '7', 'name': '廿四味', 'sponsorship': '20'},
-  {'no': '8', 'name': '︷.噓.低調', 'sponsorship': '16'},
-  {'no': '9', 'name': '王云鹏', 'sponsorship': '10'},
-  {'no': '10', 'name': '歪脖子树（Zircon）', 'sponsorship': '10'},
+  {'no': '1', 'name': '不疯就行', 'sponsorship': '100'},
+  {'no': '2', 'name': '什么长发及腰不如短发凉', 'sponsorship': '87'},
+  {'no': '3', 'name': 'Youyo🍊', 'sponsorship': '66'},
+  {'no': '4', 'name': '安分wa', 'sponsorship': '50'},
+  {'no': '5', 'name': '高小伦', 'sponsorship': '50'},
+  {'no': '6', 'name': '平', 'sponsorship': '30'}, 
+  {'no': '7', 'name': '匿名用户', 'sponsorship': '30'},
+  {'no': '8', 'name': '迷失了就不酷了', 'sponsorship': '30'},
+  {'no': '9', 'name': 'Ember Celica', 'sponsorship': '20'},
+  {'no': '10', 'name': '廿四味', 'sponsorship': '20'},
   {'no': '...', 'name': '…', 'sponsorship': '…'}
 ]
 
@@ -255,9 +270,13 @@ const fetchLinkDetails = async () => {
   params.append('url', state.link);
 
   try {
-    // const resp = await axios.post('https://music.unmeta.cn/songlist', params, {
-    const resp = await axios.post('https://sss.unmeta.cn/songlist', params, {
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'}
+    // 本地开发环境URL
+    const resp = await axios.post('http://127.0.0.1:8081/songlist'+ (state.useDetailedSongName ? '?detailed=true' : ''), params, {
+    // 生产环境URL
+    // const resp = await axios.post('https://sss.unmeta.cn/songlist' + (state.useDetailedSongName ? '?detailed=true' : ''), params, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
     });
 
     console.log(resp.data)
