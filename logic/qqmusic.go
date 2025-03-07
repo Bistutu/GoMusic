@@ -17,157 +17,202 @@ import (
 	"GoMusic/misc/utils"
 )
 
+// QQ音乐相关常量
 const (
-	qqMusicRedis   = "qq_music:%d"
-	qqMusicPattern = "https://u6.y.qq.com/cgi-bin/musics.fcg?sign=%s&_=%d"
-	qqMusicV1      = `fcgi-bin`
-	qqMusicV2      = `details`
-	qqMusicV3      = `playlist`
-	qqMusicV4      = `id=[89]\d{9}`
-	qqMusicV5      = `.*playlist/7\d{9}$`
+	// API相关
+	qqMusicAPIURL = "https://u6.y.qq.com/cgi-bin/musics.fcg?sign=%s&_=%d"
+
+	// 错误响应长度标识
+	qqMusicErrorResponseLength = 108
 )
 
+// 链接类型正则表达式
 var (
-	qqMusicV1Regx = regexp.MustCompile(qqMusicV1)
-	qqMusicV2Regx = regexp.MustCompile(qqMusicV2)
-	qqMusicV3Regx = regexp.MustCompile(qqMusicV3)
-	qqMusicV4Regx = regexp.MustCompile(qqMusicV4)
-	qqMusicV5Regx = regexp.MustCompile(qqMusicV5)
+	// 短链接，需要重定向
+	shortLinkRegex = regexp.MustCompile(`fcgi-bin`)
+
+	// 详情页链接，包含details关键词
+	detailsLinkRegex = regexp.MustCompile(`details`)
+
+	// 包含id=数字的链接
+	idParamLinkRegex = regexp.MustCompile(`id=\d+`)
+
+	// 包含playlist/数字的链接
+	playlistLinkRegex = regexp.MustCompile(`.*playlist/\d+$`)
 )
 
-// QQMusicDiscover ...
+// QQMusicDiscover 获取QQ音乐歌单信息
+// link: 歌单链接
+// detailed: 是否使用详细歌曲名（原始歌曲名，不去除括号等内容）
 func QQMusicDiscover(link string, detailed bool) (*models.SongList, error) {
-	tid, err := getParams(link)
-	// platform 写死为-1
-	if err != nil {
-		return nil, err
+	// 1. 从链接中提取歌单ID
+	tid, err := extractPlaylistID(link)
+	if err != nil || tid == 0 {
+		return nil, errors.New("无效的歌单链接")
 	}
 
-	bytes, err := getQQMusicResponse(tid)
+	// 2. 获取歌单数据
+	responseData, err := fetchPlaylistData(tid)
 	if err != nil {
-		log.Errorf("fail to get qqmusic response: %v", err)
-		return nil, err
+		log.Errorf("获取QQ音乐歌单数据失败: %v", err)
+		return nil, fmt.Errorf("获取歌单数据失败: %w", err)
 	}
 
-	qqmusicResponse := &models.QQMusicResp{}
-	err = json.Unmarshal(bytes, qqmusicResponse)
-	if err != nil {
-		log.Errorf("fail to unmarshal qqmusic: %v", err)
-		return nil, err
+	// 3. 解析响应数据
+	qqMusicResponse := &models.QQMusicResp{}
+	if err = json.Unmarshal(responseData, qqMusicResponse); err != nil {
+		log.Errorf("解析QQ音乐响应数据失败: %v", err)
+		return nil, fmt.Errorf("解析歌单数据失败: %w", err)
 	}
-	songsString := make([]string, 0, len(qqmusicResponse.Req0.Data.Songlist))
+
+	// 4. 构建歌曲列表
+	songList := buildSongList(qqMusicResponse, detailed)
+
+	return songList, nil
+}
+
+// fetchPlaylistData 获取QQ音乐歌单数据
+// 尝试多个平台参数，直到获取有效响应
+func fetchPlaylistData(tid int) ([]byte, error) {
+	// 支持的平台列表
+	platforms := []string{"-1", "android", "iphone", "h5", "wxfshare", "iphone_wx", "windows"}
+
+	var lastErr error
+	var resp *http.Response
+
+	// 尝试不同平台参数
+	for _, platform := range platforms {
+		// 1. 构建请求参数
+		paramString := models.GetQQMusicReqString(tid, platform)
+		sign := utils.Encrypt(paramString)
+		requestURL := fmt.Sprintf(qqMusicAPIURL, sign, time.Now().UnixMilli())
+
+		// 2. 发送请求
+		resp, lastErr = httputil.Post(requestURL, strings.NewReader(paramString))
+		if lastErr != nil {
+			log.Errorf("HTTP请求失败(平台:%s): %v", platform, lastErr)
+			continue
+		}
+
+		// 3. 读取响应
+		data, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+
+		// 4. 检查响应是否有效
+		// 108字节长度表示返回了错误信息，需要尝试其他平台
+		if len(data) != qqMusicErrorResponseLength {
+			return data, nil
+		}
+	}
+
+	return nil, fmt.Errorf("尝试所有平台参数均失败: %w", lastErr)
+}
+
+// extractPlaylistID 从QQ音乐链接中提取歌单ID
+func extractPlaylistID(link string) (int, error) {
+	// 1. 处理playlist/数字格式的链接
+	if playlistLinkRegex.MatchString(link) {
+		return extractNumberAfterKeyword(link, "playlist/")
+	}
+
+	// 2. 处理id=数字格式的链接
+	if idParamLinkRegex.MatchString(link) {
+		return extractNumberAfterKeyword(link, "id=")
+	}
+
+	// 3. 处理需要重定向的短链接
+	if shortLinkRegex.MatchString(link) {
+		redirectedLink, err := httputil.GetRedirectLocation(link)
+		if err != nil {
+			log.Errorf("获取重定向链接失败: %v", err)
+			return 0, fmt.Errorf("处理短链接失败: %w", err)
+		}
+		// 递归处理重定向后的链接
+		return extractPlaylistID(redirectedLink)
+	}
+
+	// 4. 处理details页面链接
+	if detailsLinkRegex.MatchString(link) {
+		tidString, err := utils.GetQQMusicParam(link)
+		if err != nil {
+			log.Errorf("从details链接提取ID失败: %v", err)
+			return 0, fmt.Errorf("提取歌单ID失败: %w", err)
+		}
+
+		tid, err := strconv.Atoi(tidString)
+		if err != nil {
+			log.Errorf("歌单ID转换为数字失败: %v", err)
+			return 0, fmt.Errorf("歌单ID格式错误: %w", err)
+		}
+
+		return tid, nil
+	}
+
+	return 0, errors.New("无效的歌单链接格式")
+}
+
+// buildSongList 根据QQ音乐响应数据构建歌曲列表
+func buildSongList(response *models.QQMusicResp, detailed bool) *models.SongList {
+	songsCount := response.Req0.Data.Dirinfo.Songnum
+	songList := response.Req0.Data.Songlist
+
+	songs := make([]string, 0, len(songList))
 	builder := strings.Builder{}
-	for _, v := range qqmusicResponse.Req0.Data.Songlist {
+
+	for _, song := range songList {
 		builder.Reset()
 
 		// 根据detailed参数决定是否使用原始歌曲名
 		if detailed {
-			// 使用原始歌曲名
-			builder.WriteString(v.Name)
+			builder.WriteString(song.Name) // 使用原始歌曲名
 		} else {
-			// 去除多余符号
-			builder.WriteString(utils.StandardSongName(v.Name))
+			builder.WriteString(utils.StandardSongName(song.Name)) // 去除多余符号
 		}
 
 		builder.WriteString(" - ")
 
-		authors := make([]string, 0, len(v.Singer))
-		for _, v := range v.Singer {
-			authors = append(authors, v.Name)
+		// 处理歌手信息
+		singers := make([]string, 0, len(song.Singer))
+		for _, singer := range song.Singer {
+			singers = append(singers, singer.Name)
 		}
-		authorsString := strings.Join(authors, " / ")
-		builder.WriteString(authorsString)
-		songsString = append(songsString, builder.String())
+		builder.WriteString(strings.Join(singers, " / "))
+
+		songs = append(songs, builder.String())
 	}
+
 	return &models.SongList{
-		Name:       qqmusicResponse.Req0.Data.Dirinfo.Title,
-		Songs:      songsString,
-		SongsCount: qqmusicResponse.Req0.Data.Dirinfo.Songnum,
-	}, nil
+		Name:       response.Req0.Data.Dirinfo.Title,
+		Songs:      songs,
+		SongsCount: songsCount,
+	}
 }
 
-// 适配不同的平台
-func getQQMusicResponse(tid int) (bytes []byte, err error) {
-	platforms := []string{"-1", "android", "iphone", "h5", "wxfshare", "iphone_wx", "windows"}
-
-	var resp *http.Response
-
-	for _, platform := range platforms {
-		paramString := models.GetQQMusicReqString(tid, platform)
-		sign := utils.Encrypt(paramString)
-		link := fmt.Sprintf(qqMusicPattern, sign, time.Now().UnixMilli())
-
-		resp, err = httputil.Post(link, strings.NewReader(paramString))
-		if err != nil {
-			log.Errorf("http error: %+v", err)
-			continue
-		}
-
-		bytes, _ = io.ReadAll(resp.Body)
-		resp.Body.Close()
-
-		// 108 代表返回了错误的信息，并没有获取到歌曲
-		if len(bytes) != 108 { // Check for a valid response
-			return bytes, nil
-		}
-	}
-	return nil, fmt.Errorf("failed to get qqmusic after trying all platforms: %v", err)
-}
-
-// GetNetEasyParam 获取歌单id
-func getParams(link string) (tid int, err error) {
-	if qqMusicV5Regx.MatchString(link) {
-		index := strings.Index(link, "playlist")
-		if index < 0 || index+19 > len(link) {
-			log.Errorf("fail to get tid: %v", err)
-			return
-		}
-		tid, err = strconv.Atoi(link[index+9 : index+19])
-		return tid, nil
+// extractNumberAfterKeyword 从字符串中提取关键词后面的数字
+func extractNumberAfterKeyword(s, keyword string) (int, error) {
+	index := strings.Index(s, keyword)
+	if index < 0 {
+		return 0, fmt.Errorf("未找到关键词: %s", keyword)
 	}
 
-	if qqMusicV4Regx.MatchString(link) {
-		index := strings.Index(link, "id=")
-		if index < 0 || index+3 > len(link) {
-			log.Errorf("fail to get tid: %v", err)
-			return
-		}
-		tid, err = strconv.Atoi(link[index+3 : index+13])
-		if err != nil {
-			log.Errorf("fail to convert tid: %v", err)
-			return
-		}
-		return tid, nil
-	}
-	if qqMusicV1Regx.MatchString(link) {
-		link, err = httputil.GetRedirectLocation(link)
-		if err != nil {
-			log.Errorf("fail to get redirection url: %v", err)
-			return
+	// 提取关键词后面的所有数字
+	startIndex := index + len(keyword)
+	endIndex := len(s)
+
+	// 找到数字结束的位置
+	for i := startIndex; i < endIndex; i++ {
+		if s[i] < '0' || s[i] > '9' {
+			endIndex = i
+			break
 		}
 	}
-	if qqMusicV2Regx.MatchString(link) {
-		var tidString string
-		tidString, err = utils.GetQQMusicParam(link)
-		if err != nil {
-			log.Errorf("fail to get songs id: %v", err)
-			return
-		}
-		tid, err = strconv.Atoi(tidString)
-		if err != nil {
-			log.Errorf("fail to convert tid: %v", err)
-			return
-		}
-		return tid, nil
+
+	// 提取并转换数字
+	numStr := s[startIndex:endIndex]
+	num, err := strconv.Atoi(numStr)
+	if err != nil {
+		return 0, fmt.Errorf("数字转换失败: %w", err)
 	}
-	if qqMusicV3Regx.MatchString(link) {
-		index := strings.Index(link, "playlist")
-		if index < 0 || index+19 > len(link) {
-			log.Errorf("fail to get tid: %v", err)
-			return
-		}
-		tid, err = strconv.Atoi(link[index+9 : index+19])
-		return tid, nil
-	}
-	return 0, errors.New("无效的歌单链接")
+
+	return num, nil
 }
