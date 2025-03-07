@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 	"regexp"
+	"strings"
 	"sync/atomic"
 
 	"GoMusic/logic"
@@ -15,7 +16,7 @@ import (
 const (
 	netEasy     = `(163cn)|(\.163\.)`
 	qqMusic     = `.qq.`
-	qishuiMusic = `qishui\.douyin\.com`
+	qishuiMusic = `qishui`
 	SUCCESS     = "success"
 )
 
@@ -48,7 +49,7 @@ func MusicHandler(c *gin.Context) {
 			handleQiShuiMusic(c, link, detailed)
 			return
 		}
-		
+
 		log.Warnf("不支持的音乐链接格式: %s", link)
 		c.JSON(http.StatusBadRequest, &models.Result{Code: models.FailureCode, Msg: "不支持的音乐链接格式", Data: nil})
 	}
@@ -58,7 +59,11 @@ func MusicHandler(c *gin.Context) {
 func handleNetEasyMusic(c *gin.Context, link string, detailed bool) {
 	songList, err := logic.NetEasyDiscover(link, detailed)
 	if err != nil {
-		log.Errorf("获取网易云音乐歌单失败: %v", err)
+		if strings.Contains(err.Error(), "无权限访问该歌单") {
+			log.Errorf("获取歌单失败，无权限访问: %v", link)
+		} else {
+			log.Errorf("获取歌单失败: %v", err)
+		}
 		c.JSON(http.StatusBadRequest, &models.Result{Code: models.FailureCode, Msg: err.Error(), Data: nil})
 		return
 	}
@@ -68,9 +73,14 @@ func handleNetEasyMusic(c *gin.Context, link string, detailed bool) {
 
 // 处理QQ音乐链接
 func handleQQMusic(c *gin.Context, link string, detailed bool) {
+	if link == "https://i.y.qq.com/v8/playsong.html" {
+		c.JSON(http.StatusBadRequest, &models.Result{Code: models.FailureCode, Msg: "无效歌单链接，请检查是否正确", Data: nil})
+		return
+
+	}
 	songList, err := logic.QQMusicDiscover(link, detailed)
 	if err != nil {
-		log.Errorf("获取QQ音乐歌单失败: %v", err)
+		log.Errorf("获取歌单失败: %v", err)
 		c.JSON(http.StatusBadRequest, &models.Result{Code: models.FailureCode, Msg: err.Error(), Data: nil})
 		return
 	}

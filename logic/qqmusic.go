@@ -33,7 +33,6 @@ var (
 	qqMusicV3Regx = regexp.MustCompile(qqMusicV3)
 	qqMusicV4Regx = regexp.MustCompile(qqMusicV4)
 	qqMusicV5Regx = regexp.MustCompile(qqMusicV5)
-	platforms     = []string{"-1", "android", "iphone", "h5"}
 )
 
 // QQMusicDiscover ...
@@ -60,7 +59,7 @@ func QQMusicDiscover(link string, detailed bool) (*models.SongList, error) {
 	builder := strings.Builder{}
 	for _, v := range qqmusicResponse.Req0.Data.Songlist {
 		builder.Reset()
-		
+
 		// 根据detailed参数决定是否使用原始歌曲名
 		if detailed {
 			// 使用原始歌曲名
@@ -69,7 +68,7 @@ func QQMusicDiscover(link string, detailed bool) (*models.SongList, error) {
 			// 去除多余符号
 			builder.WriteString(utils.StandardSongName(v.Name))
 		}
-		
+
 		builder.WriteString(" - ")
 
 		authors := make([]string, 0, len(v.Singer))

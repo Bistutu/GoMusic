@@ -1,14 +1,15 @@
 package logic
 
 import (
-	"GoMusic/misc/httputil"
-	"GoMusic/misc/models"
-	"GoMusic/misc/utils"
 	"fmt"
 	"io"
 	"net/url"
 	"regexp"
 	"strings"
+
+	"GoMusic/misc/httputil"
+	"GoMusic/misc/models"
+	"GoMusic/misc/utils"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -39,17 +40,19 @@ func QiShuiMusicDiscover(link string, detailed bool) (*models.SongList, error) {
 	if extractedLink != "" {
 		link = extractedLink
 	}
-	
+
 	params, err := getQiShuiParams(link)
 	if err != nil {
 		return nil, err
 	}
+
 	resp, err := httputil.Get(link, strings.NewReader(params))
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	songList, err := ParseSongList(resp.Body, detailed)
+
+	songList, err := parseQsSongList(resp.Body, detailed)
 	if err != nil {
 		return nil, err
 	}
@@ -75,9 +78,9 @@ func getQiShuiParams(link string) (string, error) {
 	return params.Encode(), nil
 }
 
-// ParseSongList 解析网页
+// parseQsSongList 解析网页
 // detailed: 是否使用详细歌曲名（原始歌曲名，不去除括号等内容）
-func ParseSongList(body io.Reader, detailed bool) (*models.SongList, error) {
+func parseQsSongList(body io.Reader, detailed bool) (*models.SongList, error) {
 	docDetail, err := goquery.NewDocumentFromReader(body)
 	if err != nil {
 		return nil, err
@@ -92,7 +95,10 @@ func ParseSongList(body io.Reader, detailed bool) (*models.SongList, error) {
 		func(i int, s *goquery.Selection) {
 			title := s.Find("div:nth-child(2) > div:nth-child(1) > p").Text()
 			artist := s.Find("div:nth-child(2) > div:nth-child(2) > p").Text()
-			
+
+			// artist 需要格式化，去除 • 后面的字符，例如：G.E.M. 邓紫棋 • T.I.M.E. -> G.E.M. 邓紫棋
+			artist = strings.Split(artist, "•")[0]
+
 			// 根据detailed参数决定是否使用原始歌曲名
 			var songName string
 			if detailed {
@@ -100,7 +106,7 @@ func ParseSongList(body io.Reader, detailed bool) (*models.SongList, error) {
 			} else {
 				songName = utils.StandardSongName(title) // 使用标准化的歌曲名
 			}
-			
+
 			// 按照网易云音乐的格式化方式: "歌曲名 - 歌手"
 			formattedSong := fmt.Sprintf("%s - %s", songName, artist)
 			songList.Songs = append(songList.Songs, formattedSong)
