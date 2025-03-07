@@ -62,7 +62,7 @@
       </el-row>
 
       <el-form-item>
-        <el-button type="danger" class="button-center lang-song-list-btn" @click="fetchLinkDetails">
+        <el-button type="danger" class="button-center lang-song-list-btn" @click="throttledFetchLinkDetails">
           {{ state.isEnglish ? i18n.fetchSongList.en : i18n.fetchSongList.zh }}
         </el-button>
       </el-form-item>
@@ -365,6 +365,21 @@ const copyResult = () => {
   document.body.removeChild(textarea);
   ElMessage.success({message: state.isEnglish ? 'Copied to clipboard' : '已复制到剪贴板', type: 'success'});
 };
+
+// 节流函数
+const throttle = (fn, delay) => {
+  let lastTime = 0;
+  return function (...args) {
+    const now = Date.now();
+    if (now - lastTime >= delay) {
+      fn.apply(this, args);
+      lastTime = now;
+    }
+  };
+};
+
+// 使用节流包装 fetchLinkDetails
+const throttledFetchLinkDetails = throttle(fetchLinkDetails, 1000);
 
 const toggleLanguage = () => {
   state.isEnglish = !state.isEnglish;
