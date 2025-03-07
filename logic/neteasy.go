@@ -23,7 +23,7 @@ const (
 	netEasyRedis = "net:%v"
 	netEasyUrlV6 = "https://music.163.com/api/v6/playlist/detail"
 	netEasyUrlV3 = "https://music.163.com/api/v3/song/detail"
-	chunkSize    = 500
+	chunkSize    = 400
 )
 
 // NetEasyDiscover 获取网易云音乐歌单信息
