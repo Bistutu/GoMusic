@@ -23,7 +23,7 @@ type QQMusicReq struct {
 	} `json:"comm"`
 }
 
-func NewQQMusicReq(disstid int, platform string) *QQMusicReq {
+func NewQQMusicReq(disstid int, platform string, songBegin, songNum int) *QQMusicReq {
 	return &QQMusicReq{
 		Req0: struct {
 			Module string `json:"module"`
@@ -51,8 +51,8 @@ func NewQQMusicReq(disstid int, platform string) *QQMusicReq {
 				EncHostUin: "",
 				Tag:        1,
 				Userinfo:   1,
-				SongBegin:  0,
-				SongNum:    1024,
+				SongBegin:  songBegin,
+				SongNum:    songNum,
 			},
 		},
 		Comm: struct {
@@ -69,8 +69,9 @@ func NewQQMusicReq(disstid int, platform string) *QQMusicReq {
 	}
 }
 
-func GetQQMusicReqString(disstid int, platform string) string {
-	param := NewQQMusicReq(disstid, platform)
+// GetQQMusicReqStringWithPagination 获取带分页参数的请求字符串
+func GetQQMusicReqStringWithPagination(disstid int, platform string, songBegin, songNum int) string {
+	param := NewQQMusicReq(disstid, platform, songBegin, songNum)
 	marshal, _ := json.Marshal(param)
 	return string(marshal)
 }

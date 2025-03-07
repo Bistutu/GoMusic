@@ -20,10 +20,15 @@ import (
 // QQ音乐相关常量
 const (
 	// API相关
+	qqMusicRedis  = "qq_music:%d"
 	qqMusicAPIURL = "https://u6.y.qq.com/cgi-bin/musics.fcg?sign=%s&_=%d"
 
 	// 错误响应长度标识
 	qqMusicErrorResponseLength = 108
+
+	// 分页相关
+	maxSongsPerPage = 1000  // 每页最大歌曲数
+	maxTotalSongs   = 10000 // 最大支持的歌曲总数
 )
 
 // 链接类型正则表达式
@@ -73,7 +78,133 @@ func QQMusicDiscover(link string, detailed bool) (*models.SongList, error) {
 
 // fetchPlaylistData 获取QQ音乐歌单数据
 // 尝试多个平台参数，直到获取有效响应
+// 支持分页获取大型歌单的所有歌曲
 func fetchPlaylistData(tid int) ([]byte, error) {
+	// 1. 先获取歌单基本信息，了解总歌曲数
+	basicInfo, err := fetchPlaylistBasicInfo(tid)
+	if err != nil {
+		return nil, fmt.Errorf("获取歌单基本信息失败: %w", err)
+	}
+
+	// 解析基本信息
+	basicResp := &models.QQMusicResp{}
+	if err = json.Unmarshal(basicInfo, basicResp); err != nil {
+		return nil, fmt.Errorf("解析歌单基本信息失败: %w", err)
+	}
+
+	// 获取歌曲总数
+	totalSongs := basicResp.Req0.Data.Dirinfo.Songnum
+	if totalSongs <= maxSongsPerPage {
+		// 如果歌曲数量不超过单页上限，直接返回基本信息
+		return basicInfo, nil
+	}
+
+	// 2. 分页获取所有歌曲
+	log.Infof("歌单包含%d首歌曲，需要分页获取", totalSongs)
+
+	// 限制最大获取数量，防止请求过多
+	if totalSongs > maxTotalSongs {
+		log.Warnf("歌单歌曲数量(%d)超过最大支持数量(%d)，将只获取前%d首",
+			totalSongs, maxTotalSongs, maxTotalSongs)
+		totalSongs = maxTotalSongs
+	}
+
+	// 计算需要的页数
+	pageCount := (totalSongs + maxSongsPerPage - 1) / maxSongsPerPage
+
+	// 创建一个新的响应对象，用于合并所有页的数据
+	mergedResp := models.QQMusicResp{
+		Code: basicResp.Code,
+		Req0: struct {
+			Code int `json:"code"`
+			Data struct {
+				Dirinfo struct {
+					Title   string `json:"title"`
+					Songnum int    `json:"songnum"`
+				} `json:"dirinfo"`
+				Songlist []struct {
+					Name   string `json:"name"`
+					Singer []struct {
+						Name string `json:"name"`
+					} `json:"singer"`
+				} `json:"songlist"`
+			} `json:"data"`
+		}{
+			Code: basicResp.Req0.Code,
+			Data: struct {
+				Dirinfo struct {
+					Title   string `json:"title"`
+					Songnum int    `json:"songnum"`
+				} `json:"dirinfo"`
+				Songlist []struct {
+					Name   string `json:"name"`
+					Singer []struct {
+						Name string `json:"name"`
+					} `json:"singer"`
+				} `json:"songlist"`
+			}{
+				Dirinfo: basicResp.Req0.Data.Dirinfo,
+				Songlist: make([]struct {
+					Name   string `json:"name"`
+					Singer []struct {
+						Name string `json:"name"`
+					} `json:"singer"`
+				}, 0, totalSongs),
+			},
+		},
+	}
+
+	// 添加第一页的歌曲
+	mergedResp.Req0.Data.Songlist = append(mergedResp.Req0.Data.Songlist, basicResp.Req0.Data.Songlist...)
+
+	// 获取剩余页的数据
+	for page := 1; page < pageCount; page++ {
+		songBegin := page * maxSongsPerPage
+		songNum := maxSongsPerPage
+		if songBegin+songNum > totalSongs {
+			songNum = totalSongs - songBegin
+		}
+
+		log.Infof("获取第%d页歌曲，起始位置: %d，数量: %d", page+1, songBegin, songNum)
+
+		// 获取当前页数据
+		pageData, err := fetchPlaylistPage(tid, songBegin, songNum)
+		if err != nil {
+			log.Errorf("获取第%d页歌曲失败: %v", page+1, err)
+			continue
+		}
+
+		// 解析当前页数据
+		pageResp := &models.QQMusicResp{}
+		if err = json.Unmarshal(pageData, pageResp); err != nil {
+			log.Errorf("解析第%d页歌曲数据失败: %v", page+1, err)
+			continue
+		}
+
+		// 添加当前页歌曲到合并的响应中
+		mergedResp.Req0.Data.Songlist = append(mergedResp.Req0.Data.Songlist, pageResp.Req0.Data.Songlist...)
+	}
+
+	// 更新合并后的歌曲总数
+	mergedResp.Req0.Data.Dirinfo.Songnum = len(mergedResp.Req0.Data.Songlist)
+
+	// 将合并后的响应转换为JSON
+	mergedData, err := json.Marshal(mergedResp)
+	if err != nil {
+		return nil, fmt.Errorf("合并歌单数据失败: %w", err)
+	}
+
+	log.Infof("成功获取全部%d首歌曲", len(mergedResp.Req0.Data.Songlist))
+	return mergedData, nil
+}
+
+// fetchPlaylistBasicInfo 获取歌单基本信息（第一页数据）
+func fetchPlaylistBasicInfo(tid int) ([]byte, error) {
+	return fetchPlaylistPage(tid, 0, maxSongsPerPage)
+}
+
+// fetchPlaylistPage 获取歌单指定页的数据
+func fetchPlaylistPage(tid int, songBegin, songNum int) ([]byte, error) {
 	// 支持的平台列表
 	platforms := []string{"-1", "android", "iphone", "h5", "wxfshare", "iphone_wx", "windows"}
 
@@ -83,7 +214,7 @@ func fetchPlaylistData(tid int) ([]byte, error) {
 	// 尝试不同平台参数
 	for _, platform := range platforms {
 		// 1. 构建请求参数
-		paramString := models.GetQQMusicReqString(tid, platform)
+		paramString := models.GetQQMusicReqStringWithPagination(tid, platform, songBegin, songNum)
 		sign := utils.Encrypt(paramString)
 		requestURL := fmt.Sprintf(qqMusicAPIURL, sign, time.Now().UnixMilli())
 
