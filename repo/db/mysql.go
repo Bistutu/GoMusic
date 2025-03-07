@@ -37,13 +37,15 @@ func MigrateNameField(db *gorm.DB) error {
 
 func BatchGetSongById(ids []uint) (map[uint]string, error) {
 	var netEasySongs []*models.NetEasySong
-	err := db.Where("id in ?", ids).Find(&netEasySongs).Error
+	// 仅选择 id 和 name 列
+	err := db.Select("id, name").Where("id in ?", ids).Find(&netEasySongs).Error
 	if err != nil {
 		log.Errorf("查询数据库失败：%v", err)
 		return nil, err
 	}
+
 	// 歌曲id:歌曲信息
-	netEasySongMap := make(map[uint]string)
+	netEasySongMap := make(map[uint]string, len(netEasySongs))
 	for _, v := range netEasySongs {
 		netEasySongMap[v.Id] = v.Name
 	}
