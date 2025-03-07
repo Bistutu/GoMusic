@@ -31,7 +31,7 @@
         </el-col>
       </el-row>
 
-      <el-row justify="center">
+      <el-row justify="center" style="margin-bottom: -10px;">
         <el-col :md="12">
           <el-form-item>
             <el-checkbox v-model="state.useDetailedSongName">
@@ -44,6 +44,19 @@
             >
               <el-icon class="info-icon"><InfoFilled /></el-icon>
             </el-tooltip>
+          </el-form-item>
+        </el-col>
+      </el-row>
+
+      <el-row justify="center">
+        <el-col :md="12" >
+          <el-form-item>
+            <span class="format-label">{{ state.isEnglish ? i18n.songFormat.en : i18n.songFormat.zh }}:</span>
+            <el-radio-group v-model="state.songFormat" class="format-radio-group">
+              <el-radio label="song-singer">{{ state.isEnglish ? i18n.formatSongSinger.en : i18n.formatSongSinger.zh }}</el-radio>
+              <el-radio label="singer-song">{{ state.isEnglish ? i18n.formatSingerSong.en : i18n.formatSingerSong.zh }}</el-radio>
+              <el-radio label="song">{{ state.isEnglish ? i18n.formatSongOnly.en : i18n.formatSongOnly.zh }}</el-radio>
+            </el-radio-group>
           </el-form-item>
         </el-col>
       </el-row>
@@ -138,6 +151,7 @@ const state = reactive({
   isEnglish: false,
   songsCount: 0,
   useDetailedSongName: false,
+  songFormat: 'song-singer', // 默认为"歌名-歌手"格式
 });
 
 const i18n = {
@@ -238,8 +252,8 @@ const i18n = {
     zh: '赞助金额￥',
   },
   detailedSongName: {
-    en: 'Use detailed song name (original song name without processing)',
-    zh: '使用详细歌曲名（未经处理的原始歌曲名）',
+    en: 'use original song name without processing',
+    zh: '使用未经处理的原始歌曲名',
   },
   detailedSongNameTip: {
     en: 'By default, this option is unchecked for better compatibility with music platforms. The processed song names have better matching rates when migrating to other platforms.',
@@ -248,7 +262,23 @@ const i18n = {
   emptyPlaylist: {
     en: 'Empty playlist or failed to parse the playlist. Please check your link and try again.',
     zh: '歌单为空或解析失败，请检查链接是否正确并重试。',
-  }
+  },
+  songFormat: {
+    en: 'Song Format',
+    zh: '歌曲格式',
+  },
+  formatSongSinger: {
+    en: 'Song - Singer',
+    zh: '歌名 - 歌手',
+  },
+  formatSingerSong: {
+    en: 'Singer - Song',
+    zh: '歌手 - 歌名',
+  },
+  formatSongOnly: {
+    en: 'Song Only',
+    zh: '仅歌名',
+  },
 }
 
 // sponsor table data
@@ -286,10 +316,14 @@ const fetchLinkDetails = async () => {
   params.append('url', state.link);
 
   try {
+    // 构建查询参数
+    let queryParams = state.useDetailedSongName ? '?detailed=true' : '?detailed=false';
+    queryParams += `&format=${state.songFormat}`;
+    
     // 本地开发环境URL
-    // const resp = await axios.post('http://127.0.0.1:8081/songlist'+ (state.useDetailedSongName ? '?detailed=true' : ''), params, {
+    // const resp = await axios.post('http://127.0.0.1:8081/songlist' + queryParams, params, {
     // 生产环境URL
-    const resp = await axios.post('https://sss.unmeta.cn/songlist' + (state.useDetailedSongName ? '?detailed=true' : ''), params, {
+    const resp = await axios.post('https://sss.unmeta.cn/songlist' + queryParams, params, {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded'
       },
@@ -404,16 +438,6 @@ window.ResizeObserver = class ResizeObserver extends _ResizeObserver {
   display: block; /* 按钮水平居中 */
 }
 
-.el-collapse-item__header {
-  font-size: 1em !important;
-}
-
-
-.el-input {
-  margin: 0 auto;
-  display: flex !important; /* 输入框水平居中 */
-}
-
 .middle-font {
   font-size: medium;
 }
@@ -424,6 +448,23 @@ window.ResizeObserver = class ResizeObserver extends _ResizeObserver {
   cursor: help;
   font-size: 16px;
   vertical-align: middle;
+}
+
+.format-label {
+  margin-right: 10px;
+  font-size: 14px;
+  display: inline-block;
+  vertical-align: middle;
+  line-height: 20px;
+  height: 20px;
+}
+
+.format-radio-group {
+  margin: 0;
+  display: inline-block;
+  vertical-align: middle;
+  height: 32px;
+  line-height: 20px;
 }
 
 </style>
