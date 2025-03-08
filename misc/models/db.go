@@ -1,11 +1,10 @@
 package models
 
-import "gorm.io/gorm"
+import "time"
 
 // NetEasySong NetEasy song, the table will be created automatically if successful run the program
 type NetEasySong struct {
-	gorm.Model
-	Id    uint   `gorm:"column:id"`
-	Name  string `gorm:"column:name;type:varchar(512);unique:true"`
-	Exist byte   `gorm:"column:exist;default:1"`
+	Id        uint      `gorm:"column:id;primarykey"`
+	Name      string    `gorm:"column:name;type:varchar(512);unique:true"`
+	CreatedAt time.Time `gorm:"column:created_at"`
 }

@@ -1,5 +1,5 @@
 {
-  "name": "GoMusic-音乐迁移-迁移网易云/汽水/QQ音乐歌单至 Apple/Youtube/Spotify Music",
+  "name": "go-music",
   "version": "0.1.0",
   "private": true,
   "scripts": {
