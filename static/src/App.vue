@@ -20,6 +20,16 @@
             alt="GitHub stars"></a>
       </div>
 
+      <!-- Google AdSense -->
+      <div class="ad-container">
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="ca-pub-1997752442920544"
+             data-ad-slot="YOUR_AD_SLOT_ID"
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
+      </div>
+
       <el-row justify="center" @submit.prevent="fetchLinkDetails">
         <el-col :md="12">
           <el-form-item>
@@ -137,7 +147,7 @@
 </template>
 
 <script setup>
-import {reactive} from 'vue';
+import {reactive, onMounted} from 'vue';
 import axios from 'axios';
 import {ElMessage} from 'element-plus';
 import {isSupportedPlatform, isValidUrl} from "@/utils/utils";
@@ -152,6 +162,15 @@ const state = reactive({
   songsCount: 0,
   useDetailedSongName: false,
   songFormat: 'song-singer', // 默认为"歌名-歌手"格式
+});
+
+// 初始化广告
+onMounted(() => {
+  try {
+    (window.adsbygoogle = window.adsbygoogle || []).push({});
+  } catch (err) {
+    console.error('AdSense error:', err);
+  }
 });
 
 const i18n = {
@@ -480,6 +499,13 @@ window.ResizeObserver = class ResizeObserver extends _ResizeObserver {
   vertical-align: middle;
   height: 32px;
   line-height: 20px;
+}
+
+.ad-container {
+  text-align: center;
+  margin: 1em auto;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 </style>
