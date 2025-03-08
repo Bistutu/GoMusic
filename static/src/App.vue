@@ -48,23 +48,31 @@
               {{ state.isEnglish ? i18n.detailedSongName.en : i18n.detailedSongName.zh }}
             </el-checkbox>
             <el-tooltip
-              :content="state.isEnglish ? i18n.detailedSongNameTip.en : i18n.detailedSongNameTip.zh"
-              placement="top"
-              effect="light"
+                :content="state.isEnglish ? i18n.detailedSongNameTip.en : i18n.detailedSongNameTip.zh"
+                placement="top"
+                effect="light"
             >
-              <el-icon class="info-icon"><InfoFilled /></el-icon>
+              <el-icon class="info-icon">
+                <InfoFilled/>
+              </el-icon>
             </el-tooltip>
           </el-form-item>
         </el-col>
       </el-row>
 
       <el-row justify="center">
-        <el-col :md="12" >
+        <el-col :md="12">
           <el-form-item>
             <span class="format-label">{{ state.isEnglish ? i18n.songFormat.en : i18n.songFormat.zh }}:</span>
             <el-radio-group v-model="state.songFormat" class="format-radio-group">
-              <el-radio label="song-singer">{{ state.isEnglish ? i18n.formatSongSinger.en : i18n.formatSongSinger.zh }}</el-radio>
-              <el-radio label="singer-song">{{ state.isEnglish ? i18n.formatSingerSong.en : i18n.formatSingerSong.zh }}</el-radio>
+              <el-radio label="song-singer">{{
+                  state.isEnglish ? i18n.formatSongSinger.en : i18n.formatSongSinger.zh
+                }}
+              </el-radio>
+              <el-radio label="singer-song">{{
+                  state.isEnglish ? i18n.formatSingerSong.en : i18n.formatSingerSong.zh
+                }}
+              </el-radio>
               <el-radio label="song">{{ state.isEnglish ? i18n.formatSongOnly.en : i18n.formatSongOnly.zh }}</el-radio>
             </el-radio-group>
           </el-form-item>
@@ -147,12 +155,12 @@
 </template>
 
 <script setup>
-import {reactive, onMounted} from 'vue';
+import {onMounted, reactive} from 'vue';
 import axios from 'axios';
 import {ElMessage} from 'element-plus';
 import {isSupportedPlatform, isValidUrl} from "@/utils/utils";
 import {sendErrorMessage, sendSuccessMessage} from "@/utils/tip";
-import { InfoFilled } from '@element-plus/icons-vue';
+import {InfoFilled} from '@element-plus/icons-vue';
 
 const activeNames = reactive(['first', 'second']);
 const state = reactive({
@@ -279,8 +287,8 @@ const i18n = {
     zh: '默认不勾选此项是一种优化选择，处理后的歌曲名在迁移到其他平台时有更好的匹配率',
   },
   emptyPlaylist: {
-    en: 'Empty playlist or failed to parse the playlist. Please check your link and try again.',
-    zh: '歌单为空或解析失败，请检查链接是否正确并重试。',
+    en: 'Failed to parse, please check if the playlist is open to public or the link is correct.',
+    zh: '解析失败，请检查歌单是否开放访问权限或链接是否正确。',
   },
   songFormat: {
     en: 'Song Format',
@@ -307,7 +315,7 @@ const sponsorData = [
   {'no': '3', 'name': 'Youyo🍊', 'sponsorship': '66'},
   {'no': '4', 'name': '安分wa', 'sponsorship': '50'},
   {'no': '5', 'name': '高小伦', 'sponsorship': '50'},
-  {'no': '6', 'name': '平', 'sponsorship': '30'}, 
+  {'no': '6', 'name': '平', 'sponsorship': '30'},
   {'no': '7', 'name': '匿名用户', 'sponsorship': '30'},
   {'no': '8', 'name': '迷失了就不酷了', 'sponsorship': '30'},
   {'no': '9', 'name': 'Ember Celica', 'sponsorship': '20'},
@@ -338,7 +346,7 @@ const fetchLinkDetails = async () => {
     // 构建查询参数
     let queryParams = state.useDetailedSongName ? '?detailed=true' : '?detailed=false';
     queryParams += `&format=${state.songFormat}`;
-    
+
     // 本地开发环境URL
     // const resp = await axios.post('http://127.0.0.1:8081/songlist' + queryParams, params, {
     // 生产环境URL
@@ -353,13 +361,13 @@ const fetchLinkDetails = async () => {
       reset(state.isEnglish ? "Request failed, please try again later~" : "请求失败，请稍后再试~");
       return;
     }
-    
+
     // 检查是否为空歌单
     if (!resp.data.data.songs || resp.data.data.songs.length === 0 || resp.data.data.songs_count === 0) {
       reset(state.isEnglish ? i18n.emptyPlaylist.en : i18n.emptyPlaylist.zh);
       return;
     }
-    
+
     sendSuccessMessage(state.isEnglish ? "Song list fetched successfully" : "歌单获取成功");
     state.result = resp.data.data.songs.join('\n')
     state.songsCount = resp.data.data.songs_count;
