@@ -16,7 +16,7 @@ import (
 const (
 	netEasy     = `(163cn)|(\.163\.)`
 	qqMusic     = `.qq.`
-	qishuiMusic = `qishui`
+	qishuiMusic = `(qishui)|(douyin)`
 	SUCCESS     = "success"
 )
 
