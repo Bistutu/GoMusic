@@ -264,7 +264,7 @@ const i18n = {
   },
   sponsorHint: {
     en: 'The website is free, open-source, and kept simple. If you want to support the author, please scan the sponsor code with WeChat. Below are the top 10 sponsors (last updated on 2025.1.21)',
-    zh: '网站免费、开源、保持简单，如果你想支持作者，请使用微信扫描赞赏码，以下是赞赏榜的前10名赞助者（最后更新 2025.2.26）',
+    zh: '网站免费、开源、保持简单，如果你想支持作者，请使用微信扫描赞赏码，以下是赞赏榜的前10名赞助者（最后更新 2025.9.10）',
   },
   no: {
     en: 'No.',
@@ -310,17 +310,16 @@ const i18n = {
 
 // sponsor table data
 const sponsorData = [
-  {'no': '1', 'name': '不疯就行', 'sponsorship': '100'},
-  {'no': '2', 'name': '什么长发及腰不如短发凉', 'sponsorship': '87'},
-  {'no': '3', 'name': 'Youyo🍊', 'sponsorship': '66'},
-  {'no': '4', 'name': '安分wa', 'sponsorship': '50'},
-  {'no': '5', 'name': '高小伦', 'sponsorship': '50'},
-  {'no': '6', 'name': '平', 'sponsorship': '30'},
-  {'no': '7', 'name': '匿名用户', 'sponsorship': '30'},
-  {'no': '8', 'name': '迷失了就不酷了', 'sponsorship': '30'},
-  {'no': '9', 'name': 'Ember Celica', 'sponsorship': '20'},
-  {'no': '10', 'name': '廿四味', 'sponsorship': '20'},
-  {'no': '...', 'name': '…', 'sponsorship': '…'}
+  {'no': '1', 'name': '冰楠 ₿.Ξ 🧘', 'sponsorship': '188'},
+  {'no': '2', 'name': '高胖胖', 'sponsorship': '101'},
+  {'no': '3', 'name': '不疯就行', 'sponsorship': '100'},
+  {'no': '4', 'name': '魏鹏程', 'sponsorship': '88'},
+  {'no': '5', 'name': '什么长发及腰不如短发凉', 'sponsorship': '87'},
+  {'no': '6', 'name': 'Youyo🍊', 'sponsorship': '66'},
+  {'no': '7', 'name': '安分wa', 'sponsorship': '50'},
+  {'no': '8', 'name': '高小伦', 'sponsorship': '50'},
+  {'no': '9', 'name': '平', 'sponsorship': '30'},
+  {'no': '10', 'name': '匿名用户', 'sponsorship': '30'}
 ]
 
 function reset(msg) {
