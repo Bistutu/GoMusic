@@ -17,17 +17,9 @@ This project's backend is developed using Golang + Gin, and the frontend is buil
 
 <img src="misc/images/1.png" style="width:60%; border: 1px solid black;"/>
 
-# How to Start the Program?
+# How to Deploy?
 
-- Install Golang.
-- Clone the program to your local machine.
-- Compile and run.
-
-```shell
-git clone https://github.com/Bistutu/GoMusic.git
-cd GoMusic
-go build && ./GoMusic
-```
+See **[Deployment Guide](DEPLOYMENT.md)** for details.
 
 ## Star History Record
 
