@@ -79,6 +79,24 @@
         </el-col>
       </el-row>
 
+      <el-row justify="center">
+        <el-col :md="12">
+          <el-form-item>
+            <span class="format-label">{{ state.isEnglish ? i18n.songOrder.en : i18n.songOrder.zh }}:</span>
+            <el-radio-group v-model="state.songOrder" class="format-radio-group">
+              <el-radio label="normal">{{
+                  state.isEnglish ? i18n.orderNormal.en : i18n.orderNormal.zh
+                }}
+              </el-radio>
+              <el-radio label="reverse">{{
+                  state.isEnglish ? i18n.orderReverse.en : i18n.orderReverse.zh
+                }}
+              </el-radio>
+            </el-radio-group>
+          </el-form-item>
+        </el-col>
+      </el-row>
+
       <el-form-item>
         <el-button type="danger" class="button-center lang-song-list-btn" @click="throttledFetchLinkDetails">
           {{ state.isEnglish ? i18n.fetchSongList.en : i18n.fetchSongList.zh }}
@@ -170,6 +188,7 @@ const state = reactive({
   songsCount: 0,
   useDetailedSongName: false,
   songFormat: 'song-singer', // 默认为"歌名-歌手"格式
+  songOrder: 'normal', // 默认为正序
 });
 
 // 初始化广告
@@ -306,6 +325,18 @@ const i18n = {
     en: 'Song Only',
     zh: '仅歌名',
   },
+  songOrder: {
+    en: 'Song Order',
+    zh: '歌曲顺序',
+  },
+  orderNormal: {
+    en: 'Normal Order',
+    zh: '正序',
+  },
+  orderReverse: {
+    en: 'Reverse Order',
+    zh: '倒序',
+  },
 }
 
 // sponsor table data
@@ -345,6 +376,7 @@ const fetchLinkDetails = async () => {
     // 构建查询参数
     let queryParams = state.useDetailedSongName ? '?detailed=true' : '?detailed=false';
     queryParams += `&format=${state.songFormat}`;
+    queryParams += `&order=${state.songOrder}`;
 
     // 本地开发环境URL
     // const resp = await axios.post('http://127.0.0.1:8081/songlist' + queryParams, params, {
