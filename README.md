@@ -23,17 +23,9 @@
 
 见 GitHub issue：https://github.com/Bistutu/GoMusic/issues/17
 
-# 如何启动程序？
+# 如何部署？
 
-- 安装 Golang
-- 将程序克隆至本地
-- 编译并运行
-
-```shell
-git clone https://github.com/Bistutu/GoMusic.git
-cd GoMusic
-go build &&./GoMusic
-```
+详见 **[部署文档](DEPLOYMENT.md)**
 
 ## Star 历史记录
 

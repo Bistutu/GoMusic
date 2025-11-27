@@ -17,17 +17,9 @@
 
 <img src="misc/images/1.png" style="width:60%; border: 1px solid black;"/>
 
-# 프로그램 시작 방법?
+# 배포 방법?
 
-- Golang 설치
-- 프로그램을 로컬로 클론
-- 컴파일 후 실행
-
-```shell
-git clone https://github.com/Bistutu/GoMusic.git
-cd GoMusic
-go build && ./GoMusic
-```
+자세한 내용은 **[배포 가이드](DEPLOYMENT.md)** 를 참조하세요.
 
 ## 스타 이력 기록
 
