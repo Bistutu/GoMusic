@@ -27,7 +27,7 @@ const (
 	qqMusicErrorResponseLength = 108
 
 	// 分页相关
-	maxSongsPerPage = 1000  // 每页最大歌曲数
+	maxSongsPerPage = 30  // 每页最大歌曲数
 	maxTotalSongs   = 10000 // 最大支持的歌曲总数
 )
 
