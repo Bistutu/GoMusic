@@ -1,8 +1,8 @@
 <!--  三段式：头部、主体、底部 -->
 <template>
-  <el-container style="margin: 0">
+  <el-container class="app-container">
 
-    <el-header style="margin-bottom: 4em;margin-top: 0 ">
+    <el-header class="app-header">
       <div class="i18n_btn">
         <el-button @click="toggleLanguage">{{ state.isEnglish ? '中文' : 'English' }}</el-button>
       </div>
@@ -12,7 +12,7 @@
       </p>
     </el-header>
 
-    <el-main style="margin-top: 1em">
+    <el-main class="app-main">
       <!-- github 开源标识 -->
       <div class="github-badge-container">
         <a href="https://github.com/Bistutu/GoMusic" target="_blank"><img
@@ -20,18 +20,8 @@
             alt="GitHub stars"></a>
       </div>
 
-      <!-- Google AdSense -->
-      <div class="ad-container">
-        <ins class="adsbygoogle"
-             style="display:block"
-             data-ad-client="ca-pub-1997752442920544"
-             data-ad-slot="YOUR_AD_SLOT_ID"
-             data-ad-format="auto"
-             data-full-width-responsive="true"></ins>
-      </div>
-
       <el-row justify="center" @submit.prevent="fetchLinkDetails">
-        <el-col :md="12">
+        <el-col :md="12" :sm="18" :xs="24" class="content-col">
           <el-form-item>
             <el-input v-model="state.link" size="large"
                       :placeholder="state.isEnglish ? i18n.inputPlaceholder.en : i18n.inputPlaceholder.zh"
@@ -41,8 +31,8 @@
         </el-col>
       </el-row>
 
-      <el-row justify="center" style="margin-bottom: -10px;">
-        <el-col :md="12">
+      <el-row justify="center" class="compact-row">
+        <el-col :md="12" :sm="18" :xs="24" class="content-col">
           <el-form-item>
             <el-checkbox v-model="state.useDetailedSongName">
               {{ state.isEnglish ? i18n.detailedSongName.en : i18n.detailedSongName.zh }}
@@ -61,7 +51,7 @@
       </el-row>
 
       <el-row justify="center">
-        <el-col :md="12">
+        <el-col :md="12" :sm="18" :xs="24" class="content-col">
           <el-form-item>
             <span class="format-label">{{ state.isEnglish ? i18n.songFormat.en : i18n.songFormat.zh }}:</span>
             <el-radio-group v-model="state.songFormat" class="format-radio-group">
@@ -80,7 +70,7 @@
       </el-row>
 
       <el-row justify="center">
-        <el-col :md="12">
+        <el-col :md="12" :sm="18" :xs="24" class="content-col">
           <el-form-item>
             <span class="format-label">{{ state.isEnglish ? i18n.songOrder.en : i18n.songOrder.zh }}:</span>
             <el-radio-group v-model="state.songOrder" class="format-radio-group">
@@ -104,7 +94,7 @@
       </el-form-item>
 
       <el-row justify="center">
-        <el-col :md="12">
+        <el-col :md="12" :sm="18" :xs="24" class="content-col">
           <el-form-item>
             <el-input type="textarea" v-model="state.result" :rows="15"
                       :placeholder="state.isEnglish ? i18n.resultHint.en : i18n.resultHint.zh"></el-input>
@@ -129,7 +119,7 @@
 
     <el-footer>
       <el-row justify="center">
-        <el-col :md="12">
+        <el-col :md="12" :sm="20" :xs="24" class="content-col">
           <el-collapse v-model="activeNames">
             <el-collapse-item :title="state.isEnglish ? i18n.guide.en : i18n.guide.zh" name="first">
               <ol class="middle-font">
@@ -173,7 +163,7 @@
 </template>
 
 <script setup>
-import {onMounted, reactive} from 'vue';
+import {reactive} from 'vue';
 import axios from 'axios';
 import {ElMessage} from 'element-plus';
 import {isSupportedPlatform, isValidUrl} from "@/utils/utils";
@@ -189,15 +179,6 @@ const state = reactive({
   useDetailedSongName: false,
   songFormat: 'song-singer', // 默认为"歌名-歌手"格式
   songOrder: 'normal', // 默认为正序
-});
-
-// 初始化广告
-onMounted(() => {
-  try {
-    (window.adsbygoogle = window.adsbygoogle || []).push({});
-  } catch (err) {
-    console.error('AdSense error:', err);
-  }
 });
 
 const i18n = {
@@ -472,8 +453,33 @@ window.ResizeObserver = class ResizeObserver extends _ResizeObserver {
 
 
 <style>
+.app-container {
+  margin: 0;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 40%);
+}
+
+.app-header {
+  margin-top: 0;
+  margin-bottom: 2.5em;
+  padding-top: 0.75em;
+}
+
+.app-main {
+  margin-top: 1em;
+  padding: 1rem 1rem 0.5rem;
+}
+
 .text-center {
   text-align: center;
+}
+
+.content-col {
+  max-width: 760px;
+}
+
+.compact-row {
+  margin-bottom: -10px;
 }
 
 .songs-count-display {
@@ -509,6 +515,7 @@ window.ResizeObserver = class ResizeObserver extends _ResizeObserver {
 .button-center {
   margin: 0 auto;
   display: block; /* 按钮水平居中 */
+  min-width: 160px;
 }
 
 .middle-font {
@@ -540,11 +547,30 @@ window.ResizeObserver = class ResizeObserver extends _ResizeObserver {
   line-height: 20px;
 }
 
-.ad-container {
-  text-align: center;
-  margin: 1em auto;
-  max-width: 100%;
-  overflow: hidden;
+@media (max-width: 768px) {
+  .app-header {
+    margin-bottom: 1.25em;
+  }
+
+  .app-main {
+    padding: 0.5rem 0.75rem 0;
+  }
+
+  .i18n_btn {
+    margin-right: 0;
+  }
+
+  .format-label,
+  .format-radio-group {
+    display: block;
+    height: auto;
+    line-height: 1.6;
+  }
+
+  .format-radio-group :deep(.el-radio) {
+    margin-right: 12px;
+    margin-bottom: 6px;
+  }
 }
 
 </style>
