@@ -20,14 +20,12 @@ import (
 // QQ音乐相关常量
 const (
 	// API相关
-	qqMusicRedis  = "qq_music:%d"
-	qqMusicAPIURL = "https://u6.y.qq.com/cgi-bin/musics.fcg?sign=%s&_=%d"
-
-	// 错误响应长度标识
-	qqMusicErrorResponseLength = 108
+	qqMusicRedis        = "qq_music:%d"
+	qqMusicAPIURL       = "https://u6.y.qq.com/cgi-bin/musics.fcg?sign=%s&_=%d"
+	qqMusicLegacyAPIURL = "https://c.y.qq.com/qzone/fcg-bin/fcg_ucc_getcdinfo_byids_cp.fcg?type=1&json=1&utf8=1&onlysong=0&disstid=%d&format=json&g_tk=5381&loginUin=0&hostUin=0&inCharset=utf8&outCharset=utf-8&notice=0&platform=yqq&needNewCode=0"
 
 	// 分页相关
-	maxSongsPerPage = 30  // 每页最大歌曲数
+	maxSongsPerPage = 30    // 每页最大歌曲数
 	maxTotalSongs   = 10000 // 最大支持的歌曲总数
 )
 
@@ -42,8 +40,8 @@ var (
 	// 包含id=数字的链接
 	idParamLinkRegex = regexp.MustCompile(`id=\d+`)
 
-	// 包含playlist/数字的链接
-	playlistLinkRegex = regexp.MustCompile(`.*playlist/\d+$`)
+	// 包含 playlist/数字 的链接，兼容 /ryqq_v2/ 路径及查询参数
+	playlistLinkRegex = regexp.MustCompile(`playlist/\d+`)
 )
 
 // QQMusicDiscover 获取QQ音乐歌单信息
@@ -53,26 +51,34 @@ func QQMusicDiscover(link string, detailed bool) (*models.SongList, error) {
 	// 1. 从链接中提取歌单ID
 	tid, err := extractPlaylistID(link)
 	if err != nil || tid == 0 {
+		if err != nil {
+			return nil, fmt.Errorf("无效的歌单链接: %w", err)
+		}
 		return nil, errors.New("无效的歌单链接")
 	}
 
-	// 2. 获取歌单数据
-	responseData, err := fetchPlaylistData(tid)
-	if err != nil {
-		log.Errorf("获取QQ音乐歌单数据失败: %v", err)
-		return nil, fmt.Errorf("获取歌单数据失败: %w", err)
+	// 2. 优先使用新版接口获取歌单数据。
+	responseData, newAPIErr := fetchPlaylistData(tid)
+	if newAPIErr == nil {
+		qqMusicResponse := &models.QQMusicResp{}
+		if err = json.Unmarshal(responseData, qqMusicResponse); err != nil {
+			newAPIErr = fmt.Errorf("解析歌单数据失败: %w", err)
+		} else {
+			songList := buildSongList(qqMusicResponse, detailed)
+			if songList.Name != "" || len(songList.Songs) > 0 {
+				return songList, nil
+			}
+			newAPIErr = errors.New("新版接口未返回有效歌单信息")
+		}
 	}
 
-	// 3. 解析响应数据
-	qqMusicResponse := &models.QQMusicResp{}
-	if err = json.Unmarshal(responseData, qqMusicResponse); err != nil {
-		log.Errorf("解析QQ音乐响应数据失败: %v", err)
-		return nil, fmt.Errorf("解析歌单数据失败: %w", err)
+	// 3. 部分新歌单会被新版接口以 code=2000 拒绝，回退到旧版公开详情接口。
+	log.Warnf("新版QQ音乐接口获取失败，尝试旧版接口: %v", newAPIErr)
+	songList, legacyErr := fetchLegacyPlaylist(tid, detailed)
+	if legacyErr != nil {
+		log.Errorf("获取QQ音乐歌单数据失败，新版接口: %v，旧版接口: %v", newAPIErr, legacyErr)
+		return nil, fmt.Errorf("获取歌单数据失败，新版接口: %v；旧版接口: %v", newAPIErr, legacyErr)
 	}
-
-	// 4. 构建歌曲列表
-	songList := buildSongList(qqMusicResponse, detailed)
-
 	return songList, nil
 }
 
@@ -170,15 +176,13 @@ func fetchPlaylistData(tid int) ([]byte, error) {
 		// 获取当前页数据
 		pageData, err := fetchPlaylistPage(tid, songBegin, songNum)
 		if err != nil {
-			log.Errorf("获取第%d页歌曲失败: %v", page+1, err)
-			continue
+			return nil, fmt.Errorf("获取第%d页歌曲失败: %w", page+1, err)
 		}
 
-		// 解析当前页数据
+		// 解析当前页数据；任何分页失败都触发旧版接口回退，避免静默返回不完整歌单。
 		pageResp := &models.QQMusicResp{}
 		if err = json.Unmarshal(pageData, pageResp); err != nil {
-			log.Errorf("解析第%d页歌曲数据失败: %v", page+1, err)
-			continue
+			return nil, fmt.Errorf("解析第%d页歌曲数据失败: %w", page+1, err)
 		}
 
 		// 添加当前页歌曲到合并的响应中
@@ -209,7 +213,6 @@ func fetchPlaylistPage(tid int, songBegin, songNum int) ([]byte, error) {
 	platforms := []string{"-1", "android", "iphone", "h5", "wxfshare", "iphone_wx", "windows"}
 
 	var lastErr error
-	var resp *http.Response
 
 	// 尝试不同平台参数
 	for _, platform := range platforms {
@@ -219,24 +222,111 @@ func fetchPlaylistPage(tid int, songBegin, songNum int) ([]byte, error) {
 		requestURL := fmt.Sprintf(qqMusicAPIURL, sign, time.Now().UnixMilli())
 
 		// 2. 发送请求
-		resp, lastErr = httputil.Post(requestURL, strings.NewReader(paramString))
-		if lastErr != nil {
-			log.Errorf("HTTP请求失败(平台:%s): %v", platform, lastErr)
+		resp, err := httputil.Post(requestURL, strings.NewReader(paramString))
+		if err != nil {
+			lastErr = err
+			log.Errorf("HTTP请求失败(平台:%s): %v", platform, err)
 			continue
 		}
 
 		// 3. 读取响应
-		data, _ := io.ReadAll(resp.Body)
+		data, readErr := io.ReadAll(resp.Body)
 		resp.Body.Close()
-
-		// 4. 检查响应是否有效
-		// 108字节长度表示返回了错误信息，需要尝试其他平台
-		if len(data) != qqMusicErrorResponseLength {
-			return data, nil
+		if readErr != nil {
+			lastErr = fmt.Errorf("读取响应失败(平台:%s): %w", platform, readErr)
+			continue
 		}
+		if resp.StatusCode != http.StatusOK {
+			lastErr = fmt.Errorf("QQ音乐接口返回 %s(平台:%s)", resp.Status, platform)
+			continue
+		}
+
+		// 4. 校验业务状态码，不再依赖会随时间戳变化的响应长度。
+		status := &models.QQMusicResp{}
+		if err = json.Unmarshal(data, status); err != nil {
+			lastErr = fmt.Errorf("解析QQ音乐响应失败(平台:%s): %w", platform, err)
+			continue
+		}
+		if status.Code != 0 || status.Req0.Code != 0 {
+			lastErr = fmt.Errorf("QQ音乐业务错误(平台:%s, code:%d, req_0.code:%d): %s",
+				platform, status.Code, status.Req0.Code, responsePreview(data))
+			continue
+		}
+
+		return data, nil
 	}
 
+	if lastErr == nil {
+		lastErr = errors.New("没有可用的平台参数")
+	}
 	return nil, fmt.Errorf("尝试所有平台参数均失败: %w", lastErr)
+}
+
+func responsePreview(data []byte) string {
+	const maxLength = 240
+	if len(data) <= maxLength {
+		return string(data)
+	}
+	return string(data[:maxLength]) + "..."
+}
+
+// fetchLegacyPlaylist 使用旧版公开详情接口获取完整歌单。
+func fetchLegacyPlaylist(tid int, detailed bool) (*models.SongList, error) {
+	requestURL := fmt.Sprintf(qqMusicLegacyAPIURL, tid)
+	headers := map[string]string{
+		"Referer":    fmt.Sprintf("https://y.qq.com/n/ryqq/playlist/%d", tid),
+		"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36",
+	}
+	resp, err := httputil.GetWithHeaders(requestURL, nil, headers)
+	if err != nil {
+		return nil, fmt.Errorf("请求旧版接口失败: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("旧版接口返回 %s", resp.Status)
+	}
+	return parseLegacyPlaylist(resp.Body, detailed)
+}
+
+func parseLegacyPlaylist(body io.Reader, detailed bool) (*models.SongList, error) {
+	legacyResp := &models.QQMusicLegacyResp{}
+	if err := json.NewDecoder(body).Decode(legacyResp); err != nil {
+		return nil, fmt.Errorf("解析旧版接口响应失败: %w", err)
+	}
+	if legacyResp.Code != 0 || legacyResp.Subcode != 0 {
+		message := legacyResp.Message
+		if message == "" {
+			message = "未返回错误详情"
+		}
+		return nil, fmt.Errorf("旧版接口业务错误(code:%d, subcode:%d): %s",
+			legacyResp.Code, legacyResp.Subcode, message)
+	}
+	if len(legacyResp.Cdlist) == 0 {
+		return nil, errors.New("旧版接口未返回歌单信息")
+	}
+
+	playlist := legacyResp.Cdlist[0]
+	if playlist.Songnum > 0 && len(playlist.Songlist) == 0 {
+		return nil, fmt.Errorf("旧版接口显示歌单有%d首歌曲，但未返回歌曲数据", playlist.Songnum)
+	}
+	songs := make([]string, 0, len(playlist.Songlist))
+	for _, song := range playlist.Songlist {
+		songName := song.Songname
+		if !detailed {
+			songName = utils.StandardSongName(songName)
+		}
+		singers := make([]string, 0, len(song.Singer))
+		for _, singer := range song.Singer {
+			singers = append(singers, singer.Name)
+		}
+		songs = append(songs, songName+" - "+strings.Join(singers, " / "))
+	}
+
+	return &models.SongList{
+		Name:       playlist.Dissname,
+		Songs:      songs,
+		SongsCount: len(songs),
+	}, nil
 }
 
 // extractPlaylistID 从QQ音乐链接中提取歌单ID
