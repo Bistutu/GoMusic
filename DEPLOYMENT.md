@@ -121,3 +121,28 @@ yarn build
 - 将构建后的前端文件（`static/dist`）部署到 Web 服务器
 - 配置反向代理将后端 API 请求转发到 Go 服务
 - 通过域名访问应用
+
+## 本地快速运行（不安装 MySQL/Redis）
+
+只测试歌单解析时，可以关闭 MySQL 和 Redis 缓存。QQ 音乐解析不依赖这两个服务，
+网易云音乐会直接请求官方 API，仅失去本地缓存加速。
+
+PowerShell：
+
+```powershell
+$env:GOMUSIC_DISABLE_DB = "1"
+$env:GOMUSIC_DISABLE_REDIS = "1"
+go run .
+```
+
+另开终端启动前端：
+
+```powershell
+cd static
+npm install
+npm run serve
+```
+
+前端开发环境通过 `static/.env.development` 将 API 地址设为
+`http://127.0.0.1:8081`，打开 `http://localhost:8080/` 即可使用。
+生产构建时仍可通过 `VUE_APP_API_BASE_URL` 覆盖后端地址。
