@@ -272,20 +272,86 @@ h1 {
   color: #333;
   font-weight: 500;
 }
-.result-text {
-  display: block;
-  width: 100%;
-  height: 216px;
-  min-height: 180px;
-  max-height: 600px;
-  padding: 13px 15px;
+.numbered-editor {
+  --editor-padding-block: 13px;
+  --editor-padding-inline: 15px;
+  --editor-gutter: 0px;
+  position: relative;
+  overflow: hidden;
   border: 1px solid #ddd;
   border-radius: 6px;
   background: #fff;
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 13px;
-  line-height: 1.95;
+  line-height: 26px;
+  tab-size: 8;
+}
+.numbered-editor.has-line-numbers {
+  --editor-gutter: calc(var(--line-number-digits) * 1ch + 20px);
+}
+.numbered-editor.has-line-numbers::before {
+  content: "";
+  box-sizing: border-box;
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: var(--editor-gutter);
+  background: #fafafa;
+  border-right: 1px solid #eee;
+}
+.numbered-editor:focus-within {
+  outline: 2px solid #aaa;
+  outline-offset: 1px;
+}
+.editor-lines {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  padding-block: var(--editor-padding-block);
+  color: transparent;
+  pointer-events: none;
+  user-select: none;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+.editor-line {
+  position: relative;
+  min-height: 26px;
+  padding-left: calc(var(--editor-gutter) + var(--editor-padding-inline));
+  padding-right: var(--editor-padding-inline);
+}
+.editor-line::before {
+  content: attr(data-line);
+  box-sizing: border-box;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--editor-gutter);
+  padding: 0 10px 0 6px;
+  color: #929292;
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.result-text {
+  position: relative;
+  display: block;
+  width: calc(100% - var(--editor-gutter));
+  margin-left: var(--editor-gutter);
+  height: 216px;
+  min-height: 180px;
+  max-height: 600px;
+  padding: var(--editor-padding-block) var(--editor-padding-inline);
+  border: 0;
+  border-radius: 0;
+  background: #fff;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
   resize: vertical;
+}
+.result-text:focus {
+  outline: none;
 }
 .result-text:disabled {
   background: #fafafa;
@@ -484,10 +550,9 @@ h1 {
   .result-heading {
     gap: 12px;
   }
-  .result-text {
-    height: 216px;
-    padding: 12px;
-    font-size: 13px;
+  .numbered-editor {
+    --editor-padding-block: 12px;
+    --editor-padding-inline: 12px;
   }
   .help-section {
     font-size: 12px;

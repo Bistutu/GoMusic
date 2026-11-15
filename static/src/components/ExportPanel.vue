@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import type { Copy } from "../i18n";
+import NumberedTextarea from "./NumberedTextarea.vue";
 import {
   copyText,
   downloadText,
@@ -114,13 +115,12 @@ function download() {
         >
       </div>
     </div>
-    <textarea
+    <NumberedTextarea
       v-model="text"
-      class="result-text"
-      :aria-label="t.resultLabel"
+      :label="t.resultLabel"
       :placeholder="busy ? t.loading : t.resultPlaceholder"
       :disabled="!list || busy"
-      spellcheck="false"
+      :start="start + 1"
     />
     <div v-if="list?.tracks.length" class="text-caption">
       <span>{{ t.editable }}</span><span
