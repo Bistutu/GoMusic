@@ -134,6 +134,50 @@ test("shows incomplete counts and supports a final 1-track batch", async ({
     "歌曲 501 - Live - 歌手甲 / 歌手乙",
   );
 });
+test("discloses a short response from a large playlist", async ({ page }) => {
+  const body = playlist(30, false);
+  body.data.total_count = 2800;
+  await page.route("**/api/v1/songlists", (route) =>
+    route.fulfill({ json: body }),
+  );
+  await page.goto("/");
+  await page.getByRole("button", { name: "填入范例链接", exact: true }).click();
+  await page.getByRole("button", { name: "获取歌单", exact: true }).click();
+  await expect(page.getByText("部分歌曲未获取", { exact: true })).toBeVisible();
+  await expect(page.locator(".result-heading")).toContainText(
+    "已获取 30 首歌曲",
+  );
+  await expect(page.getByText("平台显示 2800", { exact: false })).toBeVisible();
+  const output = page.getByLabel("可编辑的歌单文本");
+  expect((await output.inputValue()).split("\n")).toHaveLength(30);
+  await page.getByRole("radio", { name: "倒序", exact: true }).check();
+  expect((await output.inputValue()).split("\n")[0]).toContain("歌曲 30");
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "下载 TXT", exact: true }).click();
+  const stream = await (await download).createReadStream();
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream!) chunks.push(Buffer.from(chunk));
+  const text = Buffer.concat(chunks)
+    .toString("utf8")
+    .replace(/^\ufeff/, "");
+  expect(text).toBe(await output.inputValue());
+  expect(text.split("\n")).toHaveLength(30);
+});
+test("shows an upstream timeout as a timeout", async ({ page }) => {
+  await page.route("**/api/v1/songlists", (route) =>
+    route.fulfill({
+      status: 504,
+      json: { code: -1, msg: "获取歌单超时，请稍后重试", data: null },
+    }),
+  );
+  await page.goto("/");
+  await page.getByRole("button", { name: "填入范例链接", exact: true }).click();
+  await page.getByRole("button", { name: "获取歌单", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("获取歌单超时");
+  await expect(
+    page.getByRole("button", { name: "复制结果", exact: true }),
+  ).toBeDisabled();
+});
 test("cancels without stale data or an error and can retry", async ({
   page,
 }) => {

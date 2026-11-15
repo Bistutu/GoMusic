@@ -44,6 +44,39 @@ func NewService(client *httputil.Client, cache, store Repository, maxSongs, conc
 	return &Service{HTTP: client, Cache: cache, Store: store, MaxSongs: maxSongs, Concurrency: concurrency}
 }
 
+// A preview or legacy endpoint can report a smaller total than the primary
+// endpoint. Keep the best result without forgetting songs already known to exist.
+func preferPlaylist(current, candidate *models.SongList) *models.SongList {
+	if current == nil {
+		return candidate
+	}
+	if candidate == nil {
+		return current
+	}
+	total := max(current.TotalCount, candidate.TotalCount)
+	if len(candidate.Tracks) > len(current.Tracks) {
+		current = candidate
+	}
+	current.TotalCount = total
+	return current
+}
+
+// Pagination can overlap even when page bodies differ. Use stable IDs, never
+// titles: different recordings can have the same name. Unknown IDs stay intact.
+func appendDistinctTrack(list *models.SongList, track models.Track, seen map[string]bool) bool {
+	if track.Title == "" {
+		return false
+	}
+	if track.ID != "" && track.ID != "0" {
+		if seen[track.ID] {
+			return false
+		}
+		seen[track.ID] = true
+	}
+	list.Tracks = append(list.Tracks, track)
+	return true
+}
+
 func (s *Service) Fetch(ctx context.Context, input string, options Options) (*models.SongList, error) {
 	link, err := musicurl.Parse(input)
 	if err != nil {

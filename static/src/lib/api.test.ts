@@ -35,6 +35,20 @@ it("preserves a structured server error", async () => {
     message: "Unavailable",
   });
 });
+it.each([
+  [400, "invalid"],
+  [504, "timeout"],
+])("classifies HTTP %i as %s", async (status, kind) => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ code: -1, msg: "Request failed" }), {
+        status: Number(status),
+      }),
+    ),
+  );
+  await expect(fetchPlaylist("url")).rejects.toMatchObject({ kind });
+});
 it("aborts an in-flight request when cancelled", async () => {
   vi.stubGlobal(
     "fetch",

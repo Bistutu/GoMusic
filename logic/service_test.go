@@ -84,7 +84,7 @@ func TestNetEaseCacheOutageDoesNotLoseSongs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if list.SongsCount != 1005 || list.TotalCount != 1005 || !list.Complete || calls.Load() != 3 {
+	if list.SongsCount != 1005 || list.TotalCount != 1005 || !list.Complete || calls.Load() != 6 {
 		t.Fatalf("count=%d total=%d complete=%v calls=%d", list.SongsCount, list.TotalCount, list.Complete, calls.Load())
 	}
 	if list.Songs[0] != "Artist - Song 1 - Version" || list.Songs[1004] != "Artist - Song 1005 - Version" {

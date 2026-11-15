@@ -37,8 +37,12 @@ func (s *Service) qqMusic(ctx context.Context, link musicurl.Link) (*models.Song
 		return nil, ctx.Err()
 	}
 	legacy, legacyErr := s.qqLegacy(ctx, link.ID)
-	if legacyErr == nil && (primary == nil || len(legacy.Tracks) > len(primary.Tracks)) {
-		return legacy, nil
+	if legacyErr == nil {
+		best := preferPlaylist(primary, legacy)
+		if len(best.Tracks) < best.TotalCount {
+			best.Warnings = append(best.Warnings, "QQ 音乐未返回完整歌单，请检查公开权限或稍后重试")
+		}
+		return best, nil
 	}
 	if primary != nil {
 		primary.Warnings = append(primary.Warnings, "QQ 音乐未返回完整歌单，请检查公开权限或稍后重试")
@@ -53,6 +57,7 @@ func (s *Service) qqMusic(ctx context.Context, link musicurl.Link) (*models.Song
 func (s *Service) qqPages(ctx context.Context, id int) (*models.SongList, error) {
 	var list *models.SongList
 	seenPages := map[string]bool{}
+	seenTracks := map[string]bool{}
 	for begin := 0; begin < s.MaxSongs; {
 		count := maxSongsPerPage
 		if list != nil && count > list.TotalCount-begin {
@@ -72,6 +77,7 @@ func (s *Service) qqPages(ctx context.Context, id int) (*models.SongList, error)
 		if list == nil {
 			list = &models.SongList{Name: data.Dirinfo.Title, TotalCount: data.Dirinfo.Songnum}
 		}
+		list.TotalCount = max(list.TotalCount, data.Dirinfo.Songnum)
 		if len(data.Songlist) == 0 {
 			if begin < list.TotalCount {
 				return list, fmt.Errorf("QQ 音乐第 %d 页未返回歌曲", begin/maxSongsPerPage+1)
@@ -84,16 +90,21 @@ func (s *Service) qqPages(ctx context.Context, id int) (*models.SongList, error)
 			return list, fmt.Errorf("QQ 音乐返回重复分页")
 		}
 		seenPages[string(fingerprint)] = true
+		before := len(list.Tracks)
 		for _, song := range data.Songlist {
 			track := models.Track{ID: song.ID.String(), Title: song.Name, Artists: []string{}}
+			if track.ID == "" || track.ID == "0" {
+				track.ID = song.Mid
+			}
 			for _, artist := range song.Singer {
 				if artist.Name != "" {
 					track.Artists = append(track.Artists, artist.Name)
 				}
 			}
-			if track.Title != "" {
-				list.Tracks = append(list.Tracks, track)
-			}
+			appendDistinctTrack(list, track, seenTracks)
+		}
+		if len(list.Tracks) == before {
+			return list, fmt.Errorf("QQ 音乐分页没有返回新的有效歌曲")
 		}
 		begin += len(data.Songlist)
 		if begin >= list.TotalCount {

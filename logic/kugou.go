@@ -144,12 +144,17 @@ func (s *Service) kugouShare(ctx context.Context, id string) (*models.SongList, 
 	}
 	if list.TotalCount > len(list.Tracks) {
 		if strings.HasPrefix(collection, "collection_") {
-			complete, err := s.kugouPages(ctx, collection, true)
-			if err == nil && len(complete.Tracks) > len(list.Tracks) {
-				complete.Name = list.Name
-				return complete, nil
+			candidate, err := s.kugouPages(ctx, collection, true)
+			if err == nil {
+				name := list.Name
+				list = preferPlaylist(list, candidate)
+				if name != "" {
+					list.Name = name
+				}
 			}
 		}
+	}
+	if list.TotalCount > len(list.Tracks) {
 		list.Warnings = append(list.Warnings, "酷狗普通版分享页仅提供部分预览，未获取的歌曲不会计入导出数量；可尝试概念版的歌单分享链接")
 	}
 	return list, nil
@@ -210,6 +215,7 @@ func (s *Service) kugouPages(ctx context.Context, id string, collection bool) (*
 		}
 	}
 	seen := map[string]bool{}
+	seenTracks := map[string]bool{}
 	for page := 1; len(list.Tracks) < s.MaxSongs; page++ {
 		values := url.Values{"page": {strconv.Itoa(page)}, "pagesize": {"100"}}
 		endpoint := "https://mobilecdn.kugou.com/api/v3/special/song"
@@ -267,10 +273,13 @@ func (s *Service) kugouPages(ctx context.Context, id string, collection bool) (*
 			break
 		}
 		seen[string(fingerprint)] = true
+		before := len(list.Tracks)
 		for _, song := range data.Data.Info {
-			if track := song.track(); track.Title != "" {
-				list.Tracks = append(list.Tracks, track)
-			}
+			appendDistinctTrack(list, song.track(), seenTracks)
+		}
+		if len(list.Tracks) == before {
+			list.Warnings = append(list.Warnings, "酷狗分页没有返回新的有效歌曲，已停止获取")
+			break
 		}
 		if (list.TotalCount > 0 && len(list.Tracks) >= list.TotalCount) || (list.TotalCount == 0 && len(data.Data.Info) < 100) {
 			break

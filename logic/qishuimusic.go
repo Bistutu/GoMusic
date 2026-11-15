@@ -34,8 +34,12 @@ func (s *Service) qishui(ctx context.Context, link musicurl.Link) (*models.SongL
 	}
 	html, _, pageErr := s.HTTP.Do(ctx, http.MethodGet, link.URL.String(), nil, nil)
 	preview, previewErr := parseQishui(bytes.NewReader(html))
-	if previewErr == nil && (apiList == nil || len(preview.Tracks) > len(apiList.Tracks)) {
-		return preview, nil
+	if pageErr == nil && previewErr == nil {
+		best := preferPlaylist(apiList, preview)
+		if len(best.Tracks) < best.TotalCount {
+			best.Warnings = append(best.Warnings, "汽水音乐分页未完成，请稍后重试")
+		}
+		return best, nil
 	}
 	if apiList != nil {
 		apiList.Warnings = append(apiList.Warnings, "汽水音乐分页未完成，请稍后重试")
@@ -60,6 +64,7 @@ type qishuiMedia struct {
 func (s *Service) qishuiPages(ctx context.Context, id string) (*models.SongList, error) {
 	cursor := "0"
 	seen := map[string]bool{}
+	seenTracks := map[string]bool{}
 	var list *models.SongList
 	for len(seen) < 100 && !seen[cursor] {
 		seen[cursor] = true
@@ -86,18 +91,25 @@ func (s *Service) qishuiPages(ctx context.Context, id string) (*models.SongList,
 		if list == nil {
 			list = &models.SongList{Name: page.Playlist.Title, TotalCount: page.Playlist.Count}
 		}
+		list.TotalCount = max(list.TotalCount, page.Playlist.Count)
+		before := len(list.Tracks)
+		hasTracks := false
 		for _, media := range page.Medias {
 			song := media.Entity.Track
 			if media.Type != "track" || song.Name == "" {
 				continue
 			}
+			hasTracks = true
 			track := models.Track{ID: song.ID, Title: song.Name, Artists: []string{}}
 			for _, artist := range song.Artists {
 				if artist.Name != "" {
 					track.Artists = append(track.Artists, artist.Name)
 				}
 			}
-			list.Tracks = append(list.Tracks, track)
+			appendDistinctTrack(list, track, seenTracks)
+		}
+		if hasTracks && len(list.Tracks) == before {
+			return list, fmt.Errorf("汽水音乐分页没有返回新的歌曲")
 		}
 		if len(list.Tracks) >= s.MaxSongs || (!page.HasMore && len(list.Tracks) >= list.TotalCount) {
 			return list, nil

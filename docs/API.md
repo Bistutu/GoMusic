@@ -45,6 +45,8 @@ The URL can also be the full share text copied from a music app. Supported sourc
 
 `tracks` contains original metadata in the requested order. `songs` contains formatted export lines. `songs_count` always equals the number of actually returned tracks; `total_count` preserves the known upstream total. Clients **must check `complete` and display `warnings`** before describing an export as complete. Provider restrictions, missing tracks, capped pages, or the configured song limit can produce a useful partial result with HTTP 200 and `complete=false`.
 
+When a legacy endpoint or share-page fallback reports a smaller playlist total, GoMusic retains the largest total observed across the responses. A 60-track preview cannot turn a known 2,800-track playlist into a complete export. Paginated QQ, Qishui and Kugou results reconcile overlapping pages by stable song ID; different song IDs with the same title remain separate tracks. Pagination stops with a partial-result warning when subsequent pages contain no new valid tracks.
+
 Kugou standard-edition `gcid` share pages sometimes return only a preview. GoMusic reports it as partial when the advertised count is larger. Public Concept Edition collections and official special playlists have separate paginated adapters. Availability remains dependent on the music platform; a successful sample does not guarantee every playlist is publicly accessible.
 
 ## Legacy API

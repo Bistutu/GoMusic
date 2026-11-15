@@ -15,7 +15,9 @@ import (
 	"time"
 )
 
-const chunkSize = 400
+// Historical upstream responses have silently capped larger detail batches.
+// Keep below that boundary; see issue #18 and the capped-response regression.
+const chunkSize = 200
 
 type netSong struct {
 	ID   json.Number `json:"id"`

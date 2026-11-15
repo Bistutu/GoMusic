@@ -40,7 +40,11 @@ export async function fetchPlaylist(
     }
     if (!response.ok || body?.code !== 1)
       throw new PlaylistError(
-        "server",
+        response.status === 504
+          ? "timeout"
+          : response.status === 400
+            ? "invalid"
+            : "server",
         typeof body?.msg === "string" ? body.msg : "",
       );
     const data = body.data;
