@@ -72,11 +72,27 @@ const errorMessage = computed(() => {
           /><span v-if="!starsLoaded || !showStars">GitHub</span></a
         >
         <button
-          class="text-button"
+          type="button"
+          class="language-button"
           :aria-label="t.language"
+          :title="t.language"
           @click="language = language === 'zh' ? 'en' : 'zh'"
         >
-          {{ language === "zh" ? "EN" : "中文" }}
+          <svg
+            aria-hidden="true"
+            focusable="false"
+            viewBox="0 0 24 24"
+            width="16"
+            height="16"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+          >
+            <circle cx="12" cy="12" r="9" />
+            <ellipse cx="12" cy="12" rx="4" ry="9" />
+            <path d="M3 12h18" />
+          </svg>
+          {{ language === "zh" ? "English" : "中文" }}
         </button>
       </nav>
     </header>

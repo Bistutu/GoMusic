@@ -235,8 +235,29 @@ test("cancels without stale data or an error and can retry", async ({
   );
 });
 test("persists the language preference", async ({ page }) => {
+  await page.route("https://img.shields.io/**", (route) =>
+    route.fulfill({
+      contentType: "image/svg+xml",
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="20"><rect width="120" height="20" fill="#555"/></svg>',
+    }),
+  );
   await page.goto("/");
-  await page.getByRole("button", { name: "Switch to English" }).click();
+  const language = page.getByRole("button", { name: "Switch to English" });
+  await expect(language).toHaveText("English");
+  const size = await language.boundingBox();
+  expect(size!.height).toBeGreaterThanOrEqual(34);
+  await page.setViewportSize({ width: 320, height: 844 });
+  await expect(page.getByAltText("GitHub stars")).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth > innerWidth,
+    ),
+  ).toBe(false);
+  await language.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("button", { name: "切换到中文" })).toHaveText(
+    "中文",
+  );
   await expect(
     page.getByRole("button", { name: "Get playlist", exact: true }),
   ).toBeVisible();

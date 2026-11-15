@@ -71,6 +71,31 @@ textarea:focus {
   display: block;
   max-width: 120px;
 }
+.language-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 90px;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid #d4d4d4;
+  border-radius: 6px;
+  background: #fff;
+  color: #333;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.language-button:hover {
+  background: #f7f7f7;
+  border-color: #aaa;
+}
+.language-button svg {
+  display: block;
+  flex-shrink: 0;
+}
 .text-button {
   border: 0;
   background: transparent;
@@ -557,6 +582,15 @@ h1 {
   .help-section {
     font-size: 12px;
     margin-top: 29px;
+  }
+}
+@media (max-width: 360px) {
+  .site-header nav {
+    gap: 10px;
+  }
+  .github-stars {
+    max-width: 84px;
+    height: auto;
   }
 }
 @media (max-width: 760px) {
