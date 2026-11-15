@@ -14,13 +14,19 @@ The refactor preserves GoMusic's small public-playlist-to-text workflow. Provide
 
 The Qishui share-page shape was also verified directly against the issue #20 public example: `_ROUTER_DATA.loaderData.playlist_page`. The current primary path uses `/luna/playlist/detail`; the share page is a fallback. Cursor, response and song limits are enforced by GoMusic.
 
+### Kugou numeric codes
+
+The official `https://t.kugou.com/command/` protocol was researched in [LX Music's implementation](https://github.com/lyswhut/lx-music-desktop/blob/323e4bac505da428adae8db6b58039fb2b36b86d/src/renderer/utils/musicSdk/kg/songList.js) and cross-checked against [wp_MusicApi](https://github.com/GitHub-ZC/wp_MusicApi/blob/bf9307dd138dc8ac6c4f7de29361209d4f5b665f/routes/v1/kugou/playlist.js). Both source snapshots are Apache-2.0 licensed. Only endpoint/request-field protocol facts informed this independently written Go adapter; their JavaScript was not copied or executed.
+
+On 2026-11-15, the provided code `40725013` returned a type-4 playlist with `global_collection_id=collection_3_606105881_4_0` and count 12. The adapter uses that explicit public identity rather than hardcoding a code-to-playlist map or deriving an identity from a user's query parameters. Existing collection/special pagination, total preservation and partial-result reporting still apply. The public fixed command-protocol parameters are not user account credentials. Code parsing accepts bare digits and an optional `酷狗码` / `Kugou code` label, while official URLs retain precedence in share text.
+
 ### Observed Kugou GCID mapping
 
 GoMusic independently checked the public pairs `gcid_3z17seve8z2z051` → `collection_3_2248574973_2_0` and `gcid_3zbivkavz4z072` → `collection_3_606105881_4_0`. The known v3 zero-tag shape separates base-35 fields with `z`; its owner and list fields reproduce those IDs. This is an inference verified against these public samples, not a claim that every GCID format is reversible or that the trailer has been authenticated.
 
 The adapter requires the decoded owner to equal the official share-page `list_create_userid` and requires the retrieved collection's entire visible song prefix to match by stable hash before accepting it. The user's original [public share](https://m.kugou.com/songlist/gcid_3zbivkavz4z072/) exposes 10 previews but its validated [public collection](https://activity.kugou.com/share/index.html?global_specialid=collection_3_606105881_4_0) returns 12. This additional path does not require a login or use a third-party hosted service. Failed validation retains the partial-result warning.
 
-Sources containing referenced nontrivial protocol/signature logic are MIT licensed; relevant notices are retained in [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md). No changes were made to FluentRead or its reference repositories.
+MIT sources used for signature/protocol references retain their notices in [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md). The additional Apache-2.0 sources above were consulted for command endpoint and request-field protocol facts without incorporating their code. No changes were made to FluentRead or its reference repositories.
 
 ## Frontend choice
 

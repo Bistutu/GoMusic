@@ -20,15 +20,15 @@ const zh = {
   qq: "QQ 音乐",
   qishui: "汽水音乐",
   kugou: "酷狗音乐",
-  inputLabel: "歌单分享链接",
-  inputPlaceholder: "在这里粘贴歌单链接或分享文字…",
+  inputLabel: "歌单链接或酷狗码",
+  inputPlaceholder: "粘贴歌单链接、分享文字或酷狗码…",
   example: "填入范例链接",
   fetch: "获取歌单",
   loading: "正在获取歌单…",
   cancel: "取消",
   privacy: "仅支持公开歌单",
-  errorInvalid:
-    "请输入网易云、QQ 音乐、汽水或酷狗音乐的官方歌单链接（最多 4096 字节）。",
+  errorInvalid: "请输入音乐平台的官方歌单链接或有效酷狗码（最多 4096 字节）。",
+  errorKugouCode: "酷狗码无效、已过期或不是公开歌单，请核对后重试。",
   errorNetwork: "连接失败，请检查网络或确认服务已启动后重试。",
   errorTimeout: "获取歌单超时，请稍后再试。",
   errorServer: "音乐平台暂时未返回可读取的歌单，请检查链接和公开权限后重试。",
@@ -64,7 +64,7 @@ const zh = {
   copied: "已复制到剪贴板",
   copyFailed: "复制失败，请选中文本后手动复制。",
   downloaded: "已下载文本文件",
-  guideOneBody: "复制公开歌单的分享链接，粘贴到上方，点击“获取歌单”。",
+  guideOneBody: "粘贴公开歌单的分享链接或酷狗码，点击“获取歌单”。",
   guideTwoBody: "核对歌曲数量，点击“复制结果”。",
   guideThreeBody:
     "选择“文本”作为歌单来源，粘贴复制的结果，再选择 Apple Music、YouTube Music 或 Spotify 作为目的地，确认迁移。",
@@ -98,15 +98,17 @@ const en: Record<keyof typeof zh, string> = {
   qq: "QQ Music",
   qishui: "Qishui",
   kugou: "Kugou",
-  inputLabel: "Playlist share link",
-  inputPlaceholder: "Paste a playlist link or share message…",
+  inputLabel: "Playlist link or Kugou code",
+  inputPlaceholder: "Paste a playlist link, share message or Kugou code…",
   example: "Use an example link",
   fetch: "Get playlist",
   loading: "Getting playlist…",
   cancel: "Cancel",
   privacy: "Public playlists only",
   errorInvalid:
-    "Enter an official NetEase, QQ Music, Qishui or Kugou playlist link (up to 4096 bytes).",
+    "Enter an official playlist link or a valid Kugou code (up to 4096 bytes).",
+  errorKugouCode:
+    "This Kugou code is invalid, expired or not a public playlist. Check the code and try again.",
   errorNetwork:
     "Could not connect. Check your connection and that the service is running.",
   errorTimeout: "The request timed out. Please try again.",
@@ -147,7 +149,7 @@ const en: Record<keyof typeof zh, string> = {
   copyFailed: "Could not copy. Select the text and copy it manually.",
   downloaded: "Text file downloaded",
   guideOneBody:
-    "Paste a public playlist share link above and click “Get playlist”.",
+    "Paste a public playlist share link or Kugou code above and click “Get playlist”.",
   guideTwoBody: "Check the track count, then copy the result.",
   guideThreeBody:
     "choose text as the playlist source, paste the copied result, then select Apple Music, YouTube Music or Spotify as your destination to transfer.",

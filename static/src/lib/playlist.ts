@@ -53,6 +53,12 @@ export function platformOf(input: string): string | undefined {
       /* Continue to the next link in share text. */
     }
   }
+  if (kugouCodeOf(input)) return "kugou";
+}
+export function kugouCodeOf(input: string): string | undefined {
+  return /^(?:(?:酷狗码|kugou\s+code)\s*[:：]?\s*)?([0-9]{1,20})$/i.exec(
+    input.trim(),
+  )?.[1];
 }
 export function standardTitle(title: string): string {
   return title

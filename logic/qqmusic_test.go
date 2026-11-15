@@ -23,6 +23,7 @@ func TestLiveProviders(t *testing.T) {
 		{"qishui", "https://qishui.douyin.com/s/iAA9MFsL/", 1},
 		{"kugou", "https://www.kugou.com/songlist/gcid_3z17seve8z2z051/", 1},
 		{"kugou-user-share", "https://m.kugou.com/songlist/gcid_3zbivkavz4z072/?src_cid=3zbivkavz4z072&uid=606105881&chl=wechat&iszlist=1", 12},
+		{"kugou-code", "40725013", 12},
 		{"kugou-collection", "https://activity.kugou.com/share/index.html?global_specialid=collection_3_2248574973_2_0", 1},
 	}
 	t.Run("netease-song-details", func(t *testing.T) {

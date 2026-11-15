@@ -2,7 +2,7 @@
 import { computed, reactive, ref, watch } from "vue";
 import { messages } from "./i18n";
 import { usePlaylist } from "./composables/usePlaylist";
-import type { ExportOptions } from "./lib/playlist";
+import { kugouCodeOf, type ExportOptions } from "./lib/playlist";
 import PlaylistForm from "./components/PlaylistForm.vue";
 import ExportPanel from "./components/ExportPanel.vue";
 import TransferGuide from "./components/TransferGuide.vue";
@@ -39,6 +39,8 @@ watch(
 const { link, playlist, loading, error, load, cancel } = usePlaylist();
 const errorMessage = computed(() => {
   if (!error.value) return "";
+  if (error.value.kind === "invalid" && kugouCodeOf(link.value))
+    return t.value.errorKugouCode;
   const keys = {
     invalid: "errorInvalid",
     network: "errorNetwork",

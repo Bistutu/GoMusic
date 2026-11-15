@@ -79,6 +79,8 @@ func (s *Service) kugou(ctx context.Context, link musicurl.Link) (*models.SongLi
 		link = resolved
 	}
 	switch link.Kind {
+	case "code":
+		return s.kugouCode(ctx, link.ID)
 	case "gcid":
 		return s.kugouShare(ctx, link.ID)
 	case "collection":
@@ -88,6 +90,89 @@ func (s *Service) kugou(ctx context.Context, link musicurl.Link) (*models.SongLi
 	default:
 		return nil, fmt.Errorf("%w: 请使用酷狗歌单分享链接", ErrInvalidLink)
 	}
+}
+
+func (s *Service) kugouCode(ctx context.Context, code string) (*models.SongList, error) {
+	// Public legacy command protocol parameters, not account credentials.
+	// Protocol research and source licenses are documented in docs/REFERENCES.md.
+	payload, _ := json.Marshal(map[string]any{
+		"appid": 1001, "clientver": 9020, "mid": "21511157a05844bd085308bc76ef3343",
+		"clienttime": 640612895, "key": "36164c4015e704673c588ee202b9ecb8", "data": code,
+	})
+	body, _, err := s.HTTP.Do(ctx, http.MethodPost, "https://t.kugou.com/command/", bytes.NewReader(payload), map[string]string{
+		"Content-Type": "application/json", "User-Agent": "", "KG-RC": "1", "KG-THash": "network_super_call.cpp:3676261689:379",
+	})
+	if err != nil {
+		return nil, err
+	}
+	var result struct {
+		Status int `json:"status"`
+		Data   *struct {
+			Info *struct {
+				Type       int         `json:"type"`
+				Name       string      `json:"name"`
+				Count      *int        `json:"count"`
+				Collection string      `json:"global_collection_id"`
+				ID         json.Number `json:"id"`
+			} `json:"info"`
+			List []kugouSong `json:"list"`
+		} `json:"data"`
+	}
+	if json.Unmarshal(body, &result) != nil {
+		return nil, fmt.Errorf("酷狗码接口返回了无效数据")
+	}
+	if result.Status != 1 {
+		return nil, fmt.Errorf("%w: 酷狗码无效或已过期，请核对后重试", ErrInvalidLink)
+	}
+	if result.Data == nil || result.Data.Info == nil {
+		return nil, fmt.Errorf("酷狗码未返回可读取的歌单信息")
+	}
+	info := result.Data.Info
+	if info.Type != 2 && info.Type != 4 {
+		return nil, fmt.Errorf("%w: 请使用公开歌单的酷狗码", ErrInvalidLink)
+	}
+	list := &models.SongList{Name: info.Name}
+	knownTotal := info.Count != nil && *info.Count >= 0
+	if knownTotal {
+		list.TotalCount = *info.Count
+	}
+	seen := map[string]bool{}
+	for _, song := range result.Data.List {
+		appendDistinctTrack(list, song.track(), seen)
+	}
+	if knownTotal && len(list.Tracks) > list.TotalCount {
+		list.Warnings = append(list.Warnings, "酷狗码的歌曲总数与返回内容不一致，请核对结果")
+	}
+	if knownTotal && len(list.Tracks) > 0 && len(list.Tracks) == list.TotalCount {
+		return list, nil
+	}
+	var candidate *models.SongList
+	collection, parseErr := musicurl.Parse("https://activity.kugou.com/share/index.html?global_specialid=" + url.QueryEscape(info.Collection))
+	if parseErr == nil && collection.Kind == "collection" && collection.ID != "" {
+		candidate, err = s.kugouPages(ctx, collection.ID, true, list.TotalCount)
+	} else if id, parseErr := strconv.ParseUint(info.ID.String(), 10, 64); info.Type == 2 && parseErr == nil && id > 0 {
+		candidate, err = s.kugouPages(ctx, info.ID.String(), false, list.TotalCount)
+	}
+	if candidate != nil && err == nil {
+		list = preferPlaylist(list, candidate)
+		if info.Name != "" {
+			list.Name = info.Name
+		}
+		return list, nil
+	}
+	if err != nil && len(list.Tracks) == 0 {
+		return nil, err
+	}
+	if len(list.Tracks) > 0 {
+		if !knownTotal || err != nil {
+			list.Warnings = append(list.Warnings, "酷狗码未能确认完整歌单，请核对数量或使用公开分享链接重试")
+		}
+		return list, nil
+	}
+	if knownTotal && list.TotalCount == 0 && list.Name != "" {
+		return list, nil
+	}
+	return nil, fmt.Errorf("酷狗码未提供可读取的公开歌单，请使用歌单分享链接重试")
 }
 
 func (s *Service) kugouShare(ctx context.Context, id string) (*models.SongList, error) {

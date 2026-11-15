@@ -22,6 +22,7 @@ var albumPath = regexp.MustCompile(`(?:^|/)album/([0-9]+)(?:/|$)`)
 var kugouSpecial = regexp.MustCompile(`/special/single/([0-9]+)`)
 var kugouGcid = regexp.MustCompile(`/songlist/(gcid_[A-Za-z0-9]+)`)
 var kugouCollection = regexp.MustCompile(`^collection_[0-9]+_[0-9]+_[0-9]+_[0-9]+$`)
+var kugouCode = regexp.MustCompile(`(?i)^(?:(?:酷狗码|kugou\s+code)\s*[:：]?\s*)?([0-9]{1,20})$`)
 
 var hosts = map[string]string{
 	"music.163.com": NetEase, "y.music.163.com": NetEase, "163cn.tv": NetEase, "163cn.com": NetEase,
@@ -46,7 +47,7 @@ func Validate(u *url.URL) (string, error) {
 	return p, nil
 }
 
-// Parse accepts a URL or the share text copied from a music app.
+// Parse accepts an official URL, share text, or a numeric Kugou playlist code.
 func Parse(input string) (Link, error) {
 	for _, candidate := range links.FindAllString(input, -1) {
 		candidate = strings.TrimRight(candidate, "，。；！、）】》〉,;!)\u200b")
@@ -130,5 +131,8 @@ func Parse(input string) (Link, error) {
 		}
 		return link, nil
 	}
-	return Link{}, errors.New("请输入网易云音乐、QQ 音乐、汽水音乐或酷狗音乐的歌单链接")
+	if match := kugouCode.FindStringSubmatch(strings.TrimSpace(input)); len(match) > 1 {
+		return Link{Provider: Kugou, Kind: "code", ID: match[1]}, nil
+	}
+	return Link{}, errors.New("请输入音乐平台的官方歌单链接或有效酷狗码")
 }

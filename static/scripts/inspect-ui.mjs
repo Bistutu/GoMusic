@@ -34,9 +34,9 @@ try {
       path: path.join(evidence, `${name}-initial.png`),
       fullPage: true,
     });
-    if ((await page.getByLabel("歌单分享链接").inputValue()) !== "")
+    if ((await page.getByLabel("歌单链接或酷狗码").inputValue()) !== "")
       throw new Error("Initial playlist input must be empty");
-    await page.getByLabel("歌单分享链接").fill(link);
+    await page.getByLabel("歌单链接或酷狗码").fill(link);
     const response = page.waitForResponse((response) =>
       response.url().endsWith("/api/v1/songlists"),
     );

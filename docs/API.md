@@ -17,12 +17,16 @@ GoMusic reads public playlist metadata. It exports text; transferring tracks to 
 
 The URL can also be the full share text copied from a music app. Supported sources:
 
+The same string `url` field also accepts a numeric Kugou playlist code, for example `{"url":"40725013"}` or `{"url":"酷狗码：40725013"}`. Codes are kept as strings, including leading zeros. A code is resolved through Kugou's official HTTPS command endpoint; a returned public collection or special playlist then uses the existing paginated adapter. Both the JSON and legacy form routes support this input. Invalid/expired codes and codes for non-playlist resources return HTTP 400; an upstream failure remains 502/504. Numeric input is interpreted as a Kugou code, not a raw playlist ID for another platform.
+
 | Source | Links |
 | --- | --- |
 | `netease` | `music.163.com` playlist/album links, hash routes, `163cn.tv` / `163cn.com` shares |
 | `qq` | `y.qq.com/n/ryqq/playlist/ID`, `ryqq_v2`, `i.y.qq.com` / `i2.y.qq.com` detail pages, `c6.y.qq.com` short links |
 | `qishui` | `qishui.douyin.com/s/...`, `music.douyin.com/qishui/share/playlist?playlist_id=...` |
 | `kugou` | `www.kugou.com/songlist/gcid_...`, official special playlists, Concept Edition `global_specialid=collection_...`, official `t.kugou.com` / `t1.kugou.com` redirects |
+
+For a code response, GoMusic keeps the command metadata's known total even if a later endpoint reports fewer tracks. A complete embedded list can be exported directly; incomplete or unknown-total embedded data remains explicitly partial. No music account credentials are used or accepted.
 
 `detailed=true` preserves original titles; otherwise platform annotations in `【...】` are removed and Chinese parentheses are normalized. `format` supports `song-singer` (default), `singer-song`, and `song`. `order` supports `normal` (default) and `reverse`. Title and artist fields stay separate during formatting, including when they contain ` - `.
 

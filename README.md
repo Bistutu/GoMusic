@@ -6,7 +6,7 @@
 
 项目后端使用 Go + Gin，前端使用 Vue 3 + TypeScript + Vite。
 
-- 粘贴歌单链接或整段分享文字，获取公开歌单。
+- 粘贴歌单链接、整段分享文字或酷狗码（如 `40725013`），获取公开歌单。
 - 调整歌名格式和顺序，复制文本或下载 TXT；长歌单支持每 500 首分批导出。
 - 显示实际获取数与平台总数，部分结果会明确提示，不将缺歌误报为完整导出。
 - 默认无需数据库；可选 MySQL、Redis 缓存，支持 Docker Compose 一键部署。
@@ -21,7 +21,7 @@
 
 > 如何迁移至 Apple/Youtube/Spotify Music
 
-1. 输入公开歌单链接，如：https://music.163.com/playlist?id=19723756
+1. 输入公开歌单链接，如：https://music.163.com/playlist?id=19723756；酷狗也可直接输入酷狗码，如 `40725013` 或 `酷狗码：40725013`。
 2. 复制查询结果
 3. 打开 **[TunemyMusic](https://www.tunemymusic.com/zh-CN/transfer)** or **[Spotlistr](https://spotlistr.com/)** 网站
 4. 选择歌单来源“任意文本”，将刚刚复制的歌单粘贴进去，选择 Apple/Youtube/Spotify Music 作为目的地，确认迁移

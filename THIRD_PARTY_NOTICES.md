@@ -15,3 +15,5 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 Installed dependencies retain their own licenses in Go modules and npm packages. See `go.mod`, `go.sum` and `static/package-lock.json` for exact dependency versions.
+
+Additional protocol-only research for numeric Kugou codes used LX Music (`lyswhut/lx-music-desktop`, commit `323e4bac505da428adae8db6b58039fb2b36b86d`) and wp_MusicApi (`GitHub-ZC/wp_MusicApi`, commit `bf9307dd138dc8ac6c4f7de29361209d4f5b665f`), both Apache-2.0 licensed. The Go implementation is independent; no source code from these projects is incorporated. Links and the verified official protocol are recorded in `docs/REFERENCES.md`.

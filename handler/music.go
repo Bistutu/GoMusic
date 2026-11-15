@@ -51,7 +51,7 @@ func (h musicHandler) serve(c *gin.Context) {
 		}
 		input.URL = c.Request.PostForm.Get("url")
 	} else {
-		replyError(c, http.StatusUnsupportedMediaType, "请使用 JSON 或表单提交歌单链接")
+		replyError(c, http.StatusUnsupportedMediaType, "请使用 JSON 或表单提交歌单链接或酷狗码")
 		return
 	}
 	if value, ok := c.GetQuery("detailed"); ok {
@@ -77,7 +77,7 @@ func (h musicHandler) serve(c *gin.Context) {
 		return
 	}
 	if strings.TrimSpace(input.URL) == "" || len(input.URL) > 4096 {
-		replyError(c, http.StatusBadRequest, "请输入有效的歌单分享链接（最多 4096 字节）")
+		replyError(c, http.StatusBadRequest, "请输入有效的歌单链接或酷狗码（最多 4096 字节）")
 		return
 	}
 	ctx, cancel := context.WithTimeout(c.Request.Context(), h.timeout)
