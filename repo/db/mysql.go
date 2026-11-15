@@ -1,6 +1,8 @@
 package db
 
 import (
+	"os"
+
 	_ "github.com/go-sql-driver/mysql"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -11,8 +13,15 @@ import (
 )
 
 var db *gorm.DB
+var disabled bool
 
 func init() {
+	if os.Getenv("GOMUSIC_DISABLE_DB") == "1" {
+		disabled = true
+		log.Warn("GOMUSIC_DISABLE_DB=1，本地模式不启用 MySQL 缓存")
+		return
+	}
+
 	dsn := "go_music:12345678@tcp(127.0.0.1:3306)/go_music?charset=utf8mb4&parseTime=True&loc=Local"
 	//dsn := "root:12345678@tcp(127.0.0.1:3306)/go_music?charset=utf8mb4&parseTime=True&loc=Local"
 	open, err := gorm.Open(mysql.Open(dsn))
@@ -36,6 +45,10 @@ func MigrateNameField(db *gorm.DB) error {
 }
 
 func BatchGetSongById(ids []uint) (map[uint]string, error) {
+	if disabled {
+		return map[uint]string{}, nil
+	}
+
 	var netEasySongs []*models.NetEasySong
 	// 仅选择 id 和 name 列
 	err := db.Select("id, name").Where("id in ?", ids).Find(&netEasySongs).Error
@@ -53,6 +66,10 @@ func BatchGetSongById(ids []uint) (map[uint]string, error) {
 }
 
 func BatchInsertSong(netEasySongs []*models.NetEasySong) error {
+	if disabled {
+		return nil
+	}
+
 	// 如果 Duplicate primary key 则执行 update 操作
 	err := db.Clauses(clause.OnConflict{
 		UpdateAll: true,
@@ -64,6 +81,10 @@ func BatchInsertSong(netEasySongs []*models.NetEasySong) error {
 }
 
 func BatchDelSong(ids []int) error {
+	if disabled {
+		return nil
+	}
+
 	err := db.Delete(&models.NetEasySong{}, ids).Error
 	if err != nil {
 		log.Errorf("数据库删除数据失败：%v", err)

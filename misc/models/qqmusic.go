@@ -94,3 +94,21 @@ type QQMusicResp struct {
 		} `json:"data"`
 	} `json:"req_0"`
 }
+
+// QQMusicLegacyResp 是旧版公开歌单详情接口的响应。
+// 部分新歌单在新版 musicu 接口返回 code=2000 时，可由该接口获取完整数据。
+type QQMusicLegacyResp struct {
+	Code    int    `json:"code"`
+	Subcode int    `json:"subcode"`
+	Message string `json:"msg"`
+	Cdlist  []struct {
+		Dissname string `json:"dissname"`
+		Songnum  int    `json:"songnum"`
+		Songlist []struct {
+			Songname string `json:"songname"`
+			Singer   []struct {
+				Name string `json:"name"`
+			} `json:"singer"`
+		} `json:"songlist"`
+	} `json:"cdlist"`
+}

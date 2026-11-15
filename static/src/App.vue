@@ -170,6 +170,8 @@ import {isSupportedPlatform, isValidUrl} from "@/utils/utils";
 import {sendErrorMessage, sendSuccessMessage} from "@/utils/tip";
 import {InfoFilled} from '@element-plus/icons-vue';
 
+const apiBaseURL = (process.env.VUE_APP_API_BASE_URL || 'https://sss.unmeta.cn').replace(/\/$/, '');
+
 const activeNames = reactive(['first', 'second']);
 const state = reactive({
   link: '',
@@ -359,10 +361,7 @@ const fetchLinkDetails = async () => {
     queryParams += `&format=${state.songFormat}`;
     queryParams += `&order=${state.songOrder}`;
 
-    // 本地开发环境URL
-    // const resp = await axios.post('http://127.0.0.1:8081/songlist' + queryParams, params, {
-    // 生产环境URL
-    const resp = await axios.post('https://sss.unmeta.cn/songlist' + queryParams, params, {
+    const resp = await axios.post(`${apiBaseURL}/songlist${queryParams}`, params, {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded'
       },
