@@ -1,73 +1,95 @@
 package httputil
 
 import (
+	"GoMusic/internal/musicurl"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
-
-	"GoMusic/misc/log"
-	"GoMusic/misc/models"
+	"net/url"
+	"time"
 )
 
-// not allow redirect client
-var client *http.Client
+const MaxResponseBytes = 16 << 20
 
-// allow redirect client
-var clientNoRedirect *http.Client
+type Client struct{ http *http.Client }
 
-func init() {
-	client = &http.Client{}
-	clientNoRedirect = &http.Client{
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return http.ErrUseLastResponse // return this error to prevent redirect
-		},
+func NewClient(client *http.Client) *Client {
+	if client == nil {
+		client = &http.Client{Timeout: 12 * time.Second}
 	}
+	copy := *client
+	if copy.Timeout <= 0 {
+		copy.Timeout = 12 * time.Second
+	}
+	copy.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if len(via) >= 6 {
+			return fmt.Errorf("音乐分享链接跳转次数过多")
+		}
+		provider, err := musicurl.Validate(req.URL)
+		if err != nil {
+			return err
+		}
+		initial, err := musicurl.Validate(via[0].URL)
+		if err != nil || initial != provider {
+			return fmt.Errorf("音乐分享链接跳转到了其他平台")
+		}
+		return nil
+	}
+	return &Client{http: &copy}
 }
 
-// Post ...
-func Post(link string, data io.Reader) (*http.Response, error) {
-	req, err := http.NewRequest(models.POST, link, data)
+func (c *Client) request(ctx context.Context, method, address string, body io.Reader, headers map[string]string) (*http.Response, error) {
+	u, err := url.Parse(address)
 	if err != nil {
-		log.Errorf("http NewRequest error: %+v", err)
 		return nil, err
 	}
-	req.Header.Add(models.ContentType, "application/x-www-form-urlencoded")
-	return client.Do(req)
-}
-
-// GetRedirectLocation 获取短链的跳转地址，并校验响应状态和 Location。
-func GetRedirectLocation(link string) (string, error) {
-	rsp, err := clientNoRedirect.Get(link)
-	if err != nil {
-		log.Errorf("http Get error: %+v", err)
-		return "", err
-	}
-	defer rsp.Body.Close()
-
-	if rsp.StatusCode < http.StatusMultipleChoices || rsp.StatusCode >= http.StatusBadRequest {
-		return "", fmt.Errorf("短链请求返回 %s，未提供跳转地址", rsp.Status)
-	}
-	location := rsp.Header.Get("Location")
-	if location == "" {
-		return "", fmt.Errorf("短链请求返回 %s，但 Location 为空", rsp.Status)
-	}
-	return location, nil
-}
-
-func Get(link string, data io.Reader) (*http.Response, error) {
-	return GetWithHeaders(link, data, nil)
-}
-
-// GetWithHeaders 发送带自定义请求头的 GET 请求。
-func GetWithHeaders(link string, data io.Reader, headers map[string]string) (*http.Response, error) {
-	req, err := http.NewRequest(http.MethodGet, link, data)
-	if err != nil {
-		log.Errorf("http NewRequest error: %+v", err)
+	if _, err = musicurl.Validate(u); err != nil {
 		return nil, err
 	}
-	req.Header.Add(models.ContentType, "application/x-www-form-urlencoded")
-	for key, value := range headers {
-		req.Header.Set(key, value)
+	req, err := http.NewRequestWithContext(ctx, method, u.String(), body)
+	if err != nil {
+		return nil, err
 	}
-	return client.Do(req)
+	req.Header.Set("User-Agent", "Mozilla/5.0 GoMusic/2.0")
+	if body != nil {
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	}
+	for name, value := range headers {
+		req.Header.Set(name, value)
+	}
+	return c.http.Do(req)
+}
+
+// Resolve reads only redirect headers, avoiding a full share-page download just to extract its ID.
+func (c *Client) Resolve(ctx context.Context, address string, headers map[string]string) (*url.URL, error) {
+	resp, err := c.request(ctx, http.MethodGet, address, nil, headers)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("音乐平台返回 HTTP %d", resp.StatusCode)
+	}
+	return resp.Request.URL, nil
+}
+
+// Do applies a deadline, bounds the response size, and closes every response body.
+func (c *Client) Do(ctx context.Context, method, address string, body io.Reader, headers map[string]string) ([]byte, *url.URL, error) {
+	resp, err := c.request(ctx, method, address, body, headers)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, resp.Request.URL, fmt.Errorf("音乐平台返回 HTTP %d", resp.StatusCode)
+	}
+	data, err := io.ReadAll(io.LimitReader(resp.Body, MaxResponseBytes+1))
+	if err != nil {
+		return nil, resp.Request.URL, err
+	}
+	if len(data) > MaxResponseBytes {
+		return nil, resp.Request.URL, fmt.Errorf("音乐平台响应超过大小限制")
+	}
+	return data, resp.Request.URL, nil
 }

@@ -1,0 +1,72 @@
+name: gomusic
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: go_music
+      MYSQL_USER: go_music
+      MYSQL_PASSWORD: ${GOMUSIC_MYSQL_PASSWORD:-gomusic_local}
+      MYSQL_ROOT_PASSWORD: ${GOMUSIC_MYSQL_ROOT_PASSWORD:-gomusic_root_local}
+    ports:
+      - "127.0.0.1:${GOMUSIC_MYSQL_PORT:-13306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command:
+      [
+        "--character-set-server=utf8mb4",
+        "--collation-server=utf8mb4_unicode_ci",
+      ]
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "MYSQL_PWD=$$MYSQL_PASSWORD mysql -h127.0.0.1 -u$$MYSQL_USER $$MYSQL_DATABASE -e 'SELECT 1'",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 20s
+  redis:
+    image: redis:7.4-alpine
+    environment:
+      REDIS_PASSWORD: ${GOMUSIC_REDIS_PASSWORD:-gomusic_local}
+    command:
+      [
+        "sh",
+        "-c",
+        'exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"',
+      ]
+    ports:
+      - "127.0.0.1:${GOMUSIC_REDIS_PORT:-16379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "REDISCLI_AUTH=$$REDIS_PASSWORD redis-cli ping | grep -q PONG",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  app:
+    profiles: ["app"]
+    build: .
+    environment:
+      GIN_MODE: release
+      MYSQL_DSN: "go_music:${GOMUSIC_MYSQL_PASSWORD:-gomusic_local}@tcp(mysql:3306)/go_music?charset=utf8mb4&parseTime=true&loc=UTC&timeout=3s&readTimeout=3s&writeTimeout=3s"
+      REDIS_ADDR: redis:6379
+      REDIS_PASSWORD: ${GOMUSIC_REDIS_PASSWORD:-gomusic_local}
+      GOMUSIC_STATS_TOKEN: ${GOMUSIC_STATS_TOKEN:-}
+      GOMUSIC_STATS_COOKIE_SECURE: ${GOMUSIC_STATS_COOKIE_SECURE:-false}
+    ports:
+      - "127.0.0.1:${GOMUSIC_PORT:-8081}:8081"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+volumes:
+  mysql_data:
+  redis_data:

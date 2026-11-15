@@ -1,9 +1,15 @@
 package logic
 
-import "testing"
+import (
+	"os"
+	"testing"
+)
 
 // TestQQMusicLivePlaylists 验证有效分享短链和用户的 ryqq_v2 歌单链接。
 func TestQQMusicLivePlaylists(t *testing.T) {
+	if os.Getenv("GOMUSIC_LEGACY_LIVE_TEST") != "1" {
+		t.Skip("optional legacy live cases")
+	}
 	tests := []struct {
 		name     string
 		link     string

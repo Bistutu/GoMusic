@@ -2,9 +2,12 @@ package models
 
 import "time"
 
-// NetEasySong NetEasy song, the table will be created automatically if successful run the program
-type NetEasySong struct {
-	Id        uint      `gorm:"column:id;primarykey"`
-	Name      string    `gorm:"column:name;type:varchar(512);unique:true"`
-	CreatedAt time.Time `gorm:"column:created_at"`
+// SongMetadata is a versioned raw metadata cache. Legacy net_easy_songs remains untouched.
+// Distinct tracks can share a title; only (provider, id) is unique.
+type SongMetadata struct {
+	Provider  string    `gorm:"primaryKey;size:16"`
+	ID        string    `gorm:"primaryKey;size:32"`
+	Title     string    `gorm:"type:text;not null"`
+	Artists   string    `gorm:"type:text;not null"`
+	UpdatedAt time.Time `gorm:"index"`
 }

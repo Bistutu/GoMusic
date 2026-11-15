@@ -1,0 +1,65 @@
+name: CI
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: go_music_test
+          MYSQL_USER: go_music
+          MYSQL_PASSWORD: test_password
+          MYSQL_ROOT_PASSWORD: test_root_password
+        ports: ["13306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h127.0.0.1"
+          --health-interval=5s --health-timeout=3s --health-retries=30
+      redis:
+        image: redis:7.4-alpine
+        ports: ["16379:6379"]
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s --health-timeout=3s --health-retries=10
+    env:
+      GIN_MODE: release
+      GOMUSIC_INTEGRATION_MYSQL_DSN: go_music:test_password@tcp(127.0.0.1:13306)/go_music_test?charset=utf8mb4&parseTime=true&loc=UTC
+      GOMUSIC_INTEGRATION_REDIS_ADDR: 127.0.0.1:16379
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go test -race -p 1 ./...
+      - run: go vet ./...
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: static
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: static/package-lock.json
+      - run: npm ci
+      - run: npm run check
+      - run: npm run format:check
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-evidence
+          path: |
+            static/playwright-report
+            static/test-results

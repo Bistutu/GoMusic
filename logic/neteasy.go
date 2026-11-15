@@ -1,371 +1,277 @@
 package logic
 
 import (
+	"GoMusic/internal/musicurl"
+	"GoMusic/misc/log"
+	"GoMusic/misc/models"
+	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
+	"golang.org/x/sync/errgroup"
+	"net/http"
+	"net/url"
 	"strings"
 	"sync"
-
-	"golang.org/x/sync/errgroup"
-
-	"GoMusic/misc/httputil"
-	"GoMusic/misc/log"
-	"GoMusic/misc/utils"
-	"GoMusic/repo/db"
-
-	"GoMusic/misc/models"
-	"GoMusic/repo/cache"
+	"time"
 )
 
-const (
-	netEasyRedis = "net:%v"
-	netEasyUrlV6 = "https://music.163.com/api/v6/playlist/detail"
-	netEasyUrlV3 = "https://music.163.com/api/v3/song/detail"
-	chunkSize    = 400
-)
+// Historical upstream responses have silently capped larger detail batches.
+// Keep below that boundary; see issue #18 and the capped-response regression.
+const chunkSize = 200
 
-// NetEasyDiscover 获取网易云音乐歌单信息
-// link: 歌单链接
-// detailed: 是否使用详细歌曲名（原始歌曲名，不去除括号等内容）
-func NetEasyDiscover(link string, detailed bool) (*models.SongList, error) {
-	// 1. 获取歌单基本信息
-	songIdsResp, err := getSongsInfo(link)
-	if err != nil {
-		return nil, fmt.Errorf("获取歌单信息失败: %w", err)
-	}
+type netSong struct {
+	ID   json.Number `json:"id"`
+	Name string      `json:"name"`
+	AR   []struct {
+		Name string `json:"name"`
+	} `json:"ar"`
+	Artists []struct {
+		Name string `json:"name"`
+	} `json:"artists"`
+}
 
-	playlistName := songIdsResp.Playlist.Name     // 歌单名
-	trackIds := songIdsResp.Playlist.TrackIds      // 歌曲ID列表
-	tracksCount := songIdsResp.Playlist.TrackCount // 歌曲总数
-
-	// 如果歌单为空，直接返回
-	if len(trackIds) == 0 {
-		return &models.SongList{
-			Name:       playlistName,
-			Songs:      []string{},
-			SongsCount: 0,
-		}, nil
-	}
-
-	// 详细模式下，直接从API获取所有歌曲信息，不走缓存和数据库
-	if detailed {
-		log.Infof("详细模式：直接从网易云API获取歌曲信息: %v", link)
-		// 收集所有歌曲ID
-		allSongIds := make([]uint, len(trackIds))
-		for i, track := range trackIds {
-			allSongIds[i] = track.Id
+func (song netSong) track() models.Track {
+	t := models.Track{ID: song.ID.String(), Title: song.Name, Artists: []string{}}
+	for _, a := range song.AR {
+		if a.Name != "" {
+			t.Artists = append(t.Artists, a.Name)
 		}
-		
-		// 存储歌曲信息的结果集
-		resultMap := sync.Map{}
-		
-		// 直接从API获取所有歌曲信息
-		// 注意：在详细模式下，我们不会将获取的数据写入缓存和数据库
-		allSongIdsSlice := make([]*models.SongId, len(allSongIds))
-		for i, id := range allSongIds {
-			allSongIdsSlice[i] = &models.SongId{Id: id}
-		}
-		
-		// 分块处理，避免请求过大
-		missSize := len(allSongIdsSlice)
-		chunkCount := (missSize + chunkSize - 1) / chunkSize
-		chunks := make([][]*models.SongId, chunkCount)
-
-		for i := 0; i < missSize; i += chunkSize {
-			end := i + chunkSize
-			if end > missSize {
-				end = missSize
+	}
+	if len(t.Artists) == 0 {
+		for _, a := range song.Artists {
+			if a.Name != "" {
+				t.Artists = append(t.Artists, a.Name)
 			}
-			chunks[i/chunkSize] = allSongIdsSlice[i:end]
-		}
-
-		// 并发请求处理
-		var eg errgroup.Group
-
-		for _, chunk := range chunks {
-			chunk := chunk // 创建副本避免闭包问题
-			eg.Go(func() error {
-				return processChunkDetailed(chunk, &resultMap)
-			})
-		}
-
-		// 等待所有请求完成
-		if err := eg.Wait(); err != nil {
-			return nil, fmt.Errorf("获取歌曲详情失败: %w", err)
-		}
-		
-		// 返回最终结果
-		return createSongList(playlistName, trackIds, resultMap, tracksCount), nil
-	}
-
-	// 非详细模式下，走正常的缓存和数据库流程
-	// 2. 构建缓存键
-	songCacheKeys := make([]string, len(trackIds))
-	for i, track := range trackIds {
-		songCacheKeys[i] = fmt.Sprintf(netEasyRedis, track.Id)
-	}
-
-	// 3. 存储歌曲信息的结果集
-	resultMap := sync.Map{}
-
-	// 4. 尝试从缓存获取歌曲信息
-	cacheResults, _ := cache.MGet(songCacheKeys...)
-	
-	// 5. 收集缓存未命中的歌曲ID
-	missCacheKeys := make([]uint, 0, len(trackIds))
-	for i, result := range cacheResults {
-		if result != nil {
-			resultMap.Store(trackIds[i].Id, result.(string))
-		} else {
-			missCacheKeys = append(missCacheKeys, trackIds[i].Id)
 		}
 	}
-
-	// 缓存全部命中，直接返回结果
-	if len(missCacheKeys) == 0 {
-		log.Infof("网易云歌单缓存全部命中: %v", link)
-		return createSongList(playlistName, trackIds, resultMap, tracksCount), nil
-	}
-
-	// 6. 从数据库查询缓存未命中的歌曲
-	dbResults, _ := db.BatchGetSongById(missCacheKeys)
-	
-	// 7. 收集数据库未命中的歌曲ID
-	missDBKeys := make([]uint, 0, len(missCacheKeys))
-	for _, id := range missCacheKeys {
-		if val, ok := dbResults[id]; ok {
-			resultMap.Store(id, val)
-		} else {
-			missDBKeys = append(missDBKeys, id)
-		}
-	}
-
-	// 数据库全部命中，更新缓存并返回结果
-	if len(missDBKeys) == 0 {
-		log.Infof("网易云歌单数据库全部命中: %v", link)
-		// 更新缓存
-		missKeyCacheMap := sync.Map{}
-		for k, v := range dbResults {
-			missKeyCacheMap.Store(fmt.Sprintf(netEasyRedis, k), v)
-		}
-		_ = cache.MSet(missKeyCacheMap)
-
-		return createSongList(playlistName, trackIds, resultMap, tracksCount), nil
-	}
-
-	// 8. 从网易云API获取未命中的歌曲信息
-	missKeyCacheMap, err := batchGetSongs(missDBKeys, resultMap, detailed)
-	if err != nil {
-		return nil, fmt.Errorf("获取歌曲详情失败: %w", err)
-	}
-
-	// 9. 将新获取的歌曲信息写入数据库
-	missDbData := make([]*models.NetEasySong, 0, len(missDBKeys))
-	for _, id := range missDBKeys {
-		if value, ok := missKeyCacheMap.Load(fmt.Sprintf(netEasyRedis, id)); ok {
-			missDbData = append(missDbData, &models.NetEasySong{Id: id, Name: value.(string)})
-		}
-	}
-	
-	if len(missDbData) > 0 {
-		if err := db.BatchInsertSong(missDbData); err != nil {
-			log.Warnf("写入数据库失败: %v", err)
-		}
-	}
-
-	// 10. 更新缓存
-	if err := cache.MSet(missKeyCacheMap); err != nil {
-		log.Warnf("更新缓存失败: %v", err)
-	}
-
-	// 11. 返回最终结果
-	return createSongList(playlistName, trackIds, resultMap, tracksCount), nil
+	return t
 }
 
-// createSongList 创建歌单结果
-func createSongList(name string, trackIds []*models.TrackId, resultMap sync.Map, count int) *models.SongList {
-	return &models.SongList{
-		Name:       name,
-		Songs:      utils.SyncMapToSortedSlice(trackIds, resultMap),
-		SongsCount: count,
-	}
-}
-
-// getSongsInfo 获取歌单基本信息
-func getSongsInfo(link string) (*models.NetEasySongId, error) {
-	songListId, err := utils.GetNetEasyParam(link)
+func (s *Service) netEase(ctx context.Context, link musicurl.Link) (*models.SongList, error) {
+	link, err := s.resolve(ctx, link)
 	if err != nil {
-		return nil, fmt.Errorf("解析歌单链接失败: %w", err)
+		return nil, err
 	}
-	
-	resp, err := httputil.Post(netEasyUrlV6, strings.NewReader("id="+songListId))
+	if link.Kind == "album" {
+		return s.netEaseAlbum(ctx, link.ID)
+	}
+	body, _, err := s.HTTP.Do(ctx, http.MethodPost, "https://music.163.com/api/v6/playlist/detail",
+		strings.NewReader(url.Values{"id": {link.ID}, "n": {"100000"}}.Encode()), nil)
 	if err != nil {
-		return nil, fmt.Errorf("请求网易云API失败: %w", err)
+		return nil, fmt.Errorf("请求网易云歌单失败: %w", err)
 	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("读取响应内容失败: %w", err)
+	var metadata struct {
+		Code     int `json:"code"`
+		Playlist *struct {
+			Name       string    `json:"name"`
+			TrackCount int       `json:"trackCount"`
+			Tracks     []netSong `json:"tracks"`
+			TrackIDs   []struct {
+				ID json.Number `json:"id"`
+			} `json:"trackIds"`
+		} `json:"playlist"`
 	}
-	
-	songIdsResp := &models.NetEasySongId{}
-	if err = json.Unmarshal(body, songIdsResp); err != nil {
-		return nil, fmt.Errorf("解析响应内容失败: %w", err)
+	if err = json.Unmarshal(body, &metadata); err != nil {
+		return nil, fmt.Errorf("网易云返回了无效数据: %w", err)
 	}
-	
-	if songIdsResp.Code == 401 {
-		return nil, errors.New("无权限访问该歌单")
+	if metadata.Code == 401 || metadata.Code == 403 {
+		return nil, fmt.Errorf("%w: 该网易云歌单未公开，请先设置为公开", ErrPrivatePlaylist)
 	}
-	
-	return songIdsResp, nil
-}
-
-// batchGetSongs 批量获取歌曲详情
-func batchGetSongs(missKeys []uint, resultMap sync.Map, detailed bool) (sync.Map, error) {
-	if len(missKeys) == 0 {
-		return sync.Map{}, nil
+	if metadata.Code != 200 || metadata.Playlist == nil || metadata.Playlist.Name == "" {
+		return nil, fmt.Errorf("网易云歌单不存在、未公开或暂时不可访问 (code=%d)", metadata.Code)
 	}
-	
-	// 1. 构建请求参数
-	missSongIds := make([]*models.SongId, len(missKeys))
-	for i, id := range missKeys {
-		missSongIds[i] = &models.SongId{Id: id}
+	p := metadata.Playlist
+	if p.TrackCount > 0 && len(p.TrackIDs) == 0 {
+		return nil, fmt.Errorf("网易云未返回歌曲列表，请检查歌单访问权限")
 	}
-
-	// 2. 分块处理，避免请求过大
-	missSize := len(missSongIds)
-	chunkCount := (missSize + chunkSize - 1) / chunkSize
-	chunks := make([][]*models.SongId, chunkCount)
-
-	for i := 0; i < missSize; i += chunkSize {
-		end := i + chunkSize
-		if end > missSize {
-			end = missSize
+	ids := make([]string, 0, len(p.TrackIDs))
+	for _, item := range p.TrackIDs {
+		if item.ID.String() != "" {
+			ids = append(ids, item.ID.String())
 		}
-		chunks[i/chunkSize] = missSongIds[i:end]
+		if len(ids) >= s.MaxSongs {
+			break
+		}
 	}
+	seeds := make(map[string]models.Track, len(p.Tracks))
+	for _, song := range p.Tracks {
+		if song.Name != "" {
+			seeds[song.ID.String()] = song.track()
+		}
+	}
+	tracks, err := s.netEaseSongs(ctx, ids, seeds)
+	if err != nil {
+		return nil, err
+	}
+	list := &models.SongList{Name: p.Name, TotalCount: p.TrackCount, Tracks: make([]models.Track, 0, len(ids))}
+	if len(p.TrackIDs) > list.TotalCount {
+		list.TotalCount = len(p.TrackIDs)
+	}
+	for _, id := range ids {
+		if track, ok := tracks[id]; ok {
+			list.Tracks = append(list.Tracks, track)
+		}
+	}
+	return list, nil
+}
 
-	// 3. 并发请求处理
-	var eg errgroup.Group
-	missKeyCacheMap := sync.Map{}
+func (s *Service) netEaseAlbum(ctx context.Context, id string) (*models.SongList, error) {
+	var last error
+	for _, prefix := range []string{"https://music.163.com/api/v1/album/", "https://music.163.com/api/album/"} {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		body, _, err := s.HTTP.Do(ctx, http.MethodGet, prefix+id, nil, map[string]string{"Referer": "https://music.163.com/"})
+		if err != nil {
+			last = err
+			continue
+		}
+		var data struct {
+			Code  int `json:"code"`
+			Album *struct {
+				Name  string    `json:"name"`
+				Size  int       `json:"size"`
+				Songs []netSong `json:"songs"`
+			} `json:"album"`
+			Songs []netSong `json:"songs"`
+		}
+		if err = json.Unmarshal(body, &data); err != nil {
+			last = err
+			continue
+		}
+		if data.Code != 200 || data.Album == nil {
+			last = fmt.Errorf("网易云专辑不存在或暂时不可访问 (code=%d)", data.Code)
+			continue
+		}
+		songs := data.Songs
+		if songs == nil {
+			songs = data.Album.Songs
+		}
+		if data.Album.Name == "" || (data.Album.Size > 0 && songs == nil) {
+			last = fmt.Errorf("网易云未返回有效专辑数据")
+			continue
+		}
+		list := &models.SongList{Name: data.Album.Name, TotalCount: data.Album.Size}
+		for _, song := range songs {
+			if song.Name != "" {
+				list.Tracks = append(list.Tracks, song.track())
+			}
+		}
+		return list, nil
+	}
+	return nil, last
+}
 
-	for _, chunk := range chunks {
-		chunk := chunk // 创建副本避免闭包问题
-		eg.Go(func() error {
-			return processChunk(chunk, &missKeyCacheMap, &resultMap, detailed)
+func (s *Service) netEaseSongs(ctx context.Context, ids []string, seeds map[string]models.Track) (map[string]models.Track, error) {
+	found := make(map[string]models.Track, len(ids))
+	for _, id := range ids {
+		if track, ok := seeds[id]; ok {
+			found[id] = track
+		}
+	}
+	// Iterate the requested IDs, including when MGET failed or returned no values.
+	for _, repo := range []Repository{s.Cache, s.Store} {
+		missing := missingIDs(ids, found)
+		if len(missing) == 0 {
+			return found, nil
+		}
+		if repo == nil {
+			continue
+		}
+		values, err := repo.Get(ctx, musicurl.NetEase, missing)
+		if err != nil {
+			log.Warnf("读取歌曲缓存失败，继续向上游获取: %v", err)
+			continue
+		}
+		for _, id := range missing {
+			if track, ok := values[id]; ok && track.ID == id && track.Title != "" {
+				found[id] = track
+			}
+		}
+	}
+	missing := missingIDs(ids, found)
+	var mu sync.Mutex
+	group, gctx := errgroup.WithContext(ctx)
+	group.SetLimit(s.Concurrency)
+	for start := 0; start < len(missing); start += chunkSize {
+		end := start + chunkSize
+		if end > len(missing) {
+			end = len(missing)
+		}
+		chunk := missing[start:end]
+		group.Go(func() error {
+			payload := make([]map[string]string, 0, len(chunk))
+			for _, id := range chunk {
+				payload = append(payload, map[string]string{"id": id})
+			}
+			encoded, _ := json.Marshal(payload)
+			body, _, err := s.HTTP.Do(gctx, http.MethodPost, "https://music.163.com/api/v3/song/detail",
+				strings.NewReader(url.Values{"c": {string(encoded)}}.Encode()), nil)
+			if err != nil {
+				return fmt.Errorf("获取网易云歌曲详情失败: %w", err)
+			}
+			var result struct {
+				Code  int       `json:"code"`
+				Songs []netSong `json:"songs"`
+			}
+			if err = json.Unmarshal(body, &result); err != nil {
+				return err
+			}
+			if result.Code != 200 {
+				return fmt.Errorf("网易云歌曲详情暂时不可访问 (code=%d)", result.Code)
+			}
+			mu.Lock()
+			defer mu.Unlock()
+			for _, song := range result.Songs {
+				if song.Name != "" {
+					found[song.ID.String()] = song.track()
+				}
+			}
+			return nil
 		})
 	}
-
-	// 4. 等待所有请求完成
-	if err := eg.Wait(); err != nil {
-		return sync.Map{}, err
+	if err := group.Wait(); err != nil {
+		return nil, err
 	}
-
-	return missKeyCacheMap, nil
+	// Backfill Redis even when all missing metadata came from MySQL.
+	values := make([]models.Track, 0, len(found))
+	for _, track := range found {
+		values = append(values, track)
+	}
+	if s.Cache != nil && len(values) > 0 {
+		if err := s.Cache.Put(ctx, musicurl.NetEase, values); err != nil {
+			log.Warnf("写入 Redis 缓存失败: %v", err)
+		}
+	}
+	fresh := make([]models.Track, 0, len(missing))
+	for _, id := range missing {
+		if track, ok := found[id]; ok {
+			fresh = append(fresh, track)
+		}
+	}
+	if s.Store != nil && len(fresh) > 0 {
+		if err := s.Store.Put(ctx, musicurl.NetEase, fresh); err != nil {
+			log.Warnf("写入 MySQL 缓存失败: %v", err)
+		}
+	}
+	return found, nil
 }
 
-// processChunk 处理一个分块的歌曲ID
-func processChunk(chunk []*models.SongId, missKeyCacheMap *sync.Map, resultMap *sync.Map, detailed bool) error {
-	// 1. 序列化请求参数
-	marshal, err := json.Marshal(chunk)
-	if err != nil {
-		return fmt.Errorf("序列化请求参数失败: %w", err)
-	}
-	
-	// 2. 发送请求
-	resp, err := httputil.Post(netEasyUrlV3, strings.NewReader("c="+string(marshal)))
-	if err != nil {
-		return fmt.Errorf("请求歌曲详情失败: %w", err)
-	}
-	defer resp.Body.Close()
-
-	// 3. 读取响应内容
-	bytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("读取响应内容失败: %w", err)
-	}
-	
-	// 4. 解析响应内容
-	songs := &models.Songs{}
-	if err = json.Unmarshal(bytes, songs); err != nil {
-		return fmt.Errorf("解析响应内容失败: %w", err)
-	}
-
-	// 5. 处理歌曲信息
-	for _, song := range songs.Songs {
-		// 根据detailed参数决定是否使用原始歌曲名
-		var songName string
-		if detailed {
-			songName = song.Name // 使用原始歌曲名
-		} else {
-			songName = utils.StandardSongName(song.Name) // 使用标准化的歌曲名
+func missingIDs(ids []string, found map[string]models.Track) []string {
+	missing := make([]string, 0, len(ids))
+	seen := map[string]bool{}
+	for _, id := range ids {
+		if _, ok := found[id]; !ok && !seen[id] {
+			missing = append(missing, id)
+			seen[id] = true
 		}
-
-		// 构建作者信息
-		authors := make([]string, len(song.Ar))
-		for i, ar := range song.Ar {
-			authors[i] = ar.Name
-		}
-		
-		// 格式化歌曲信息
-		songInfo := fmt.Sprintf("%s - %s", songName, strings.Join(authors, " / "))
-
-		// 存储结果
-		cacheKey := fmt.Sprintf(netEasyRedis, song.Id)
-		missKeyCacheMap.Store(cacheKey, songInfo)
-		resultMap.Store(song.Id, songInfo)
 	}
-	
-	return nil
+	return missing
 }
 
-// processChunkDetailed 处理一个分块的歌曲ID（详细模式）
-func processChunkDetailed(chunk []*models.SongId, resultMap *sync.Map) error {
-	// 1. 序列化请求参数
-	marshal, err := json.Marshal(chunk)
-	if err != nil {
-		return fmt.Errorf("序列化请求参数失败: %w", err)
-	}
-	
-	// 2. 发送请求
-	resp, err := httputil.Post(netEasyUrlV3, strings.NewReader("c="+string(marshal)))
-	if err != nil {
-		return fmt.Errorf("请求歌曲详情失败: %w", err)
-	}
-	defer resp.Body.Close()
-
-	// 3. 读取响应内容
-	bytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("读取响应内容失败: %w", err)
-	}
-	
-	// 4. 解析响应内容
-	songs := &models.Songs{}
-	if err = json.Unmarshal(bytes, songs); err != nil {
-		return fmt.Errorf("解析响应内容失败: %w", err)
-	}
-
-	// 5. 处理歌曲信息
-	for _, song := range songs.Songs {
-		// 使用原始歌曲名
-		songName := song.Name
-
-		// 构建作者信息
-		authors := make([]string, len(song.Ar))
-		for i, ar := range song.Ar {
-			authors[i] = ar.Name
-		}
-		
-		// 格式化歌曲信息
-		songInfo := fmt.Sprintf("%s - %s", songName, strings.Join(authors, " / "))
-
-		// 存储结果 - 注意这里直接使用song.Id作为key，而不是缓存键
-		resultMap.Store(song.Id, songInfo)
-	}
-	
-	return nil
+// NetEasyDiscover remains available for existing Go callers; HTTP handlers use the injected service.
+func NetEasyDiscover(link string, detailed bool) (*models.SongList, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+	return NewService(nil, nil, nil, 10000, 4).Fetch(ctx, link, Options{Detailed: detailed})
 }

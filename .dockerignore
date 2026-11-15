@@ -1,0 +1,7 @@
+.git
+.env
+static/node_modules
+static/dist
+static/test-results
+static/playwright-report
+**/*.log

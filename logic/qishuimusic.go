@@ -1,117 +1,197 @@
 package logic
 
 import (
-	"fmt"
-	"io"
-	"net/url"
-	"regexp"
-	"strings"
-
-	"GoMusic/misc/httputil"
+	"GoMusic/internal/musicurl"
 	"GoMusic/misc/models"
-	"GoMusic/misc/utils"
-
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/PuerkitoBio/goquery"
+	"io"
+	"net/http"
+	"strings"
+	"time"
 )
 
-// 歌曲链接正则
-const (
-	qishuiMusicV1 = `https?://[a-zA-Z0-9./?=&_-]+`
-	qishuiMusicV2 = `playlist_id=`
-	qishuiMusicV3 = `https?://qishui\.douyin\.com/s/[a-zA-Z0-9]+/?` // 匹配汽水音乐分享链接
-)
-
-var (
-	qishuiMusicV1Regx, _ = regexp.Compile(qishuiMusicV1)
-	qishuiMusicV2Regx, _ = regexp.Compile(qishuiMusicV2)
-	qishuiMusicV3Regx, _ = regexp.Compile(qishuiMusicV3) // 专门匹配汽水音乐链接
-)
-
-// 歌曲信息列表#root > div > div > div > div > div:nth-child(2) > div > div > div > div > div 下的子元素nth-child
-// 歌曲名称 div:nth-child(2) > div:nth-child(1) > p
-// 歌曲作者 div:nth-child(2) > div:nth-child(2) > p
-
-// QiShuiMusicDiscover 解析歌单
-// link: 歌单链接
-// detailed: 是否使用详细歌曲名（原始歌曲名，不去除括号等内容）
-func QiShuiMusicDiscover(link string, detailed bool) (*models.SongList, error) {
-	// 从文本中提取汽水音乐链接
-	extractedLink := qishuiMusicV3Regx.FindString(link)
-	if extractedLink != "" {
-		link = extractedLink
-	}
-
-	params, err := getQiShuiParams(link)
+func (s *Service) qishui(ctx context.Context, link musicurl.Link) (*models.SongList, error) {
+	var err error
+	link, err = s.resolve(ctx, link)
 	if err != nil {
 		return nil, err
 	}
-
-	resp, err := httputil.Get(link, strings.NewReader(params))
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	songList, err := parseQsSongList(resp.Body, detailed)
-	if err != nil {
-		return nil, err
-	}
-	return songList, nil
-}
-
-// getQiShuiParams 获取参数,但是都爬网页了好像没有必要
-func getQiShuiParams(link string) (string, error) {
-	extractLink := qishuiMusicV1Regx.FindString(link)
-	if !qishuiMusicV2Regx.MatchString(extractLink) {
-		var err error
-		extractLink, err = httputil.GetRedirectLocation(extractLink)
-		if err != nil {
-			return "", err
+	var apiList *models.SongList
+	var apiErr error
+	if link.ID != "" {
+		apiList, apiErr = s.qishuiPages(ctx, link.ID)
+		if apiErr == nil {
+			return apiList, nil
 		}
 	}
-	fmt.Println(extractLink)
-	parsedURL, err := url.Parse(extractLink)
-	if err != nil {
-		return "", err
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
 	}
-	params := parsedURL.Query()
-	return params.Encode(), nil
+	html, _, pageErr := s.HTTP.Do(ctx, http.MethodGet, link.URL.String(), nil, nil)
+	preview, previewErr := parseQishui(bytes.NewReader(html))
+	if pageErr == nil && previewErr == nil {
+		best := preferPlaylist(apiList, preview)
+		if len(best.Tracks) < best.TotalCount {
+			best.Warnings = append(best.Warnings, "汽水音乐分页未完成，请稍后重试")
+		}
+		return best, nil
+	}
+	if apiList != nil {
+		apiList.Warnings = append(apiList.Warnings, "汽水音乐分页未完成，请稍后重试")
+		return apiList, nil
+	}
+	return nil, fmt.Errorf("汽水音乐未返回可读取的歌单: %w", errors.Join(apiErr, pageErr, previewErr))
 }
 
-// parseQsSongList 解析网页
-// detailed: 是否使用详细歌曲名（原始歌曲名，不去除括号等内容）
-func parseQsSongList(body io.Reader, detailed bool) (*models.SongList, error) {
-	docDetail, err := goquery.NewDocumentFromReader(body)
+type qishuiMedia struct {
+	Type   string `json:"type"`
+	Entity struct {
+		Track struct {
+			ID      string `json:"id"`
+			Name    string `json:"name"`
+			Artists []struct {
+				Name string `json:"name"`
+			} `json:"artists"`
+		} `json:"track"`
+	} `json:"entity"`
+}
+
+func (s *Service) qishuiPages(ctx context.Context, id string) (*models.SongList, error) {
+	cursor := "0"
+	seen := map[string]bool{}
+	seenTracks := map[string]bool{}
+	var list *models.SongList
+	for len(seen) < 100 && !seen[cursor] {
+		seen[cursor] = true
+		payload, _ := json.Marshal(map[string]any{"playlist_id": id, "cursor": cursor, "count": 200})
+		body, _, err := s.HTTP.Do(ctx, http.MethodPost, "https://beta-luna.douyin.com/luna/playlist/detail", bytes.NewReader(payload), map[string]string{"Content-Type": "application/json", "User-Agent": "Luna/19.1.0 Android"})
+		if err != nil {
+			return list, err
+		}
+		var page struct {
+			Playlist *struct {
+				Title string `json:"title"`
+				Count int    `json:"count_tracks"`
+			} `json:"playlist"`
+			Medias  []qishuiMedia   `json:"media_resources"`
+			Cursor  json.RawMessage `json:"next_cursor"`
+			HasMore bool            `json:"has_more"`
+		}
+		if err = json.Unmarshal(body, &page); err != nil {
+			return list, err
+		}
+		if page.Playlist == nil || page.Playlist.Title == "" {
+			return list, fmt.Errorf("汽水歌单不存在或未公开")
+		}
+		if list == nil {
+			list = &models.SongList{Name: page.Playlist.Title, TotalCount: page.Playlist.Count}
+		}
+		list.TotalCount = max(list.TotalCount, page.Playlist.Count)
+		before := len(list.Tracks)
+		hasTracks := false
+		for _, media := range page.Medias {
+			song := media.Entity.Track
+			if media.Type != "track" || song.Name == "" {
+				continue
+			}
+			hasTracks = true
+			track := models.Track{ID: song.ID, Title: song.Name, Artists: []string{}}
+			for _, artist := range song.Artists {
+				if artist.Name != "" {
+					track.Artists = append(track.Artists, artist.Name)
+				}
+			}
+			appendDistinctTrack(list, track, seenTracks)
+		}
+		if hasTracks && len(list.Tracks) == before {
+			return list, fmt.Errorf("汽水音乐分页没有返回新的歌曲")
+		}
+		if len(list.Tracks) >= s.MaxSongs || (!page.HasMore && len(list.Tracks) >= list.TotalCount) {
+			return list, nil
+		}
+		next := strings.Trim(string(page.Cursor), "\"")
+		if next == "" || next == "null" || seen[next] || len(page.Medias) == 0 {
+			return list, fmt.Errorf("汽水音乐分页未继续")
+		}
+		cursor = next
+	}
+	return list, fmt.Errorf("汽水音乐分页次数超过限制")
+}
+
+// The current share page embeds playlist_page data in _ROUTER_DATA, independently of CSS layout.
+func parseQishui(body io.Reader) (*models.SongList, error) {
+	doc, err := goquery.NewDocumentFromReader(body)
 	if err != nil {
 		return nil, err
 	}
-	songListName := docDetail.Find("#root > div > div > div > div > div:nth-child(1) > div:nth-child(3) > h1 > p").Text()
-	songListAuthor := docDetail.Find("#root > div > div > div > div > div:nth-child(1) > div:nth-child(3) > div > div > div:nth-child(2) > p").Text()
-	songList := models.SongList{
-		Name:       fmt.Sprintf("%s-%s", songListName, songListAuthor),
-		SongsCount: 0,
-	}
-	docDetail.Find("#root > div > div > div > div > div:nth-child(2) > div > div > div > div > div").Each(
-		func(i int, s *goquery.Selection) {
-			title := s.Find("div:nth-child(2) > div:nth-child(1) > p").Text()
-			artist := s.Find("div:nth-child(2) > div:nth-child(2) > p").Text()
-
-			// artist 需要格式化，去除 • 后面的字符，例如：G.E.M. 邓紫棋 • T.I.M.E. -> G.E.M. 邓紫棋
-			artist = strings.Split(artist, "•")[0]
-
-			// 根据detailed参数决定是否使用原始歌曲名
-			var songName string
-			if detailed {
-				songName = title // 使用原始歌曲名
-			} else {
-				songName = utils.StandardSongName(title) // 使用标准化的歌曲名
+	var list *models.SongList
+	doc.Find("script").EachWithBreak(func(_ int, script *goquery.Selection) bool {
+		text := strings.TrimSpace(script.Text())
+		start := strings.Index(text, "_ROUTER_DATA")
+		if start < 0 {
+			return true
+		}
+		text = text[start+len("_ROUTER_DATA"):]
+		text = strings.TrimSpace(text)
+		if !strings.HasPrefix(text, "=") {
+			return true
+		}
+		text = strings.TrimSpace(strings.TrimPrefix(text, "="))
+		var data struct {
+			LoaderData struct {
+				Page *struct {
+					Info *struct {
+						Title string `json:"title"`
+						Count int    `json:"count_tracks"`
+					} `json:"playlistInfo"`
+					Medias []struct {
+						Type   string `json:"type"`
+						Entity struct {
+							Track struct {
+								ID      string `json:"id"`
+								Name    string `json:"name"`
+								Artists []struct {
+									Name string `json:"name"`
+								} `json:"artists"`
+							} `json:"track"`
+						} `json:"entity"`
+					} `json:"medias"`
+				} `json:"playlist_page"`
+			} `json:"loaderData"`
+		}
+		// Decode exactly one JSON value; subsequent hydration JavaScript is never evaluated.
+		if json.NewDecoder(strings.NewReader(text)).Decode(&data) != nil || data.LoaderData.Page == nil || data.LoaderData.Page.Info == nil || data.LoaderData.Page.Info.Title == "" {
+			return true
+		}
+		page := data.LoaderData.Page
+		list = &models.SongList{Name: page.Info.Title, TotalCount: page.Info.Count}
+		for _, media := range page.Medias {
+			if media.Type != "track" || media.Entity.Track.Name == "" {
+				continue
 			}
-
-			// 按照网易云音乐的格式化方式: "歌曲名 - 歌手"
-			formattedSong := fmt.Sprintf("%s - %s", songName, artist)
-			songList.Songs = append(songList.Songs, formattedSong)
-			songList.SongsCount++
-		},
-	)
-	return &songList, nil
+			song := media.Entity.Track
+			track := models.Track{ID: song.ID, Title: song.Name, Artists: []string{}}
+			for _, artist := range song.Artists {
+				if artist.Name != "" {
+					track.Artists = append(track.Artists, artist.Name)
+				}
+			}
+			list.Tracks = append(list.Tracks, track)
+		}
+		return false
+	})
+	if list != nil {
+		return list, nil
+	}
+	return nil, fmt.Errorf("汽水音乐未返回可读取的歌单，请确认歌单已公开，并使用汽水音乐的歌单分享链接")
+}
+func QiShuiMusicDiscover(link string, detailed bool) (*models.SongList, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+	return NewService(nil, nil, nil, 10000, 4).Fetch(ctx, link, Options{Detailed: detailed})
 }
