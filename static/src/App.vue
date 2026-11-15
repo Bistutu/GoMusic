@@ -22,6 +22,7 @@ const exportOptions = reactive<ExportOptions>({
   order: "normal",
 });
 const showStars = ref(true);
+const starsLoaded = ref(false);
 const t = computed(() => messages[language.value]);
 watch(
   language,
@@ -59,13 +60,14 @@ const errorMessage = computed(() => {
           rel="noopener noreferrer"
           ><img
             v-if="showStars"
+            v-show="starsLoaded"
             class="github-stars"
             src="https://img.shields.io/github/stars/Bistutu/GoMusic?style=flat-square&logo=github&label=Star"
             alt="GitHub stars"
             height="20"
-            loading="lazy"
+            @load="starsLoaded = true"
             @error="showStars = false"
-          /><span v-else>GitHub</span></a
+          /><span v-if="!starsLoaded || !showStars">GitHub</span></a
         >
         <button
           class="text-button"
@@ -78,7 +80,12 @@ const errorMessage = computed(() => {
     </header>
     <main>
       <div class="page-intro">
-        <h1>{{ t.title }}</h1>
+        <h1>
+          <template v-for="(part, index) in t.title.split(' / ')" :key="index"
+            ><template v-if="index"> / </template
+            ><span class="title-part">{{ part }}</span></template
+          >
+        </h1>
         <p>{{ t.subtitle }}</p>
       </div>
       <PlaylistForm

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Copy } from "../i18n";
+import sponsorImage from "../assets/approve.png";
 defineProps<{ t: Copy }>();
 const sponsors = [
   ["冰楠 ₿.Ξ 🧘", 188],
@@ -53,12 +54,22 @@ const sponsors = [
       <h2 id="support-heading">{{ t.sponsor }}</h2>
       <p>{{ t.sponsorBody }}</p>
       <div class="sponsor-content">
-        <img
-          src="../assets/approve.png"
-          alt="WeChat"
-          loading="lazy"
-          width="150"
-        />
+        <a
+          class="sponsor-image"
+          :href="sponsorImage"
+          target="_blank"
+          rel="noopener noreferrer"
+          :aria-label="t.sponsorEnlarge"
+        >
+          <img
+            :src="sponsorImage"
+            alt="WeChat"
+            loading="lazy"
+            width="320"
+            height="320"
+          />
+          <span>{{ t.sponsorEnlarge }}</span>
+        </a>
         <div class="supporter-table">
           <p>{{ t.sponsorUpdated }}</p>
           <table>

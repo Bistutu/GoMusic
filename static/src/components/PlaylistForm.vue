@@ -11,6 +11,7 @@ const props = defineProps<{
   options: ExportOptions;
 }>();
 const emit = defineEmits<{ submit: []; cancel: [] }>();
+const exampleUrl = "https://music.163.com/playlist?id=19723756";
 const platform = computed(() => {
   const p = platformOf(link.value);
   return p ? props.t[p as "netease" | "qq" | "qishui" | "kugou"] : "";
@@ -35,13 +36,17 @@ const platform = computed(() => {
     />
     <div class="input-helper">
       <span>{{ platform ? t.detected + platform : t.privacy }}</span>
+      <button
+        type="button"
+        class="text-button example-link"
+        :disabled="busy"
+        :title="exampleUrl"
+        @click="link = exampleUrl"
+      >
+        {{ t.example }}
+      </button>
     </div>
     <div class="playlist-options">
-      <label class="original-option" :title="t.originalHint"
-        ><input v-model="options.detailed" type="checkbox" />{{
-          t.original
-        }}</label
-      >
       <div class="option-row" role="radiogroup" :aria-label="t.format">
         <span class="option-label">{{ t.format }}</span>
         <div class="option-values">
@@ -89,6 +94,11 @@ const platform = computed(() => {
           >
         </div>
       </div>
+      <label class="original-option" :title="t.originalHint"
+        ><input v-model="options.detailed" type="checkbox" />{{
+          t.original
+        }}</label
+      >
     </div>
     <div class="fetch-actions">
       <button class="primary-button" :disabled="busy" type="submit">

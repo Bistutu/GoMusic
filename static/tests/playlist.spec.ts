@@ -35,7 +35,7 @@ test("keeps the page usable on desktop and mobile", async ({
     page.getByRole("button", { name: "复制结果", exact: true }),
   ).toBeDisabled();
   await expect(
-    page.getByRole("checkbox", { name: "使用未经处理的原始歌曲名" }),
+    page.getByRole("checkbox", { name: "保留原始歌名" }),
   ).toBeVisible();
   await expect(
     page.getByRole("radio", { name: "歌手 - 歌名", exact: true }),
@@ -95,7 +95,7 @@ test("formats locally, reverses, edits and downloads the selected text", async (
   await expect(output).toHaveValue(
     "歌手甲 / 歌手乙 - 歌曲 2 - Live\n歌手甲 / 歌手乙 - 歌曲 1 - Live",
   );
-  await page.getByLabel("使用未经处理的原始歌曲名").check();
+  await page.getByLabel("保留原始歌名").check();
   expect(await output.inputValue()).toContain("【平台注释】");
   expect(requests).toBe(1);
   await output.fill("手动编辑的歌曲");
@@ -138,9 +138,20 @@ test("cancels without stale data or an error and can retry", async ({
   page,
 }) => {
   let calls = 0;
+  let releaseFirst!: () => void;
+  let firstStarted!: () => void;
+  const firstResponse = new Promise<void>((resolve) => {
+    releaseFirst = resolve;
+  });
+  const firstRequest = new Promise<void>((resolve) => {
+    firstStarted = resolve;
+  });
   await page.route("**/api/v1/songlists", async (route) => {
     calls++;
-    if (calls === 1) await new Promise((resolve) => setTimeout(resolve, 500));
+    if (calls === 1) {
+      firstStarted();
+      await firstResponse;
+    }
     await route.fulfill({ json: playlist() }).catch(() => {});
   });
   await page.goto("/");
@@ -148,7 +159,9 @@ test("cancels without stale data or an error and can retry", async ({
     .getByLabel("歌单分享链接")
     .fill("https://y.qq.com/n/ryqq/playlist/1");
   await page.getByRole("button", { name: "获取歌单", exact: true }).click();
+  await firstRequest;
   await page.getByRole("button", { name: "取消", exact: true }).click();
+  releaseFirst();
   await expect(page.getByRole("alert")).toHaveCount(0);
   await page.getByRole("button", { name: "获取歌单", exact: true }).click();
   await expect(page.getByLabel("可编辑的歌单文本")).toBeEnabled();

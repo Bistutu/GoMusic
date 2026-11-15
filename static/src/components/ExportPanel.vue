@@ -137,8 +137,8 @@ function download() {
         @click="download"
       >
         {{ t.download }}</button
-      ><span class="action-notice" role="status">{{
-        notice ? t[notice] : ""
+      ><span v-if="notice" class="action-notice" role="status">{{
+        t[notice]
       }}</span>
     </div>
   </section>

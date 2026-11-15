@@ -84,6 +84,7 @@ select:focus {
 }
 .page-intro {
   margin: 28px 0 25px;
+  text-align: center;
 }
 h1 {
   text-wrap: balance;
@@ -92,6 +93,9 @@ h1 {
   line-height: 1.6;
   letter-spacing: -0.4px;
   margin: 0 0 7px;
+}
+.title-part {
+  white-space: nowrap;
 }
 .page-intro p {
   font-size: 17px;
@@ -123,6 +127,8 @@ h1 {
 .input-helper {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
   color: #858585;
   font-size: 12px;
@@ -130,11 +136,17 @@ h1 {
   margin: 7px 0 0;
   min-height: 20px;
 }
+.example-link {
+  font-size: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .playlist-options {
   display: flex;
-  flex-direction: column;
-  gap: 15px;
-  margin: 19px 0 22px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+  margin: 14px 0 20px;
   font-size: 13px;
 }
 .original-option,
@@ -144,6 +156,7 @@ h1 {
   gap: 7px;
   cursor: pointer;
   line-height: 1.6;
+  white-space: nowrap;
 }
 .playlist-options input {
   margin: 0;
@@ -154,28 +167,32 @@ h1 {
 }
 .option-row {
   display: flex;
-  align-items: flex-start;
-  gap: 16px;
+  align-items: center;
+  gap: 10px;
 }
 .option-label {
   color: #666;
-  min-width: 64px;
   line-height: 1.6;
+  white-space: nowrap;
 }
 .option-values {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12px 24px;
+  gap: 8px 12px;
 }
 .fetch-actions {
   display: flex;
   align-items: center;
-  gap: 15px;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px 15px;
 }
 .loading-note {
   font-size: 12px;
   color: #737373;
+  width: 100%;
+  text-align: center;
 }
 .primary-button,
 .secondary-button {
@@ -286,6 +303,7 @@ h1 {
 .export-actions {
   display: flex;
   align-items: center;
+  justify-content: center;
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 17px;
@@ -293,7 +311,8 @@ h1 {
 .action-notice {
   font-size: 12px;
   color: #737373;
-  margin-left: 4px;
+  width: 100%;
+  text-align: center;
 }
 .batch-control {
   display: flex;
@@ -371,12 +390,23 @@ h1 {
 .sponsor-content {
   display: flex;
   align-items: flex-start;
-  gap: 40px;
+  gap: 32px;
   margin-top: 18px;
 }
-.sponsor-content img {
-  width: 150px;
+.sponsor-image {
+  flex: 0 0 320px;
+  max-width: 100%;
+  text-align: center;
+  font-size: 12px;
+}
+.sponsor-image img {
+  display: block;
+  width: 100%;
   height: auto;
+}
+.sponsor-image span {
+  display: block;
+  margin-top: 8px;
 }
 .supporter-table {
   flex: 1;
@@ -455,26 +485,7 @@ h1 {
     min-height: 72px;
   }
   .playlist-options {
-    gap: 15px;
-    margin: 18px 0 21px;
-  }
-  .option-row {
-    gap: 12px;
-  }
-  .option-label {
-    min-width: 58px;
-  }
-  .option-values {
-    gap: 11px 17px;
-  }
-  .option-values label {
-    font-size: 12px;
-  }
-  .fetch-actions {
-    flex-wrap: wrap;
-  }
-  .fetch-actions > .primary-button {
-    width: 100%;
+    column-gap: 12px;
   }
   .export-panel {
     margin-top: 26px;
@@ -487,24 +498,20 @@ h1 {
     padding: 12px;
     font-size: 13px;
   }
-  .export-actions > .primary-button,
-  .export-actions > .secondary-button {
-    flex: 1;
-  }
-  .action-notice {
-    width: 100%;
-    margin: 0;
-  }
   .help-section {
     font-size: 12px;
     margin-top: 29px;
   }
+}
+@media (max-width: 760px) {
   .sponsor-content {
     flex-direction: column;
     gap: 20px;
   }
-  .sponsor-content img {
-    width: 140px;
+  .sponsor-image {
+    flex: none;
+    width: 320px;
+    align-self: center;
   }
   .supporter-table {
     width: 100%;
