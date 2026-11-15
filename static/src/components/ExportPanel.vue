@@ -88,13 +88,32 @@ function download() {
           : t.partialHint
       }}
     </p>
-    <label v-if="songs.length > 500" class="batch-control"
-      >{{ t.batch
-      }}<select v-model.number="batchSize">
-        <option :value="0">{{ t.all }}</option>
-        <option :value="500">{{ t.batch500 }}</option>
-      </select></label
+    <div
+      v-if="songs.length > 500"
+      class="batch-control"
+      role="radiogroup"
+      :aria-label="t.batch"
     >
+      <span class="option-label">{{ t.batch }}</span>
+      <div class="option-values">
+        <label
+          ><input
+            v-model.number="batchSize"
+            type="radio"
+            name="batch-size"
+            :value="0"
+          />{{ t.all }}</label
+        >
+        <label
+          ><input
+            v-model.number="batchSize"
+            type="radio"
+            name="batch-size"
+            :value="500"
+          />{{ t.batch500 }}</label
+        >
+      </div>
+    </div>
     <textarea
       v-model="text"
       class="result-text"

@@ -16,8 +16,7 @@ body {
 }
 button,
 textarea,
-input,
-select {
+input {
   font: inherit;
   color: inherit;
 }
@@ -25,8 +24,7 @@ a {
   color: inherit;
   text-decoration: none;
 }
-button,
-select {
+button {
   cursor: pointer;
 }
 a:hover,
@@ -43,8 +41,7 @@ a:focus-visible {
   outline: 2px solid #888;
   outline-offset: 4px;
 }
-textarea:focus,
-select:focus {
+textarea:focus {
   outline: 2px solid #aaa;
   outline-offset: 1px;
 }
@@ -158,7 +155,8 @@ h1 {
   line-height: 1.6;
   white-space: nowrap;
 }
-.playlist-options input {
+.playlist-options input,
+.batch-control input {
   margin: 0;
   width: 14px;
   height: 14px;
@@ -317,17 +315,10 @@ h1 {
 .batch-control {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
   font-size: 13px;
-  color: #666;
   margin: 0 0 12px;
-}
-.batch-control select {
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 6px 9px;
-  background: #fff;
-  font-size: 13px;
 }
 .batch-navigation {
   display: flex;

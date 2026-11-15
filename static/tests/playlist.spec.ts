@@ -125,7 +125,16 @@ test("shows incomplete counts and supports a final 1-track batch", async ({
   await page.getByRole("button", { name: "获取歌单", exact: true }).click();
   await expect(page.getByText("部分歌曲未获取", { exact: true })).toBeVisible();
   await expect(page.getByText("平台显示 531", { exact: false })).toBeVisible();
-  await page.getByLabel("分批导出").selectOption("500");
+  const batches = page.getByRole("radiogroup", { name: "分批导出" });
+  const all = batches.getByRole("radio", { name: "全部歌曲", exact: true });
+  const split = batches.getByRole("radio", {
+    name: "每批 500 首",
+    exact: true,
+  });
+  await expect(all).toBeVisible();
+  await expect(split).toBeVisible();
+  await expect(all).toBeChecked();
+  await split.check();
   expect(
     (await page.getByLabel("可编辑的歌单文本").inputValue()).split("\n"),
   ).toHaveLength(500);
@@ -133,6 +142,18 @@ test("shows incomplete counts and supports a final 1-track batch", async ({
   expect(await page.getByLabel("可编辑的歌单文本").inputValue()).toBe(
     "歌曲 501 - Live - 歌手甲 / 歌手乙",
   );
+  await all.check();
+  expect(
+    (await page.getByLabel("可编辑的歌单文本").inputValue()).split("\n"),
+  ).toHaveLength(501);
+  await expect(page.getByRole("button", { name: "下一批" })).not.toBeVisible();
+  await all.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(split).toBeChecked();
+  expect(
+    (await page.getByLabel("可编辑的歌单文本").inputValue()).split("\n"),
+  ).toHaveLength(500);
+  await expect(page.getByRole("button", { name: "上一批" })).toBeDisabled();
 });
 test("discloses a short response from a large playlist", async ({ page }) => {
   const body = playlist(30, false);
