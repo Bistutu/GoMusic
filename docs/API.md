@@ -49,7 +49,9 @@ When a legacy endpoint or share-page fallback reports a smaller playlist total, 
 
 Kugou standard-edition `gcid` share pages sometimes return only a preview. GoMusic reports it as partial when the advertised count is larger. Public Concept Edition collections and official special playlists have separate paginated adapters. Availability remains dependent on the music platform; a successful sample does not guarantee every playlist is publicly accessible.
 
-For an incomplete result taken from the public Kugou share-page preview, `preview=true` distinguishes that limitation from an interrupted paginated request. The adapter tries valid collection IDs (including top-level share metadata) and official special IDs when available, retaining the largest known total. A share page exposing 10 of 12 tracks remains `songs_count=10`, `total_count=12`, `complete=false`; it is never silently described as a full export.
+For an incomplete result taken from the public Kugou share-page preview, `preview=true` distinguishes that limitation from an interrupted paginated request. The adapter tries valid collection IDs (including top-level share metadata) and official special IDs when available, retaining the largest known total. For the observed v3 GCID shape, it can also decode a candidate public collection identity using base-35 fields, require its owner to match the official share metadata, and require every visible preview track ID to match the beginning of the retrieved collection in order. The trailer is not treated as an authenticated identity. Unknown formats, missing/mismatched owners, or mismatched track prefixes keep the preview instead of substituting another playlist.
+
+The original `gcid_3zbivkavz4z072` share is now resolved to `collection_3_606105881_4_0`, retaining its original name and returning 12/12 tracks. When none of the validated public paths succeeds, a page exposing 10 of 12 tracks remains `songs_count=10`, `total_count=12`, `complete=false`; it is never silently described as a full export.
 
 ## Legacy API
 

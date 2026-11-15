@@ -302,3 +302,45 @@ test("shows Kugou's 10 of 12 preview as incomplete", async ({ page }) => {
     (await page.getByLabel("可编辑的歌单文本").inputValue()).split("\n"),
   ).toHaveLength(10);
 });
+
+test("replaces a Kugou preview with the complete twelve tracks on retry", async ({
+  page,
+}) => {
+  let requests = 0;
+  await page.route("**/api/v1/songlists", (route) => {
+    const partial = requests++ === 0;
+    const result = playlist(partial ? 10 : 12, !partial);
+    return route.fulfill({
+      json: {
+        ...result,
+        data: {
+          ...result.data,
+          source: "kugou",
+          total_count: 12,
+          ...(partial ? { preview: true } : {}),
+        },
+      },
+    });
+  });
+  await page.goto("/");
+  await page
+    .getByLabel("歌单分享链接")
+    .fill("https://m.kugou.com/songlist/gcid_3zbivkavz4z072/");
+  const fetch = page.getByRole("button", { name: "获取歌单", exact: true });
+  await fetch.click();
+  await expect(page.getByText("部分歌曲未获取", { exact: true })).toBeVisible();
+  await fetch.click();
+  await expect(page.getByText("部分歌曲未获取", { exact: true })).toHaveCount(
+    0,
+  );
+  await expect(
+    page.getByText("该酷狗分享页仅提供公开预览。", { exact: false }),
+  ).toHaveCount(0);
+  await expect(page.locator(".result-heading")).toContainText(
+    "已获取 12 首歌曲",
+  );
+  expect(
+    (await page.getByLabel("可编辑的歌单文本").inputValue()).split("\n"),
+  ).toHaveLength(12);
+  expect(requests).toBe(2);
+});

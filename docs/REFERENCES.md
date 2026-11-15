@@ -14,6 +14,12 @@ The refactor preserves GoMusic's small public-playlist-to-text workflow. Provide
 
 The Qishui share-page shape was also verified directly against the issue #20 public example: `_ROUTER_DATA.loaderData.playlist_page`. The current primary path uses `/luna/playlist/detail`; the share page is a fallback. Cursor, response and song limits are enforced by GoMusic.
 
+### Observed Kugou GCID mapping
+
+GoMusic independently checked the public pairs `gcid_3z17seve8z2z051` → `collection_3_2248574973_2_0` and `gcid_3zbivkavz4z072` → `collection_3_606105881_4_0`. The known v3 zero-tag shape separates base-35 fields with `z`; its owner and list fields reproduce those IDs. This is an inference verified against these public samples, not a claim that every GCID format is reversible or that the trailer has been authenticated.
+
+The adapter requires the decoded owner to equal the official share-page `list_create_userid` and requires the retrieved collection's entire visible song prefix to match by stable hash before accepting it. The user's original [public share](https://m.kugou.com/songlist/gcid_3zbivkavz4z072/) exposes 10 previews but its validated [public collection](https://activity.kugou.com/share/index.html?global_specialid=collection_3_606105881_4_0) returns 12. This additional path does not require a login or use a third-party hosted service. Failed validation retains the partial-result warning.
+
 Sources containing referenced nontrivial protocol/signature logic are MIT licensed; relevant notices are retained in [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md). No changes were made to FluentRead or its reference repositories.
 
 ## Frontend choice

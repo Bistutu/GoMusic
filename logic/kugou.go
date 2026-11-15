@@ -102,6 +102,7 @@ func (s *Service) kugouShare(ctx context.Context, id string) (*models.SongList, 
 	var list *models.SongList
 	var collection string
 	var special string
+	var owner int64
 	doc.Find("script").EachWithBreak(func(_ int, script *goquery.Selection) bool {
 		text := script.Text()
 		start := strings.Index(text, "window.$output")
@@ -120,6 +121,7 @@ func (s *Service) kugouShare(ctx context.Context, id string) (*models.SongList, 
 					Count      *int        `json:"count"`
 					Collection string      `json:"global_collection_id"`
 					SpecialID  json.Number `json:"specialid"`
+					Owner      json.Number `json:"list_create_userid"`
 				} `json:"listinfo"`
 				Songs []kugouSong `json:"songs"`
 			} `json:"info"`
@@ -139,6 +141,7 @@ func (s *Service) kugouShare(ctx context.Context, id string) (*models.SongList, 
 			collection = payload.Collection
 		}
 		special = info.Listinfo.SpecialID.String()
+		owner, _ = info.Listinfo.Owner.Int64()
 		for _, song := range info.Songs {
 			if track := song.track(); track.Title != "" {
 				list.Tracks = append(list.Tracks, track)
@@ -178,11 +181,62 @@ func (s *Service) kugouShare(ctx context.Context, id string) (*models.SongList, 
 			}
 		}
 	}
+	if list.TotalCount > len(list.Tracks) || len(list.Warnings) > 0 {
+		if derived := kugouCollectionFromShare(id, owner); derived != "" && derived != collection {
+			candidate, err := s.kugouPages(ctx, derived, true, list.TotalCount)
+			// The share trailer is not an authenticated identity. Require the
+			// entire visible prefix to match before accepting decoded metadata.
+			if err == nil && kugouMatchesPreview(preview, candidate) {
+				name := list.Name
+				list = preferPlaylist(list, candidate)
+				if name != "" {
+					list.Name = name
+				}
+			}
+		}
+	}
 	if list == preview && (list.TotalCount > len(list.Tracks) || len(list.Warnings) > 0) {
 		list.Preview = true
 		list.Warnings = append(list.Warnings, "酷狗普通版分享页仅提供部分预览，未获取的歌曲不会计入导出数量；可尝试概念版的歌单分享链接")
 	}
 	return list, nil
+}
+
+// The observed v3 GCID format encodes the owner/list fields in base 35,
+// separated by z. Only decode its known zero-tag shape, corroborate the
+// owner against official share metadata, then verify the visible songs.
+func kugouCollectionFromShare(id string, owner int64) string {
+	if owner <= 0 || !strings.HasPrefix(id, "gcid_") {
+		return ""
+	}
+	parts := strings.Split(strings.TrimPrefix(id, "gcid_"), "z")
+	if len(parts) != 4 || parts[0] != "3" || len(parts[3]) != 3 || parts[3][0] != '0' {
+		return ""
+	}
+	var fields [3]uint64
+	for i := range fields {
+		value, err := strconv.ParseUint(parts[i], 35, 63)
+		if err != nil || strconv.FormatUint(value, 35) != parts[i] {
+			return ""
+		}
+		fields[i] = value
+	}
+	if _, err := strconv.ParseUint(parts[3][1:], 35, 16); err != nil || fields[1] != uint64(owner) || fields[2] == 0 {
+		return ""
+	}
+	return fmt.Sprintf("collection_3_%d_%d_0", fields[1], fields[2])
+}
+
+func kugouMatchesPreview(preview, candidate *models.SongList) bool {
+	if candidate == nil || len(preview.Tracks) == 0 || len(candidate.Tracks) < len(preview.Tracks) {
+		return false
+	}
+	for i, track := range preview.Tracks {
+		if track.ID == "" || !strings.EqualFold(track.ID, candidate.Tracks[i].ID) {
+			return false
+		}
+	}
+	return true
 }
 
 // kugouSignedParams implements the public H5 parameter signature using Go's standard MD5.

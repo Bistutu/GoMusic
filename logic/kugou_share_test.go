@@ -19,7 +19,7 @@ func TestKugouSharePreviewAndPublicFullListMatrix(t *testing.T) {
 		complete, previewOnly bool
 	}{
 		{"small-complete", 4, 4, "", "", 4, true, false},
-		{"user-share-ten-of-twelve", 12, 10, "", "", 10, false, true},
+		{"owner-missing-ten-of-twelve", 12, 10, "", "", 10, false, true},
 		{"large-share-stays-preview", 2800, 10, "", "", 10, false, true},
 		{"missing-total", -1, 10, "", "", 10, false, true},
 		{"inconsistent-total", 0, 10, "", "", 10, false, true},
