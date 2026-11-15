@@ -37,4 +37,10 @@ GoMusic은 무료 오픈 소스입니다. WeChat 코드로 후원하거나 [후�
 <a href="misc/images/approve.png"><img src="misc/images/approve.png" alt="WeChat 후원 코드" width="320" /></a>
 </p>
 
-[직접 호스팅 (中文)](DEPLOYMENT.md) · [NetEase ↔ QQ](https://github.com/Bistutu/GoMusic/issues/17) · [스타 기록](https://star-history.com/#Bistutu/GoMusic&Date) · [MIT](LICENSE) · [크레딧](THIRD_PARTY_NOTICES.md)
+[직접 호스팅 (中文)](DEPLOYMENT.md) · [NetEase ↔ QQ](https://github.com/Bistutu/GoMusic/issues/17) · [MIT](LICENSE) · [크레딧](THIRD_PARTY_NOTICES.md)
+
+## 스타 기록
+
+<table align="center"><tr><td>
+<a href="https://star-history.com/#Bistutu/GoMusic&Date"><img src="https://api.star-history.com/svg?repos=Bistutu/GoMusic&amp;type=Date" alt="GoMusic 스타 기록 차트" width="600" /></a>
+</td></tr></table>

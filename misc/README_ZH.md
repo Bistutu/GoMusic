@@ -46,4 +46,10 @@ GoMusic 免费、开源。欢迎使用微信扫码支持项目，也可以查看
 <a href="images/approve.png"><img src="images/approve.png" alt="微信赞赏码" width="320" /></a>
 </p>
 
-[自行部署](../DEPLOYMENT.md) · [网易云 ↔ QQ 互转](https://github.com/Bistutu/GoMusic/issues/17) · [Star 历史](https://star-history.com/#Bistutu/GoMusic&Date) · [MIT](../LICENSE) · [致谢](../THIRD_PARTY_NOTICES.md)
+[自行部署](../DEPLOYMENT.md) · [网易云 ↔ QQ 互转](https://github.com/Bistutu/GoMusic/issues/17) · [MIT](../LICENSE) · [致谢](../THIRD_PARTY_NOTICES.md)
+
+## Star 历史
+
+<table align="center"><tr><td>
+<a href="https://star-history.com/#Bistutu/GoMusic&Date"><img src="https://api.star-history.com/svg?repos=Bistutu/GoMusic&amp;type=Date" alt="GoMusic Star 历史图表" width="600" /></a>
+</td></tr></table>
