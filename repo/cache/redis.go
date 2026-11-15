@@ -1,86 +1,70 @@
 package cache
 
 import (
+	"GoMusic/misc/models"
 	"context"
-	"errors"
-	"os"
-	"sync"
+	"encoding/json"
+	"github.com/redis/go-redis/v9"
 	"time"
-
-	"github.com/go-redis/redis/v8"
-
-	"GoMusic/misc/log"
 )
 
-const (
-	month = 30 * 24 * time.Hour
-)
-
-var (
-	ctx      = context.Background()
-	rdb      *redis.Client
-	disabled = os.Getenv("GOMUSIC_DISABLE_REDIS") == "1"
-)
-
-func init() {
-	if disabled {
-		log.Warn("GOMUSIC_DISABLE_REDIS=1，本地模式不启用 Redis 缓存")
-		return
-	}
-
-	rdb = redis.NewClient(&redis.Options{
-		Addr:     "127.0.0.1:16379",  // redis 服务端地址
-		Password: "SzW7fh2Fs5d2ypwT", // redis 密码
-		DB:       0,
-	})
+type Store struct {
+	client *redis.Client
+	ttl    time.Duration
 }
 
-func SetKey(key string, value string) error {
-	if disabled {
-		return nil
+func Open(ctx context.Context, addr, password string, database int, ttl time.Duration) (*Store, error) {
+	client := redis.NewClient(&redis.Options{Addr: addr, Password: password, DB: database, DialTimeout: time.Second, ReadTimeout: time.Second, WriteTimeout: time.Second, MaxRetries: -1, DialerRetries: 1, ContextTimeoutEnabled: true})
+	if err := client.Ping(ctx).Err(); err != nil {
+		client.Close()
+		return nil, err
 	}
-	return rdb.Set(ctx, key, value, 30*time.Second).Err() // 缓存 30 秒
+	return &Store{client: client, ttl: ttl}, nil
 }
-
-func GetKey(key string) (string, error) {
-	if disabled {
-		return "", nil
+func key(provider, id string) string { return "gomusic:v2:" + provider + ":song:" + id }
+func (s *Store) Get(ctx context.Context, provider string, ids []string) (map[string]models.Track, error) {
+	found := make(map[string]models.Track, len(ids))
+	if len(ids) == 0 {
+		return found, nil
 	}
-	val, err := rdb.Get(ctx, key).Result()
-	if err != redis.Nil && err != nil {
-		return "", err
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+	keys := make([]string, len(ids))
+	for i, id := range ids {
+		keys[i] = key(provider, id)
 	}
-	return val, nil
-}
-
-func MGet(keys ...string) ([]interface{}, error) {
-	if len(keys) == 0 {
-		return nil, errors.New("keys is empty")
-	}
-	if disabled {
-		return make([]interface{}, len(keys)), nil
-	}
-	result, err := rdb.MGet(ctx, keys...).Result()
+	values, err := s.client.MGet(ctx, keys...).Result()
 	if err != nil {
-		log.Errorf("MGet error: %v", err)
+		return nil, err
 	}
-	return result, err
+	for i, value := range values {
+		text, ok := value.(string)
+		if !ok {
+			continue
+		}
+		var track models.Track
+		if json.Unmarshal([]byte(text), &track) == nil && track.ID == ids[i] && track.Title != "" {
+			found[ids[i]] = track
+		}
+	}
+	return found, nil
 }
-
-func MSet(kv sync.Map) error {
-	if disabled {
+func (s *Store) Put(ctx context.Context, provider string, tracks []models.Track) error {
+	if len(tracks) == 0 {
 		return nil
 	}
-	pipeline := rdb.Pipeline()
-	kv.Range(func(k, v any) bool {
-		// 缓存 30 天
-		pipeline.Set(ctx, k.(string), v, month)
-		return true
-	})
-	// 不关注单个命令的执行结果，只关注 pipeline 执行的结果
-	if _, err := pipeline.Exec(ctx); err != nil {
-		log.Error("MSet error: ", err)
-		return err
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+	pipe := s.client.Pipeline()
+	for _, track := range tracks {
+		data, err := json.Marshal(track)
+		if err != nil {
+			return err
+		}
+		pipe.Set(ctx, key(provider, track.ID), data, s.ttl)
 	}
-	return nil
+	_, err := pipe.Exec(ctx)
+	return err
 }
+func (s *Store) Ping(ctx context.Context) error { return s.client.Ping(ctx).Err() }
+func (s *Store) Close() error                   { return s.client.Close() }

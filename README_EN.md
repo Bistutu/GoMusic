@@ -1,5 +1,8 @@
 # Transfer NetEase/QQ Music Playlists to Apple/Youtube/Spotify Music
 
+> Refactored version: NetEase, QQ Music, Qishui and Kugou public playlists; Vue 3 + TypeScript + Vite; optional MySQL/Redis. See [deployment](DEPLOYMENT.md) and [API contracts and platform limits](docs/API.md).
+
+
 >  [简体中文](README.md)| English | [한국어](README_KO.md)
 
 Link: [https://music.unmeta.cn](https://music.unmeta.cn)

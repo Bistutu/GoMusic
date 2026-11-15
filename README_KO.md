@@ -1,5 +1,8 @@
 # 넷이즈/큐큐 음악 플레이리스트를 Apple/Youtube/Spotify Music으로 이전하기
 
+> Refactored version: NetEase, QQ Music, Qishui and Kugou public playlists; Vue 3 + TypeScript + Vite; optional MySQL/Redis. See [deployment](DEPLOYMENT.md) and [API contracts and platform limits](docs/API.md).
+
+
 > [简体中文](README.md)  | [English](README_EN.md) | 한국어
 
 링크: [https://music.unmeta.cn](https://music.unmeta.cn)

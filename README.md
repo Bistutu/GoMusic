@@ -1,10 +1,19 @@
-# 迁移网易云/汽水/QQ音乐歌单至 Apple/Youtube/Spotify Music
+# 迁移网易云 / QQ 音乐 / 汽水 / 酷狗歌单至 Apple / YouTube / Spotify Music
 
 > 简体中文| [English](README_EN.md) | [한국어](README_KO.md)
 
 链接：https://music.unmeta.cn
 
-项目后端使用 Golang + Gin 开发，前端使用 Vue + ElementUI 编写。
+项目后端使用 Go + Gin，前端使用 Vue 3 + TypeScript + Vite。
+
+- 粘贴歌单链接或整段分享文字，获取公开歌单。
+- 调整歌名格式和顺序，复制文本或下载 TXT；长歌单支持每 500 首分批导出。
+- 显示实际获取数与平台总数，部分结果会明确提示，不将缺歌误报为完整导出。
+- 默认无需数据库；可选 MySQL、Redis 缓存，支持 Docker Compose 一键部署。
+
+支持网易云、QQ、汽水与酷狗。酷狗普通版分享页可能仅提供预览，概念版公开集合使用分页接口。私密、下架或受平台限制的内容可能无法完整获取。
+
+开发与部署见 [DEPLOYMENT.md](DEPLOYMENT.md)，接口契约见 [docs/API.md](docs/API.md)，开源参考与实现选择见 [docs/REFERENCES.md](docs/REFERENCES.md)。
 
 <img src="misc/images/0.png" style="width:60%; border: 1px solid black;" />
 
@@ -12,7 +21,7 @@
 
 > 如何迁移至 Apple/Youtube/Spotify Music
 
-1. 输入歌单链接，如：http://163cn.tv/zoIxm3
+1. 输入公开歌单链接，如：https://music.163.com/playlist?id=19723756
 2. 复制查询结果
 3. 打开 **[TunemyMusic](https://www.tunemymusic.com/zh-CN/transfer)** or **[Spotlistr](https://spotlistr.com/)** 网站
 4. 选择歌单来源“任意文本”，将刚刚复制的歌单粘贴进去，选择 Apple/Youtube/Spotify Music 作为目的地，确认迁移

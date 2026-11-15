@@ -1,78 +1,51 @@
 package logic
 
 import (
-	"fmt"
+	"context"
+	"os"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
+	"time"
 )
 
-func TestQQMusicDiscover(t *testing.T) {
-	// https://c6.y.qq.com/base/fcgi-bin/u?__=4V33zWKDE3tI
-	// https://y.qq.com/n/ryqq/playlist/7364061065
-	// https://i.y.qq.com/n2/m/share/details/taoge.html?hosteuin=oKE57evqoiEPoz**&id=1596010000&appversion=120801&ADTAG=wxfshare&appshare=iphone_wx
-	// https://i.y.qq.com/n2/m/share/details/taoge.html?platform=11&appshare=android_qq&appversion=12090008&hosteuin=oK6kowEAoK4z7eSk7eEloKCFoz**&id=5204875759&ADTAG=wxfshare
-	// https://i.y.qq.com/n2/m/share/details/taoge.html?id=9094523921	// 12.11格式
-	// https://i.y.qq.com/n2/m/share/details/taoge.html?id=8177163754
-	// https://y.qq.com/n/ryqq/playlist/1953563505
-	// https://i.y.qq.com/n2/m/share/details/taoge.html?id=9115464345&hosteuin=
-	// https://i.y.qq.com/n2/m/share/details/taoge.html?hosteuin=owEkNKSzNK65&id=930054744&appversion=130000&ADTAG=qfshare&source=qq&appshare=iphone
-	// https://c6.y.qq.com/base/fcgi-bin/u?__=XogXh1TLpP1t
-	// https://i.y.qq.com/n2/m/share/details/taoge.html?hosteuin=ownioivi7wvq7n**&id=8683730831&appversion=120801&ADTAG=wxfshare&appshare=iphone_wx
+// Live tests are opt-in; deterministic provider tests never require external services.
+func TestLiveProviders(t *testing.T) {
+	if os.Getenv("GOMUSIC_LIVE_TEST") != "1" {
+		t.Skip("set GOMUSIC_LIVE_TEST=1 for public upstream smoke tests")
+	}
+	tests := []struct {
+		name, url string
+		min       int
+	}{
+		{"netease", "https://music.163.com/playlist?id=19723756", 1},
+		{"netease-album", "https://music.163.com/album?id=35150843", 1},
+		{"qq", "https://c6.y.qq.com/base/fcgi-bin/u?__=GNSf48IjarL6", 31},
+		{"qishui", "https://qishui.douyin.com/s/iAA9MFsL/", 1},
+		{"kugou", "https://www.kugou.com/songlist/gcid_3z17seve8z2z051/", 1},
+		{"kugou-collection", "https://activity.kugou.com/share/index.html?global_specialid=collection_3_2248574973_2_0", 1},
+	}
+	t.Run("netease-song-details", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+		tracks, err := NewService(nil, nil, nil, 10000, 4).netEaseSongs(ctx, []string{"186016"}, nil)
+		if err != nil || len(tracks) != 1 || tracks["186016"].Title == "" {
+			t.Fatalf("detail result=%v error=%v", tracks, err)
+		}
+		t.Logf("detail id=186016 title=%q artists=%v", tracks["186016"].Title, tracks["186016"].Artists)
+	})
 
-	t.Run("v1", func(t *testing.T) {
-		discover, err := QQMusicDiscover("https://c6.y.qq.com/base/fcgi-bin/u?__=4V33zWKDE3tI", false)
-		assert.NoError(t, err)
-		fmt.Println(discover)
-	})
-	t.Run("v2", func(t *testing.T) {
-		discover, err := QQMusicDiscover("https://y.qq.com/n/ryqq/playlist/7364061065", false)
-		assert.NoError(t, err)
-		fmt.Println(discover)
-	})
-	t.Run("v3", func(t *testing.T) {
-		discover, err := QQMusicDiscover("https://i.y.qq.com/n2/m/share/details/taoge.html?hosteuin=oKE57evqoiEPoz**&id=1596010000&appversion=120801&ADTAG=wxfshare&appshare=iphone_wx", false)
-		assert.NoError(t, err)
-		fmt.Println(discover)
-	})
-	t.Run("v4", func(t *testing.T) {
-		discover, err := QQMusicDiscover("https://i.y.qq.com/n2/m/share/details/taoge.html?platform=11&appshare=android_qq&appversion=12090008&hosteuin=oK6kowEAoK4z7eSk7eEloKCFoz**&id=5204875759&ADTAG=wxfshare", false)
-		assert.NoError(t, err)
-		fmt.Println(discover)
-	})
-	t.Run("v5", func(t *testing.T) {
-		discover, err := QQMusicDiscover("https://i.y.qq.com/n2/m/share/details/taoge.html?id=9094523921", false)
-		assert.NoError(t, err)
-		fmt.Println(discover)
-	})
-	t.Run("v6", func(t *testing.T) {
-		discover, err := QQMusicDiscover("https://i.y.qq.com/n2/m/share/details/taoge.html?id=8177163754", false)
-		assert.NoError(t, err)
-		fmt.Println(discover)
-	})
-	t.Run("v7", func(t *testing.T) {
-		discover, err := QQMusicDiscover("https://y.qq.com/n/ryqq/playlist/1953563505", false)
-		assert.NoError(t, err)
-		fmt.Println(discover)
-	})
-	t.Run("v8", func(t *testing.T) {
-		discover, err := QQMusicDiscover("https://i.y.qq.com/n2/m/share/details/taoge.html?id=9115464345&hosteuin=", false						)
-		assert.NoError(t, err)
-		fmt.Println(discover)
-	})
-	t.Run("v9", func(t *testing.T) {
-		discover, err := QQMusicDiscover("https://i.y.qq.com/n2/m/share/details/taoge.html?hosteuin=owEkNKSzNK65&id=930054744&appversion=130000&ADTAG=qfshare&source=qq&appshare=iphone", false)
-		assert.NoError(t, err)
-		fmt.Println(discover)
-	})
-	t.Run("v10", func(t *testing.T) {
-		discover, err := QQMusicDiscover("https://c6.y.qq.com/base/fcgi-bin/u?__=XogXh1TLpP1t", false)
-		assert.NoError(t, err)
-		fmt.Println(discover)
-	})
-	t.Run("V11", func(t *testing.T) {
-		discover, err := QQMusicDiscover("https://i.y.qq.com/n2/m/share/details/taoge.html?hosteuin=ownioivi7wvq7n**&id=8683730831&appversion=120801&ADTAG=wxfshare&appshare=iphone_wx", false)
-		assert.NoError(t, err)
-		fmt.Println(discover)
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+			defer cancel()
+			list, err := NewService(nil, nil, nil, 10000, 4).Fetch(ctx, tt.url, Options{Detailed: true})
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Logf("name=%q fetched=%d reported=%d complete=%v warnings=%v", list.Name, list.SongsCount, list.TotalCount, list.Complete, list.Warnings)
+			if list.SongsCount < tt.min || list.SongsCount != len(list.Songs) {
+				t.Fatalf("unexpected count %d", list.SongsCount)
+			}
+		})
+	}
 }

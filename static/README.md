@@ -1,24 +1,12 @@
-# go-music
+# GoMusic web
 
-## Project setup
-```
-npm install
-```
+Vue 3 + TypeScript + Vite. Native controls keep this small tool simple; no global UI library or external font/advertising script is loaded.
 
-### Compiles and hot-reloads for development
-```
-npm run serve
-```
+Node.js 22.12+:
 
-### Compiles and minifies for production
-```
-npm run build
+```sh
+npm ci
+npm run dev
 ```
 
-### Lints and fixes files
-```
-npm run lint
-```
-
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).
+`/api` proxies to the Go API on port 8081. Build with `npm run build`; the Go server serves `dist` on the same origin. See [deployment](../DEPLOYMENT.md), [API](../docs/API.md), and [reference decisions](../docs/REFERENCES.md).
