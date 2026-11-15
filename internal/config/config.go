@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -70,6 +71,10 @@ func FromEnv(get func(string) string) (Config, error) {
 	}
 	for _, origin := range strings.Split(get("GOMUSIC_ALLOWED_ORIGINS"), ",") {
 		if origin = strings.TrimSpace(origin); origin != "" {
+			parsed, err := url.Parse(origin)
+			if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" || strings.Contains(parsed.Host, "*") || parsed.User != nil || parsed.Path != "" || parsed.RawQuery != "" || parsed.ForceQuery || parsed.Fragment != "" {
+				return c, fmt.Errorf("GOMUSIC_ALLOWED_ORIGINS must contain exact http(s) origins without paths, wildcards or credentials")
+			}
 			c.AllowedOrigins = append(c.AllowedOrigins, origin)
 		}
 	}

@@ -10,7 +10,7 @@ cp .env.example .env
 docker compose --profile app up -d --build --wait
 ```
 
-访问 <http://localhost:8081>。应用会等待 MySQL、Redis 健康后启动，首次创建 `song_metadata` 表。数据卷分别属于这个 Compose 项目。端口默认仅绑定本机；对外部署时通过反向代理提供 HTTPS。
+访问 <http://localhost:8081>。应用会等待 MySQL、Redis 健康后启动，首次创建歌曲缓存及使用统计表。数据卷分别属于这个 Compose 项目。端口默认仅绑定本机；对外部署时通过反向代理提供 HTTPS。
 
 ```sh
 docker compose ps
@@ -41,7 +41,7 @@ cd static
 npm run dev
 ```
 
-访问 <http://localhost:5173>，`/api` 默认代理至 `127.0.0.1:8081`。可用 `GOMUSIC_API_PROXY` 修改开发代理目标。生产构建使用同源 API；分离部署时在 `static/.env.local` 设置 `VITE_API_BASE_URL=https://your-api.example` 后重新构建，并在后端显式配置允许的前端来源。
+访问 <http://localhost:5173>，`/api` 默认代理至 `127.0.0.1:8081`。可用 `GOMUSIC_API_PROXY` 修改开发代理目标。生产构建使用同源 API；分离部署时在 `static/.env.local` 设置 `VITE_API_BASE_URL=https://your-api.example` 后重新构建，并在后端显式配置允许的前端来源。来源须为完整的协议、域名和可选端口，不带路径或通配符。前端请求和 CORS 均支持匿名访客 Cookie；如需访客去重，前端与 API 应使用同站点地址（例如 `music.example.com` 与 `api.example.com`），并保持 HTTPS。跨站点部署仍受浏览器的 SameSite 和第三方 Cookie 策略限制。
 
 ## 在宿主机连接 Docker 数据服务
 

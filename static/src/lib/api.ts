@@ -27,6 +27,7 @@ export async function fetchPlaylist(
       `${import.meta.env.VITE_API_BASE_URL || ""}/api/v1/songlists`,
       {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url, detailed: true }),
         signal: controller.signal,

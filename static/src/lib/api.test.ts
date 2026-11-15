@@ -66,3 +66,17 @@ it("aborts an in-flight request when cancelled", async () => {
   controller.abort();
   await expect(request).rejects.toMatchObject({ name: "AbortError" });
 });
+
+it("retains the anonymous visitor cookie when using a separate API origin", async () => {
+  const fetch = vi.fn().mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        code: 1,
+        data: { tracks: [], total_count: 0, complete: true, warnings: [] },
+      }),
+    ),
+  );
+  vi.stubGlobal("fetch", fetch);
+  await fetchPlaylist("https://music.163.com/playlist?id=1");
+  expect(fetch.mock.calls[0]?.[1]).toMatchObject({ credentials: "include" });
+});

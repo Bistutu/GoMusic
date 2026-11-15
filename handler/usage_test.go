@@ -199,3 +199,47 @@ func TestUsageCookieSecurityAndStatelessMode(t *testing.T) {
 		}
 	}
 }
+
+func TestUsageCORSAllowsCredentialsOnlyForConfiguredOrigins(t *testing.T) {
+	for _, tc := range []struct {
+		name, method, path, origin, authorization string
+		status, events                            int
+	}{
+		{"allowed-preflight", "OPTIONS", "/api/v1/songlists", "https://music.example.test", "", 204, 0},
+		{"rejected-preflight", "OPTIONS", "/api/v1/songlists", "https://other.example.test", "", 403, 0},
+		{"allowed-playlist", "POST", "/api/v1/songlists", "https://music.example.test", "", 200, 1},
+		{"rejected-playlist", "POST", "/api/v1/songlists", "https://other.example.test", "", 403, 0},
+		{"private-stats", "GET", "/api/v1/stats", "https://music.example.test", "", 401, 0},
+		{"authorized-stats", "GET", "/api/v1/stats", "https://music.example.test", "Bearer secret", 200, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg, _ := config.FromEnv(func(string) string { return "" })
+			cfg.AllowedOrigins = []string{"https://music.example.test"}
+			cfg.StatsToken = "secret"
+			store := &usageMemory{}
+			fetch := fetchFunc(func(context.Context, string, logic.Options) (*models.SongList, error) {
+				return &models.SongList{Tracks: []models.Track{{ID: "1", Title: "Song"}}, Complete: true}, nil
+			})
+			r := httptest.NewRequest(tc.method, tc.path, strings.NewReader(`{"url":"https://music.163.com/playlist?id=1"}`))
+			r.Header.Set("Origin", tc.origin)
+			r.Header.Set("Content-Type", "application/json")
+			r.Header.Set("Authorization", tc.authorization)
+			if tc.method == "OPTIONS" {
+				r.Header.Set("Access-Control-Request-Method", "POST")
+				r.Header.Set("Access-Control-Request-Headers", "content-type,authorization")
+			}
+			w := httptest.NewRecorder()
+			NewRouterWithUsage(fetch, cfg, nil, store).ServeHTTP(w, r)
+			if w.Code != tc.status || len(store.events) != tc.events {
+				t.Fatalf("status=%d events=%d body=%s", w.Code, len(store.events), w.Body.String())
+			}
+			if tc.status != 403 {
+				if w.Header().Get("Access-Control-Allow-Origin") != tc.origin || w.Header().Get("Access-Control-Allow-Credentials") != "true" {
+					t.Fatalf("browser cannot retain its anonymous cookie: %v", w.Header())
+				}
+			} else if w.Header().Get("Access-Control-Allow-Origin") != "" {
+				t.Fatal("unconfigured origin received CORS access")
+			}
+		})
+	}
+}

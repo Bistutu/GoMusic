@@ -29,7 +29,7 @@ func NewRouterWithUsage(service Fetcher, cfg config.Config, checks map[string]He
 	router.Use(gin.Logger(), gin.CustomRecovery(func(c *gin.Context, _ any) { replyError(c, http.StatusInternalServerError, "服务暂时不可用") }))
 	_ = router.SetTrustedProxies(nil)
 	if len(cfg.AllowedOrigins) > 0 {
-		router.Use(cors.New(cors.Config{AllowOrigins: cfg.AllowedOrigins, AllowMethods: []string{"GET", "POST", "OPTIONS"}, AllowHeaders: []string{"Content-Type", "Authorization"}, MaxAge: 12 * time.Hour}))
+		router.Use(cors.New(cors.Config{AllowOrigins: cfg.AllowedOrigins, AllowCredentials: true, AllowMethods: []string{"GET", "POST", "OPTIONS"}, AllowHeaders: []string{"Content-Type", "Authorization"}, MaxAge: 12 * time.Hour}))
 	}
 	router.Use(func(c *gin.Context) {
 		c.Header("X-Content-Type-Options", "nosniff")
