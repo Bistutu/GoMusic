@@ -46,4 +46,10 @@ GoMusic is free and open source. Scan the WeChat code to support the project, or
 <a href="misc/images/approve.png"><img src="misc/images/approve.png" alt="WeChat appreciation code" width="320" /></a>
 </p>
 
-[Self-hosting](DEPLOYMENT.md) · [NetEase ↔ QQ guide](https://github.com/Bistutu/GoMusic/issues/17) · [Star history](https://star-history.com/#Bistutu/GoMusic&Date) · [MIT](LICENSE) · [Credits](THIRD_PARTY_NOTICES.md)
+[Self-hosting](DEPLOYMENT.md) · [NetEase ↔ QQ guide](https://github.com/Bistutu/GoMusic/issues/17) · [MIT](LICENSE) · [Credits](THIRD_PARTY_NOTICES.md)
+
+## Star History
+
+<table align="center"><tr><td>
+<a href="https://star-history.com/#Bistutu/GoMusic&Date"><img src="https://api.star-history.com/svg?repos=Bistutu/GoMusic&amp;type=Date" alt="GoMusic Star History chart" width="600" /></a>
+</td></tr></table>
