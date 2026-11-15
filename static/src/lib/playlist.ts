@@ -12,6 +12,7 @@ export interface Playlist {
   total_count: number;
   complete: boolean;
   warnings: string[];
+  preview?: boolean;
 }
 export interface ExportOptions {
   detailed: boolean;
@@ -21,6 +22,7 @@ export interface ExportOptions {
 
 const hosts: Record<string, string> = {
   "music.163.com": "netease",
+  "y.music.163.com": "netease",
   "163cn.tv": "netease",
   "163cn.com": "netease",
   "y.qq.com": "qq",

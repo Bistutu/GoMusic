@@ -54,7 +54,7 @@ func preferPlaylist(current, candidate *models.SongList) *models.SongList {
 		return current
 	}
 	total := max(current.TotalCount, candidate.TotalCount)
-	if len(candidate.Tracks) > len(current.Tracks) {
+	if len(candidate.Tracks) > len(current.Tracks) || (len(candidate.Tracks) == len(current.Tracks) && len(candidate.Warnings) < len(current.Warnings)) {
 		current = candidate
 	}
 	current.TotalCount = total

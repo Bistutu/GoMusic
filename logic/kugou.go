@@ -101,6 +101,7 @@ func (s *Service) kugouShare(ctx context.Context, id string) (*models.SongList, 
 	}
 	var list *models.SongList
 	var collection string
+	var special string
 	doc.Find("script").EachWithBreak(func(_ int, script *goquery.Selection) bool {
 		text := script.Text()
 		start := strings.Index(text, "window.$output")
@@ -112,11 +113,13 @@ func (s *Service) kugouShare(ctx context.Context, id string) (*models.SongList, 
 			return true
 		}
 		var payload struct {
-			Info *struct {
+			Collection string `json:"global_collection_id"`
+			Info       *struct {
 				Listinfo struct {
-					Name       string `json:"name"`
-					Count      *int   `json:"count"`
-					Collection string `json:"global_collection_id"`
+					Name       string      `json:"name"`
+					Count      *int        `json:"count"`
+					Collection string      `json:"global_collection_id"`
+					SpecialID  json.Number `json:"specialid"`
 				} `json:"listinfo"`
 				Songs []kugouSong `json:"songs"`
 			} `json:"info"`
@@ -126,12 +129,16 @@ func (s *Service) kugouShare(ctx context.Context, id string) (*models.SongList, 
 		}
 		info := payload.Info
 		list = &models.SongList{Name: info.Listinfo.Name}
-		if info.Listinfo.Count != nil {
+		if info.Listinfo.Count != nil && *info.Listinfo.Count >= 0 {
 			list.TotalCount = *info.Listinfo.Count
 		} else {
 			list.Warnings = append(list.Warnings, "酷狗未提供歌单总数，请核对导出结果")
 		}
 		collection = info.Listinfo.Collection
+		if collection == "" {
+			collection = payload.Collection
+		}
+		special = info.Listinfo.SpecialID.String()
 		for _, song := range info.Songs {
 			if track := song.track(); track.Title != "" {
 				list.Tracks = append(list.Tracks, track)
@@ -142,9 +149,14 @@ func (s *Service) kugouShare(ctx context.Context, id string) (*models.SongList, 
 	if list == nil || (list.Name == "" && len(list.Tracks) == 0) {
 		return nil, fmt.Errorf("酷狗未返回可读取的公开歌单")
 	}
-	if list.TotalCount > len(list.Tracks) {
-		if strings.HasPrefix(collection, "collection_") {
-			candidate, err := s.kugouPages(ctx, collection, true)
+	if list.TotalCount < len(list.Tracks) && len(list.Warnings) == 0 {
+		list.Warnings = append(list.Warnings, "酷狗分享页的歌曲总数与预览不一致，请核对导出结果")
+	}
+	preview := list
+	if list.TotalCount > len(list.Tracks) || len(list.Warnings) > 0 {
+		link, err := musicurl.Parse("https://activity.kugou.com/share/index.html?global_specialid=" + url.QueryEscape(collection))
+		if err == nil && link.Kind == "collection" && link.ID != "" {
+			candidate, err := s.kugouPages(ctx, link.ID, true, list.TotalCount)
 			if err == nil {
 				name := list.Name
 				list = preferPlaylist(list, candidate)
@@ -153,8 +165,21 @@ func (s *Service) kugouShare(ctx context.Context, id string) (*models.SongList, 
 				}
 			}
 		}
+		if list.TotalCount > len(list.Tracks) || len(list.Warnings) > 0 {
+			if id, err := strconv.ParseUint(special, 10, 64); err == nil && id > 0 {
+				candidate, err := s.kugouPages(ctx, special, false, list.TotalCount)
+				if err == nil {
+					name := list.Name
+					list = preferPlaylist(list, candidate)
+					if name != "" {
+						list.Name = name
+					}
+				}
+			}
+		}
 	}
-	if list.TotalCount > len(list.Tracks) {
+	if list == preview && (list.TotalCount > len(list.Tracks) || len(list.Warnings) > 0) {
+		list.Preview = true
 		list.Warnings = append(list.Warnings, "酷狗普通版分享页仅提供部分预览，未获取的歌曲不会计入导出数量；可尝试概念版的歌单分享链接")
 	}
 	return list, nil
@@ -186,8 +211,11 @@ func kugouCommonParams() url.Values {
 	now := strconv.FormatInt(time.Now().UnixMilli(), 10)
 	return url.Values{"srcappid": {"2919"}, "clientver": {"20000"}, "clienttime": {now}, "mid": {now}, "uuid": {now}, "dfid": {"-"}}
 }
-func (s *Service) kugouPages(ctx context.Context, id string, collection bool) (*models.SongList, error) {
+func (s *Service) kugouPages(ctx context.Context, id string, collection bool, knownTotal ...int) (*models.SongList, error) {
 	list := &models.SongList{Name: "酷狗歌单"}
+	if len(knownTotal) > 0 {
+		list.TotalCount = max(0, knownTotal[0])
+	}
 	headers := map[string]string{"User-Agent": kugouMobileUA, "Referer": "https://activity.kugou.com/"}
 	var infoURL string
 	if collection {
@@ -211,7 +239,7 @@ func (s *Service) kugouPages(ctx context.Context, id string, collection bool) (*
 			if metadata.Data.Name != "" {
 				list.Name = metadata.Data.Name
 			}
-			list.TotalCount = metadata.Data.Count
+			list.TotalCount = max(list.TotalCount, metadata.Data.Count)
 		}
 	}
 	seen := map[string]bool{}

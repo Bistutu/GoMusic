@@ -2,6 +2,7 @@ package handler
 
 import (
 	"GoMusic/internal/config"
+	"GoMusic/internal/usage"
 	"GoMusic/logic"
 	"GoMusic/misc/models"
 	"context"
@@ -20,11 +21,15 @@ func NewRouter() *gin.Engine {
 	return NewRouterWithService(logic.NewService(nil, nil, nil, 10000, 4), cfg, nil)
 }
 func NewRouterWithService(service Fetcher, cfg config.Config, checks map[string]HealthCheck) *gin.Engine {
+	return NewRouterWithUsage(service, cfg, checks, nil)
+}
+
+func NewRouterWithUsage(service Fetcher, cfg config.Config, checks map[string]HealthCheck, store usage.Repository) *gin.Engine {
 	router := gin.New()
 	router.Use(gin.Logger(), gin.CustomRecovery(func(c *gin.Context, _ any) { replyError(c, http.StatusInternalServerError, "服务暂时不可用") }))
 	_ = router.SetTrustedProxies(nil)
 	if len(cfg.AllowedOrigins) > 0 {
-		router.Use(cors.New(cors.Config{AllowOrigins: cfg.AllowedOrigins, AllowMethods: []string{"GET", "POST", "OPTIONS"}, AllowHeaders: []string{"Content-Type"}, MaxAge: 12 * time.Hour}))
+		router.Use(cors.New(cors.Config{AllowOrigins: cfg.AllowedOrigins, AllowMethods: []string{"GET", "POST", "OPTIONS"}, AllowHeaders: []string{"Content-Type", "Authorization"}, MaxAge: 12 * time.Hour}))
 	}
 	router.Use(func(c *gin.Context) {
 		c.Header("X-Content-Type-Options", "nosniff")
@@ -56,8 +61,10 @@ func NewRouterWithService(service Fetcher, cfg config.Config, checks map[string]
 		timeout = 90 * time.Second
 	}
 	h := musicHandler{fetcher: service, timeout: timeout}
-	router.POST("/songlist", h.serve)
-	router.POST("/api/v1/songlists", h.serve)
+	u := usageHandler{repo: store, token: cfg.StatsToken, cookieSecure: cfg.StatsCookieSecure, now: time.Now}
+	router.POST("/songlist", u.record, h.serve)
+	router.POST("/api/v1/songlists", u.record, h.serve)
+	router.GET("/api/v1/stats", u.stats)
 	router.GET("/", func(c *gin.Context) {
 		index := filepath.Join(cfg.StaticDir, "index.html")
 		if _, err := os.Stat(index); err != nil {

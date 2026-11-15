@@ -24,7 +24,7 @@ var kugouGcid = regexp.MustCompile(`/songlist/(gcid_[A-Za-z0-9]+)`)
 var kugouCollection = regexp.MustCompile(`^collection_[0-9]+_[0-9]+_[0-9]+_[0-9]+$`)
 
 var hosts = map[string]string{
-	"music.163.com": NetEase, "163cn.tv": NetEase, "163cn.com": NetEase,
+	"music.163.com": NetEase, "y.music.163.com": NetEase, "163cn.tv": NetEase, "163cn.com": NetEase,
 	"y.qq.com": QQ, "i.y.qq.com": QQ, "i2.y.qq.com": QQ, "c6.y.qq.com": QQ, "c.y.qq.com": QQ, "u.y.qq.com": QQ, "u6.y.qq.com": QQ,
 	"qishui.douyin.com": Qishui, "music.douyin.com": Qishui, "beta-luna.douyin.com": Qishui,
 	"kugou.com": Kugou, "www.kugou.com": Kugou, "m.kugou.com": Kugou, "t.kugou.com": Kugou, "t1.kugou.com": Kugou, "activity.kugou.com": Kugou, "mobilecdn.kugou.com": Kugou, "mobiles.kugou.com": Kugou, "pubsongscdn.kugou.com": Kugou,

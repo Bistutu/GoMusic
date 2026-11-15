@@ -224,3 +224,60 @@ test("persists the language preference", async ({ page }) => {
     page.getByRole("button", { name: "Get playlist", exact: true }),
   ).toBeVisible();
 });
+
+test("uses the previous Shanghai Sunday in both languages and keeps the example", async ({
+  page,
+}) => {
+  await page.clock.setFixedTime(new Date("2026-11-15T15:59:59.999Z"));
+  await page.goto("/");
+  await expect(
+    page.getByText("赞赏榜 · 更新于 2026.11.08", { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "填入范例链接", exact: true }).click();
+  await expect(page.getByLabel("歌单分享链接")).toHaveValue(
+    "http://163cn.tv/zoIxm3",
+  );
+  await page.getByRole("button", { name: "Switch to English" }).click();
+  await expect(
+    page.getByText("Top supporters · Updated 2026.11.08", { exact: true }),
+  ).toBeVisible();
+  await page.clock.setFixedTime(new Date("2026-11-15T16:00:00.000Z"));
+  await page.reload();
+  await expect(
+    page.getByText("Top supporters · Updated 2026.11.15", { exact: true }),
+  ).toBeVisible();
+  await expect(page.locator("tbody tr").first()).toContainText("冰楠");
+  await expect(page.locator("tbody tr").first()).toContainText("188");
+});
+
+test("shows Kugou's 10 of 12 preview as incomplete", async ({ page }) => {
+  const result = playlist(10, false);
+  await page.route("**/api/v1/songlists", (route) =>
+    route.fulfill({
+      json: {
+        ...result,
+        data: {
+          ...result.data,
+          source: "kugou",
+          total_count: 12,
+          preview: true,
+        },
+      },
+    }),
+  );
+  await page.goto("/");
+  await page
+    .getByLabel("歌单分享链接")
+    .fill(
+      "https://m.kugou.com/songlist/gcid_3zbivkavz4z072/?src_cid=3zbivkavz4z072&uid=606105881&chl=wechat&iszlist=1",
+    );
+  await page.getByRole("button", { name: "获取歌单", exact: true }).click();
+  await expect(page.getByText("部分歌曲未获取", { exact: true })).toBeVisible();
+  await expect(page.getByText("平台显示 12", { exact: false })).toBeVisible();
+  await expect(
+    page.getByText("该酷狗分享页仅提供公开预览。", { exact: false }),
+  ).toBeVisible();
+  expect(
+    (await page.getByLabel("可编辑的歌单文本").inputValue()).split("\n"),
+  ).toHaveLength(10);
+});

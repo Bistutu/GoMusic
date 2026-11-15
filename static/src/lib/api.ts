@@ -61,6 +61,7 @@ export async function fetchPlaylist(
         );
       }) ||
       !Number.isInteger(data.total_count) ||
+      (data.preview !== undefined && typeof data.preview !== "boolean") ||
       typeof data.complete !== "boolean" ||
       !Array.isArray(data.warnings)
     ) {

@@ -3,6 +3,7 @@ package main
 import (
 	"GoMusic/handler"
 	"GoMusic/internal/config"
+	"GoMusic/internal/usage"
 	"GoMusic/logic"
 	"GoMusic/misc/httputil"
 	"GoMusic/misc/log"
@@ -32,6 +33,7 @@ func run() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	var redisRepo, sqlRepo logic.Repository
+	var usageRepo usage.Repository
 	checks := map[string]handler.HealthCheck{}
 	if cfg.MySQLDSN != "" {
 		store, err := db.Open(ctx, cfg.MySQLDSN, cfg.CacheTTL)
@@ -40,6 +42,7 @@ func run() error {
 		}
 		defer store.Close()
 		sqlRepo = store
+		usageRepo = store
 		checks["mysql"] = store.Ping
 	}
 	if cfg.RedisAddr != "" {
@@ -52,7 +55,7 @@ func run() error {
 		checks["redis"] = store.Ping
 	}
 	service := logic.NewService(httputil.NewClient(&http.Client{Timeout: cfg.UpstreamTimeout}), redisRepo, sqlRepo, cfg.MaxSongs, cfg.Concurrency)
-	server := &http.Server{Addr: cfg.Addr, Handler: handler.NewRouterWithService(service, cfg, checks),
+	server := &http.Server{Addr: cfg.Addr, Handler: handler.NewRouterWithUsage(service, cfg, checks, usageRepo),
 		ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: cfg.RequestTimeout + 5*time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 << 10}
 	stopped, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()

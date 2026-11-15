@@ -57,6 +57,8 @@ services:
       MYSQL_DSN: "go_music:${GOMUSIC_MYSQL_PASSWORD:-gomusic_local}@tcp(mysql:3306)/go_music?charset=utf8mb4&parseTime=true&loc=UTC&timeout=3s&readTimeout=3s&writeTimeout=3s"
       REDIS_ADDR: redis:6379
       REDIS_PASSWORD: ${GOMUSIC_REDIS_PASSWORD:-gomusic_local}
+      GOMUSIC_STATS_TOKEN: ${GOMUSIC_STATS_TOKEN:-}
+      GOMUSIC_STATS_COOKIE_SECURE: ${GOMUSIC_STATS_COOKIE_SECURE:-false}
     ports:
       - "127.0.0.1:${GOMUSIC_PORT:-8081}:8081"
     depends_on:

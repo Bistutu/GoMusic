@@ -2,11 +2,9 @@ import { chromium } from "playwright";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-const root = process.env.GOMUSIC_WEB_URL || "http://127.0.0.1:18481";
+const root = process.env.GOMUSIC_WEB_URL || "http://127.0.0.1:8081";
 const evidence = process.env.GOMUSIC_UI_EVIDENCE_DIR || "test-results/live";
-const link =
-  process.env.GOMUSIC_UI_PLAYLIST_URL ||
-  "https://music.163.com/playlist?id=19723756";
+const link = process.env.GOMUSIC_UI_PLAYLIST_URL || "http://163cn.tv/zoIxm3";
 await mkdir(evidence, { recursive: true });
 const browser = await chromium.launch({
   channel: process.env.CI ? undefined : "chrome",

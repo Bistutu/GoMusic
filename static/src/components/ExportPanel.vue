@@ -83,7 +83,9 @@ function download() {
     <p v-if="list && !list.complete" class="partial-warning" role="status">
       <strong>{{ t.partial }}</strong> · {{ t.received }}
       {{ list.tracks.length }} / {{ t.total }} {{ list.total_count }}<br />{{
-        t.partialHint
+        list.source === "kugou" && list.preview
+          ? t.kugouPreviewHint
+          : t.partialHint
       }}
     </p>
     <label v-if="songs.length > 500" class="batch-control"

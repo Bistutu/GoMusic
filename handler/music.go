@@ -105,6 +105,7 @@ func (h musicHandler) serve(c *gin.Context) {
 		replyError(c, http.StatusBadGateway, "音乐平台暂时未返回可读取的歌单，请检查链接和公开权限后重试")
 		return
 	}
+	c.Set(usageOutcomeKey, usageOutcome{Succeeded: true, Partial: !list.Complete, Songs: int64(len(list.Tracks))})
 	c.JSON(http.StatusOK, models.Result{Code: models.SuccessCode, Msg: "success", Data: list})
 }
 func requestError(c *gin.Context, err error) {

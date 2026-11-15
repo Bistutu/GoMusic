@@ -17,10 +17,12 @@ func TestLiveProviders(t *testing.T) {
 		min       int
 	}{
 		{"netease", "https://music.163.com/playlist?id=19723756", 1},
+		{"netease-original-example", "http://163cn.tv/zoIxm3", 1},
 		{"netease-album", "https://music.163.com/album?id=35150843", 1},
 		{"qq", "https://c6.y.qq.com/base/fcgi-bin/u?__=GNSf48IjarL6", 31},
 		{"qishui", "https://qishui.douyin.com/s/iAA9MFsL/", 1},
 		{"kugou", "https://www.kugou.com/songlist/gcid_3z17seve8z2z051/", 1},
+		{"kugou-user-share", "https://m.kugou.com/songlist/gcid_3zbivkavz4z072/?src_cid=3zbivkavz4z072&uid=606105881&chl=wechat&iszlist=1", 1},
 		{"kugou-collection", "https://activity.kugou.com/share/index.html?global_specialid=collection_3_2248574973_2_0", 1},
 	}
 	t.Run("netease-song-details", func(t *testing.T) {

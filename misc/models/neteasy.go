@@ -17,4 +17,5 @@ type SongList struct {
 	TotalCount int      `json:"total_count"`
 	Complete   bool     `json:"complete"`
 	Warnings   []string `json:"warnings"`
+	Preview    bool     `json:"preview,omitempty"`
 }

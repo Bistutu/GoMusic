@@ -11,7 +11,7 @@ const props = defineProps<{
   options: ExportOptions;
 }>();
 const emit = defineEmits<{ submit: []; cancel: [] }>();
-const exampleUrl = "https://music.163.com/playlist?id=19723756";
+const exampleUrl = "http://163cn.tv/zoIxm3";
 const platform = computed(() => {
   const p = platformOf(link.value);
   return p ? props.t[p as "netease" | "qq" | "qishui" | "kugou"] : "";

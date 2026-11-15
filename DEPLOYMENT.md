@@ -67,9 +67,13 @@ go run .
 | `GOMUSIC_CONCURRENCY` | 4，范围 1–16 |
 | `GOMUSIC_CACHE_TTL` | `720h`，Redis 到期和 MySQL 查询新鲜度 |
 | `GOMUSIC_ALLOWED_ORIGINS` | 空，同源部署；跨域时填写逗号分隔的明确来源 |
+| `GOMUSIC_STATS_TOKEN` | 空时关闭统计查询接口；设置后使用 Bearer 令牌访问 `/api/v1/stats` |
+| `GOMUSIC_STATS_COOKIE_SECURE` | 默认 `false`；网站使用 HTTPS 时设为 `true` |
 | `GOMUSIC_DISABLE_DB` / `GOMUSIC_DISABLE_REDIS` | 兼容旧部署，设为 `1` 强制禁用对应存储 |
 
 新缓存保存原始标题和歌手，不读取旧的格式化缓存；Redis 使用 `gomusic:v2:` 前缀。旧的 `net_easy_songs` 表及旧 Redis 键保持原样，不执行删表、重写或全库清空。新版本可以正常读取后再由维护者自行决定历史缓存的保留方式。
+
+配置 MySQL 后，两条歌单获取接口会将按北京时间统计的请求数、成功/失败数、实际返回歌曲数和匿名去重访客写入 `gomusic_usage_daily`、`gomusic_usage_visitors`。统计跨重启保留，不受歌曲缓存过期时间影响。详情、历史日/周/月查询和计数口径见 [API 文档](docs/API.md#persistent-usage-statistics)。
 
 ## 验证
 

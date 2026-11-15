@@ -10,7 +10,7 @@ func TestConfig(t *testing.T) {
 	if cfg.MySQLDSN != "" || cfg.RedisAddr != "" {
 		t.Fatal("default must be stateless")
 	}
-	for key, value := range map[string]string{"GOMUSIC_ADDR": "bad", "GOMUSIC_CONCURRENCY": "0", "GOMUSIC_MAX_SONGS": "10001", "REDIS_DB": "-1", "GOMUSIC_REQUEST_TIMEOUT": "-2s"} {
+	for key, value := range map[string]string{"GOMUSIC_ADDR": "bad", "GOMUSIC_CONCURRENCY": "0", "GOMUSIC_MAX_SONGS": "10001", "REDIS_DB": "-1", "GOMUSIC_REQUEST_TIMEOUT": "-2s", "GOMUSIC_STATS_COOKIE_SECURE": "invalid"} {
 		if _, err := FromEnv(func(k string) string {
 			if k == key {
 				return value
@@ -25,5 +25,11 @@ func TestConfig(t *testing.T) {
 	})
 	if err != nil || cfg.MySQLDSN != "" || cfg.RedisAddr != "" {
 		t.Fatal("legacy disable flags were ignored")
+	}
+	cfg, err = FromEnv(func(k string) string {
+		return map[string]string{"GOMUSIC_STATS_TOKEN": " local-test-token ", "GOMUSIC_STATS_COOKIE_SECURE": "true"}[k]
+	})
+	if err != nil || cfg.StatsToken != "local-test-token" || !cfg.StatsCookieSecure {
+		t.Fatal("stats configuration was not loaded")
 	}
 }

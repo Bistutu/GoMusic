@@ -32,7 +32,7 @@ func Open(ctx context.Context, dsn string, ttl time.Duration) (*Store, error) {
 		sqlDB.Close()
 		return nil, err
 	}
-	if err = handle.WithContext(ctx).AutoMigrate(&models.SongMetadata{}); err != nil {
+	if err = handle.WithContext(ctx).AutoMigrate(&models.SongMetadata{}, &usageDaily{}, &usageVisitor{}); err != nil {
 		sqlDB.Close()
 		return nil, err
 	}

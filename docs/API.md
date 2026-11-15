@@ -49,9 +49,11 @@ When a legacy endpoint or share-page fallback reports a smaller playlist total, 
 
 Kugou standard-edition `gcid` share pages sometimes return only a preview. GoMusic reports it as partial when the advertised count is larger. Public Concept Edition collections and official special playlists have separate paginated adapters. Availability remains dependent on the music platform; a successful sample does not guarantee every playlist is publicly accessible.
 
+For an incomplete result taken from the public Kugou share-page preview, `preview=true` distinguishes that limitation from an interrupted paginated request. The adapter tries valid collection IDs (including top-level share metadata) and official special IDs when available, retaining the largest known total. A share page exposing 10 of 12 tracks remains `songs_count=10`, `total_count=12`, `complete=false`; it is never silently described as a full export.
+
 ## Legacy API
 
-`POST /songlist?detailed=true&format=singer-song&order=reverse` accepts `application/x-www-form-urlencoded` with a `url` field. The original `{code, msg, data}` envelope remains. Both routes also accept JSON; explicit query options take precedence over JSON options. No credentials or cookies are accepted or forwarded.
+`POST /songlist?detailed=true&format=singer-song&order=reverse` accepts `application/x-www-form-urlencoded` with a `url` field. The original `{code, msg, data}` envelope remains. Both routes also accept JSON; explicit query options take precedence over JSON options. Music-platform account credentials and cookies are not accepted or forwarded. The optional first-party usage cookie is described below.
 
 ## Errors and limits
 
@@ -74,3 +76,20 @@ Share input is limited to 4096 bytes. Only exact official hosts are allowed. Eac
 - `GET /readyz`: configured storage checks, HTTP 200 when healthy or HTTP 503 with `status=degraded`. No connection strings or passwords are returned. Stateless mode has no storage checks.
 
 A storage failure during a playlist request falls back from Redis to MySQL to the upstream service. Readiness still reports the configured dependency failure so operators can repair it.
+
+## Persistent usage statistics
+
+With MySQL configured, both playlist POST routes record usage in `gomusic_usage_daily` and `gomusic_usage_visitors`. These counters have no cache expiry and survive process/container restarts. Existing song-cache tables and Redis keys are retained.
+
+Set `GOMUSIC_STATS_TOKEN` to enable the private `GET /api/v1/stats` endpoint and send `Authorization: Bearer <token>`. Without a token the endpoint is disabled; it never exposes visitor identifiers. For local review:
+
+```sh
+curl -H "Authorization: Bearer $GOMUSIC_STATS_TOKEN" http://localhost:8081/api/v1/stats
+curl -H "Authorization: Bearer $GOMUSIC_STATS_TOKEN" 'http://localhost:8081/api/v1/stats?period=week&date=2026-11-15'
+```
+
+Without query parameters, `data.periods` contains `day`, `week`, `month`, and `all`. Each entry contains `start_date`, `end_date` (inclusive), `requests`, `successes`, `failures`, `partial_results`, `songs`, and `unique_visitors`. Optional `period=day|week|month|all` selects one period; optional `date=YYYY-MM-DD` selects a historical calendar date. All periods use Asia/Shanghai; weeks begin on Monday. `all` means all persisted usage through the selected date, starting from collection activation rather than the latest process restart.
+
+`songs` sums tracks actually returned, including useful partial results. Repeated retrievals add songs again; format changes, copying, and TXT downloads do not count as new retrievals. `unique_visitors` counts distinct anonymous browser/client identifiers across the whole requested period, not a sum of daily visitor counts. A first-party HttpOnly, SameSite=Lax cookie provides the identifier; only its SHA-256 hash and calendar date are stored. Clearing cookies, changing devices, or an API client not retaining cookies can count as another visitor. No IP addresses or playlist links are stored in these statistics. A failed metrics write is logged and does not turn a successful playlist response into an error.
+
+For HTTPS deployments, set `GOMUSIC_STATS_COOKIE_SECURE=true`. Same-origin frontend/API deployment is recommended so the browser retains its anonymous cookie.

@@ -1,3 +1,6 @@
+import { lastCompletedWeekDate } from "./lib/dates";
+
+const sponsorDate = lastCompletedWeekDate();
 const zh = {
   title: "迁移网易云 / QQ / 汽水 / 酷狗音乐歌单",
   detected: "已识别平台：",
@@ -36,6 +39,8 @@ const zh = {
   songs: "首歌曲",
   partial: "部分歌曲未获取",
   partialHint: "平台可能限制了部分歌曲的访问。请核对数量，再继续迁移。",
+  kugouPreviewHint:
+    "该酷狗分享页仅提供公开预览。可尝试从酷狗概念版重新分享公开歌单后再试。",
   received: "已获取",
   total: "平台显示",
   original: "保留原始歌名",
@@ -70,7 +75,7 @@ const zh = {
   sponsorEnlarge: "点击赞赏码查看原图",
   sponsorBody:
     "网站免费、开源、保持简单。如果你想支持作者，可以使用微信扫描赞赏码。感谢以下赞赏者。",
-  sponsorUpdated: "赞赏榜 · 更新于 2025.09.10",
+  sponsorUpdated: `赞赏榜 · 更新于 ${sponsorDate}`,
   sponsorName: "赞助者",
   sponsorAmount: "赞赏金额 / 元",
 };
@@ -115,6 +120,8 @@ const en: Record<keyof typeof zh, string> = {
   partial: "Some tracks are missing",
   partialHint:
     "The platform may limit access to some tracks. Check the count before transferring.",
+  kugouPreviewHint:
+    "This Kugou share page only exposes a public preview. Try sharing the public playlist from Kugou Concept Edition.",
   received: "Fetched",
   total: "Reported",
   original: "Original song titles",
@@ -151,7 +158,7 @@ const en: Record<keyof typeof zh, string> = {
   sponsorEnlarge: "View full-size support code",
   sponsorBody:
     "GoMusic is free and open source. If it helped, you can support the author with WeChat.",
-  sponsorUpdated: "Top supporters · Updated 2025.09.10",
+  sponsorUpdated: `Top supporters · Updated ${sponsorDate}`,
   sponsorName: "Supporter",
   sponsorAmount: "CNY",
 };
