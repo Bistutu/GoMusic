@@ -2,7 +2,7 @@
 
 GoMusic reads public playlists from NetEase, QQ, Qishui, Kugou, Kuwo, Migu, Qianqian, Bodian, Apple Music and Deezer. No music source requires platform credentials. Apple Music playlist data comes from its public page and may be partial when the page does not expose the full list. GoMusic exports playlist text; transferring tracks to another platform is handled by the user's chosen transfer tool. Audio download, account login and private playlists are not supported.
 
-## Fetch tracks
+## Fetch a playlist
 
 `POST /api/v1/songlists`, `Content-Type: application/json`:
 
