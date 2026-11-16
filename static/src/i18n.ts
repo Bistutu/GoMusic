@@ -16,6 +16,8 @@ const zh = {
   guide: "使用指南",
   language: "Switch to English",
   subtitle: "至 Apple Music / YouTube Music / Spotify",
+  sources:
+    "支持公开歌单来源：网易云音乐、QQ 音乐、汽水音乐、酷狗音乐、酷我音乐、波点音乐、咪咕音乐、千千音乐、Deezer",
   netease: "网易云音乐",
   qq: "QQ 音乐",
   qishui: "汽水音乐",
@@ -104,6 +106,8 @@ const en: Record<keyof typeof zh, string> = {
   guide: "How it works",
   language: "切换到中文",
   subtitle: "To Apple Music / YouTube Music / Spotify",
+  sources:
+    "Public playlist sources: NetEase Cloud Music, QQ Music, Qishui, Kugou, Kuwo, Bodian, Migu, Qianqian and Deezer",
   netease: "NetEase",
   qq: "QQ Music",
   qishui: "Qishui",

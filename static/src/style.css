@@ -125,6 +125,12 @@ h1 {
   line-height: 1.6;
   margin: 0;
 }
+.page-intro .supported-sources {
+  max-width: 740px;
+  margin: 7px auto 0;
+  font-size: 13px;
+  line-height: 1.7;
+}
 .input-label {
   display: block;
   font-size: 13px;
