@@ -14,7 +14,21 @@ const emit = defineEmits<{ submit: []; cancel: [] }>();
 const exampleUrl = "http://163cn.tv/zoIxm3";
 const platform = computed(() => {
   const p = platformOf(link.value);
-  return p ? props.t[p as "netease" | "qq" | "qishui" | "kugou"] : "";
+  return p
+    ? props.t[
+        p as
+          | "netease"
+          | "qq"
+          | "qishui"
+          | "kugou"
+          | "kuwo"
+          | "migu"
+          | "qianqian"
+          | "bodian"
+          | "apple"
+          | "deezer"
+      ]
+    : "";
 });
 </script>
 <template>

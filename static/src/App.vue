@@ -39,6 +39,11 @@ watch(
 const { link, playlist, loading, error, load, cancel } = usePlaylist();
 const errorMessage = computed(() => {
   if (!error.value) return "";
+  if (
+    error.value.kind === "invalid" &&
+    error.value.message.includes("Deezer 旧版 page.link 短链已停止跳转")
+  )
+    return t.value.errorDeezerRetiredLink;
   if (error.value.kind === "invalid" && kugouCodeOf(link.value))
     return t.value.errorKugouCode;
   const keys = {

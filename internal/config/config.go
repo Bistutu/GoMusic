@@ -26,7 +26,8 @@ func FromEnv(get func(string) string) (Config, error) {
 	c := Config{Addr: ":8081", StaticDir: "static/dist", MaxSongs: 10000, Concurrency: 4,
 		RequestTimeout: 90 * time.Second, UpstreamTimeout: 12 * time.Second, CacheTTL: 30 * 24 * time.Hour}
 	for key, dest := range map[string]*string{"GOMUSIC_ADDR": &c.Addr, "GOMUSIC_STATIC_DIR": &c.StaticDir,
-		"MYSQL_DSN": &c.MySQLDSN, "REDIS_ADDR": &c.RedisAddr, "REDIS_PASSWORD": &c.RedisPassword, "GOMUSIC_STATS_TOKEN": &c.StatsToken} {
+		"MYSQL_DSN": &c.MySQLDSN, "REDIS_ADDR": &c.RedisAddr, "REDIS_PASSWORD": &c.RedisPassword, "GOMUSIC_STATS_TOKEN": &c.StatsToken,
+	} {
 		if value := strings.TrimSpace(get(key)); value != "" {
 			*dest = value
 		}

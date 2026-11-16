@@ -76,20 +76,28 @@ func (c *Client) Resolve(ctx context.Context, address string, headers map[string
 
 // Do applies a deadline, bounds the response size, and closes every response body.
 func (c *Client) Do(ctx context.Context, method, address string, body io.Reader, headers map[string]string) ([]byte, *url.URL, error) {
+	data, _, finalURL, err := c.DoWithCookies(ctx, method, address, body, headers)
+	return data, finalURL, err
+}
+
+// DoWithCookies returns cookies set by a successful response while retaining
+// the same host, timeout, redirect, body-size, and body-close protections as Do.
+func (c *Client) DoWithCookies(ctx context.Context, method, address string, body io.Reader, headers map[string]string) ([]byte, []*http.Cookie, *url.URL, error) {
 	resp, err := c.request(ctx, method, address, body, headers)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	defer resp.Body.Close()
+	cookies := resp.Cookies()
 	if resp.StatusCode != http.StatusOK {
-		return nil, resp.Request.URL, fmt.Errorf("音乐平台返回 HTTP %d", resp.StatusCode)
+		return nil, cookies, resp.Request.URL, fmt.Errorf("音乐平台返回 HTTP %d", resp.StatusCode)
 	}
 	data, err := io.ReadAll(io.LimitReader(resp.Body, MaxResponseBytes+1))
 	if err != nil {
-		return nil, resp.Request.URL, err
+		return nil, cookies, resp.Request.URL, err
 	}
 	if len(data) > MaxResponseBytes {
-		return nil, resp.Request.URL, fmt.Errorf("音乐平台响应超过大小限制")
+		return nil, cookies, resp.Request.URL, fmt.Errorf("音乐平台响应超过大小限制")
 	}
-	return data, resp.Request.URL, nil
+	return data, cookies, resp.Request.URL, nil
 }

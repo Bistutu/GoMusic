@@ -82,6 +82,9 @@ func (s *Service) Fetch(ctx context.Context, input string, options Options) (*mo
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrInvalidLink, err)
 	}
+	if link.Kind == "track" || link.Kind == "album" || link.Kind == "ranklist" {
+		return nil, fmt.Errorf("%w: 目前仅支持获取公开歌单", ErrInvalidLink)
+	}
 	var list *models.SongList
 	switch link.Provider {
 	case musicurl.NetEase:
@@ -92,6 +95,18 @@ func (s *Service) Fetch(ctx context.Context, input string, options Options) (*mo
 		list, err = s.kugou(ctx, link)
 	case musicurl.Qishui:
 		list, err = s.qishui(ctx, link)
+	case musicurl.Kuwo:
+		list, err = s.kuwo(ctx, link)
+	case musicurl.Migu:
+		list, err = s.migu(ctx, link)
+	case musicurl.Qianqian:
+		list, err = s.qianqian(ctx, link)
+	case musicurl.Bodian:
+		list, err = s.bodian(ctx, link)
+	case musicurl.Apple:
+		list, err = s.appleMusicPlaylist(ctx, link)
+	case musicurl.Deezer:
+		list, err = s.deezer(ctx, link)
 	}
 	if err != nil {
 		return nil, err
@@ -103,6 +118,7 @@ func (s *Service) Fetch(ctx context.Context, input string, options Options) (*mo
 	}
 	list.SongsCount = len(list.Tracks)
 	if list.TotalCount < list.SongsCount {
+		list.Warnings = append(list.Warnings, "平台总数未覆盖全部已返回歌曲，已按实际数量修正；结果完整性无法确认")
 		list.TotalCount = list.SongsCount
 	}
 	list.Complete = list.SongsCount == list.TotalCount && len(list.Warnings) == 0
@@ -152,7 +168,7 @@ func (s *Service) resolve(ctx context.Context, link musicurl.Link) (musicurl.Lin
 		return link, err
 	}
 	resolved, err := musicurl.Parse(final.String())
-	if err != nil || resolved.ID == "" {
+	if err != nil || resolved.ID == "" || resolved.Provider != link.Provider || resolved.Kind != "playlist" {
 		return link, fmt.Errorf("%w: 分享链接没有有效歌单 ID", ErrInvalidLink)
 	}
 	return resolved, nil

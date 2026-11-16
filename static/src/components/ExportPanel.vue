@@ -89,6 +89,20 @@ function download() {
           : t.partialHint
       }}
     </p>
+    <details
+      v-if="list && !list.complete && list.warnings.length"
+      class="partial-details"
+    >
+      <summary>{{ t.warningDetails }}</summary>
+      <ul>
+        <li
+          v-for="(warning, index) in list.warnings"
+          :key="`${index}-${warning}`"
+        >
+          {{ warning }}
+        </li>
+      </ul>
+    </details>
     <div
       v-if="songs.length > 500"
       class="batch-control"

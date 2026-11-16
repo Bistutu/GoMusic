@@ -26,10 +26,10 @@ test("keeps the page usable on desktop and mobile", async ({
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
-    "迁移网易云",
+    "音乐迁移",
   );
   await expect(
-    page.getByRole("button", { name: "获取歌单", exact: true }),
+    page.getByRole("button", { name: "获取", exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "复制结果", exact: true }),
@@ -62,16 +62,192 @@ test("keeps the page usable on desktop and mobile", async ({
 test("validates links and shows useful network errors", async ({ page }) => {
   await page.goto("/");
   await page
-    .getByLabel("歌单链接或酷狗码")
+    .getByLabel("音乐链接或酷狗码")
     .fill("https://y.qq.com.evil.test/playlist/1");
-  await page.getByRole("button", { name: "获取歌单", exact: true }).click();
-  await expect(page.getByRole("alert")).toContainText("官方歌单链接");
+  await page.getByRole("button", { name: "获取", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("官方链接");
   await page.route("**/api/v1/songlists", (route) => route.abort("failed"));
   await page
-    .getByLabel("歌单链接或酷狗码")
+    .getByLabel("音乐链接或酷狗码")
     .fill("https://y.qq.com/n/ryqq/playlist/1");
-  await page.getByRole("button", { name: "获取歌单", exact: true }).click();
+  await page.getByRole("button", { name: "获取", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("连接失败");
+});
+test("accepts a Kuwo short share link in the shared input flow", async ({
+  page,
+}, testInfo) => {
+  let submittedUrl = "";
+  await page.route("**/api/v1/songlists", async (route) => {
+    submittedUrl = route.request().postDataJSON().url;
+    await route.fulfill({
+      json: {
+        ...playlist(2),
+        data: {
+          ...playlist(2).data,
+          name: "Kuwo short-link playlist",
+          source: "kuwo",
+        },
+      },
+    });
+  });
+  await page.goto("/");
+  const shareText = "酷我歌单 https://t.kuwo.cn/AbC123";
+  await page.getByLabel("音乐链接或酷狗码").fill(shareText);
+  await expect(page.getByText("已识别平台：酷我音乐")).toBeVisible();
+  await page.getByRole("button", { name: "获取", exact: true }).click();
+  await expect(page.locator(".playlist-name")).toContainText(
+    "Kuwo short-link playlist",
+  );
+  await expect(page.getByLabel("可编辑的歌曲文本")).toHaveValue(/歌曲 1/);
+  expect(submittedUrl).toBe(shareText);
+  await page.screenshot({
+    path: `test-results/${testInfo.project.name}-kuwo-shortlink.png`,
+    fullPage: true,
+  });
+});
+test("accepts a percent-encoded Kuwo link in the shared input flow", async ({
+  page,
+}, testInfo) => {
+  let submittedUrl = "";
+  await page.route("**/api/v1/songlists", async (route) => {
+    submittedUrl = route.request().postDataJSON().url;
+    await route.fulfill({
+      json: {
+        ...playlist(2),
+        data: {
+          ...playlist(2).data,
+          name: "Kuwo encoded-link playlist",
+          source: "kuwo",
+        },
+      },
+    });
+  });
+  await page.goto("/");
+  const encodedUrl = "https%3A%2F%2Fwww.kuwo.cn%2Fplaylist_detail%2F236289985";
+  await page.getByLabel("音乐链接或酷狗码").fill(encodedUrl);
+  await expect(page.getByText("已识别平台：酷我音乐")).toBeVisible();
+  await page.getByRole("button", { name: "获取", exact: true }).click();
+  await expect(page.locator(".playlist-name")).toContainText(
+    "Kuwo encoded-link playlist",
+  );
+  expect(submittedUrl).toBe(encodedUrl);
+  await page.screenshot({
+    path: `test-results/${testInfo.project.name}-kuwo-encoded-link.png`,
+    fullPage: true,
+  });
+});
+test("recognizes JSON-escaped share links without rewriting the input", async ({
+  page,
+}) => {
+  let submittedUrl = "";
+  await page.route("**/api/v1/songlists", async (route) => {
+    submittedUrl = route.request().postDataJSON().url;
+    await route.fulfill({
+      json: {
+        ...playlist(2),
+        data: {
+          ...playlist(2).data,
+          name: "Qishui JSON share",
+          source: "qishui",
+        },
+      },
+    });
+  });
+  await page.goto("/");
+  const shareText =
+    '{"url":"https:\\/\\/music.douyin.com\\/qishui\\/share\\/playlist?auto_play_bgm=1\\u0026playlist_id=7203983736064622592"}';
+  await page.getByLabel("音乐链接或酷狗码").fill(shareText);
+  await expect(page.getByText("已识别平台：汽水音乐")).toBeVisible();
+  await page.getByRole("button", { name: "获取", exact: true }).click();
+  await expect(page.locator(".playlist-name")).toContainText(
+    "Qishui JSON share",
+  );
+  expect(submittedUrl).toBe(shareText);
+});
+test("accepts a Bodian public playlist share link", async ({
+  page,
+}, testInfo) => {
+  await page.route("**/api/v1/songlists", (route) =>
+    route.fulfill({
+      json: {
+        ...playlist(2),
+        data: {
+          ...playlist(2).data,
+          name: "Bodian playlist",
+          source: "bodian",
+        },
+      },
+    }),
+  );
+  await page.goto("/");
+  await page
+    .getByLabel("音乐链接或酷狗码")
+    .fill(
+      "https://h5app.kuwo.cn/m/bodian/collection.html?uid=45780003&playlistId=86749638&source=5&owerId=",
+    );
+  await expect(page.getByText("已识别平台：波点音乐")).toBeVisible();
+  await page.getByRole("button", { name: "获取", exact: true }).click();
+  await expect(page.locator(".playlist-name")).toContainText("Bodian playlist");
+  await expect(page.getByLabel("可编辑的歌曲文本")).toHaveValue(/歌曲 1/);
+  await page.screenshot({
+    path: `test-results/${testInfo.project.name}-bodian.png`,
+    fullPage: true,
+  });
+});
+test("recognizes a Deezer short share link in the shared input", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page
+    .getByLabel("音乐链接或酷狗码")
+    .fill("https://link.deezer.com/s/32zD0iv1H70Dypq0V2AHe");
+  await expect(page.getByText("已识别平台：Deezer")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "获取", exact: true }),
+  ).toBeEnabled();
+});
+
+test("explains retired Deezer links in both languages", async ({
+  page,
+}, testInfo) => {
+  const shareURL = "https://deezer.page.link/kHcRMSzZEddVF4dd9";
+  let receivedURL = "";
+  await page.route("**/api/v1/songlists", async (route) => {
+    receivedURL = route.request().postDataJSON().url;
+    await route.fulfill({
+      status: 400,
+      json: {
+        code: -1,
+        msg: "Deezer 旧版 page.link 短链已停止跳转，请重新复制当前分享链接",
+        data: null,
+      },
+    });
+  });
+  await page.goto("/");
+  await page.getByLabel("音乐链接或酷狗码").fill(shareURL);
+  await expect(page.getByText("已识别平台：Deezer")).toBeVisible();
+  await page.getByRole("button", { name: "获取", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("旧版分享链接已失效");
+  await expect(page.getByRole("alert")).toContainText("重新复制当前分享链接");
+  expect(receivedURL).toBe(shareURL);
+  await page.screenshot({
+    path: `test-results/${testInfo.project.name}-deezer-retired-link.png`,
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Switch to English" }).click();
+  await expect(page.getByRole("alert")).toContainText(
+    "This old Deezer share link no longer works",
+  );
+});
+
+test("detects Apple Music links in the shared input", async ({ page }) => {
+  await page.goto("/");
+  await page
+    .getByLabel("音乐链接或酷狗码")
+    .fill(
+      "https://music.apple.com/cn/playlist/example/pl.f4d106fed2bd41149aaacabb233eb5eb",
+    );
+  await expect(page.getByText("已识别平台：Apple Music")).toBeVisible();
 });
 test("formats locally, reverses, edits and downloads the selected text", async ({
   page,
@@ -83,10 +259,10 @@ test("formats locally, reverses, edits and downloads the selected text", async (
   });
   await page.goto("/");
   await page
-    .getByLabel("歌单链接或酷狗码")
+    .getByLabel("音乐链接或酷狗码")
     .fill("分享歌单 https://y.qq.com/n/ryqq/playlist/1");
-  await page.getByRole("button", { name: "获取歌单", exact: true }).click();
-  const output = page.getByLabel("可编辑的歌单文本");
+  await page.getByRole("button", { name: "获取", exact: true }).click();
+  const output = page.getByLabel("可编辑的歌曲文本");
   await expect(output).toHaveValue(
     "歌曲 1 - Live - 歌手甲 / 歌手乙\n歌曲 2 - Live - 歌手甲 / 歌手乙",
   );
@@ -120,10 +296,10 @@ test("shows incomplete counts and supports a final 1-track batch", async ({
   );
   await page.goto("/");
   await page
-    .getByLabel("歌单链接或酷狗码")
+    .getByLabel("音乐链接或酷狗码")
     .fill("https://y.qq.com/n/ryqq/playlist/1");
-  await page.getByRole("button", { name: "获取歌单", exact: true }).click();
-  await expect(page.getByText("部分歌曲未获取", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "获取", exact: true }).click();
+  await expect(page.getByText("完整性未确认", { exact: true })).toBeVisible();
   await expect(page.getByText("平台显示 531", { exact: false })).toBeVisible();
   const batches = page.getByRole("radiogroup", { name: "分批导出" });
   const all = batches.getByRole("radio", { name: "全部歌曲", exact: true });
@@ -136,22 +312,22 @@ test("shows incomplete counts and supports a final 1-track batch", async ({
   await expect(all).toBeChecked();
   await split.check();
   expect(
-    (await page.getByLabel("可编辑的歌单文本").inputValue()).split("\n"),
+    (await page.getByLabel("可编辑的歌曲文本").inputValue()).split("\n"),
   ).toHaveLength(500);
   await page.getByRole("button", { name: "下一批" }).click();
-  expect(await page.getByLabel("可编辑的歌单文本").inputValue()).toBe(
+  expect(await page.getByLabel("可编辑的歌曲文本").inputValue()).toBe(
     "歌曲 501 - Live - 歌手甲 / 歌手乙",
   );
   await all.check();
   expect(
-    (await page.getByLabel("可编辑的歌单文本").inputValue()).split("\n"),
+    (await page.getByLabel("可编辑的歌曲文本").inputValue()).split("\n"),
   ).toHaveLength(501);
   await expect(page.getByRole("button", { name: "下一批" })).not.toBeVisible();
   await all.focus();
   await page.keyboard.press("ArrowRight");
   await expect(split).toBeChecked();
   expect(
-    (await page.getByLabel("可编辑的歌单文本").inputValue()).split("\n"),
+    (await page.getByLabel("可编辑的歌曲文本").inputValue()).split("\n"),
   ).toHaveLength(500);
   await expect(page.getByRole("button", { name: "上一批" })).toBeDisabled();
 });
@@ -163,13 +339,13 @@ test("discloses a short response from a large playlist", async ({ page }) => {
   );
   await page.goto("/");
   await page.getByRole("button", { name: "填入范例链接", exact: true }).click();
-  await page.getByRole("button", { name: "获取歌单", exact: true }).click();
-  await expect(page.getByText("部分歌曲未获取", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "获取", exact: true }).click();
+  await expect(page.getByText("完整性未确认", { exact: true })).toBeVisible();
   await expect(page.locator(".result-heading")).toContainText(
     "已获取 30 首歌曲",
   );
   await expect(page.getByText("平台显示 2800", { exact: false })).toBeVisible();
-  const output = page.getByLabel("可编辑的歌单文本");
+  const output = page.getByLabel("可编辑的歌曲文本");
   expect((await output.inputValue()).split("\n")).toHaveLength(30);
   await page.getByRole("radio", { name: "倒序", exact: true }).check();
   expect((await output.inputValue()).split("\n")[0]).toContain("歌曲 30");
@@ -188,13 +364,13 @@ test("shows an upstream timeout as a timeout", async ({ page }) => {
   await page.route("**/api/v1/songlists", (route) =>
     route.fulfill({
       status: 504,
-      json: { code: -1, msg: "获取歌单超时，请稍后重试", data: null },
+      json: { code: -1, msg: "获取超时，请稍后重试", data: null },
     }),
   );
   await page.goto("/");
   await page.getByRole("button", { name: "填入范例链接", exact: true }).click();
-  await page.getByRole("button", { name: "获取歌单", exact: true }).click();
-  await expect(page.getByRole("alert")).toContainText("获取歌单超时");
+  await page.getByRole("button", { name: "获取", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("获取超时");
   await expect(
     page.getByRole("button", { name: "复制结果", exact: true }),
   ).toBeDisabled();
@@ -221,20 +397,20 @@ test("cancels without stale data or an error and can retry", async ({
   });
   await page.goto("/");
   await page
-    .getByLabel("歌单链接或酷狗码")
+    .getByLabel("音乐链接或酷狗码")
     .fill("https://y.qq.com/n/ryqq/playlist/1");
-  await page.getByRole("button", { name: "获取歌单", exact: true }).click();
+  await page.getByRole("button", { name: "获取", exact: true }).click();
   await firstRequest;
   await page.getByRole("button", { name: "取消", exact: true }).click();
   releaseFirst();
   await expect(page.getByRole("alert")).toHaveCount(0);
-  await page.getByRole("button", { name: "获取歌单", exact: true }).click();
-  await expect(page.getByLabel("可编辑的歌单文本")).toBeEnabled();
-  expect(await page.getByLabel("可编辑的歌单文本").inputValue()).toContain(
+  await page.getByRole("button", { name: "获取", exact: true }).click();
+  await expect(page.getByLabel("可编辑的歌曲文本")).toBeEnabled();
+  expect(await page.getByLabel("可编辑的歌曲文本").inputValue()).toContain(
     "歌曲 1",
   );
 });
-test("persists the language preference", async ({ page }) => {
+test("persists the language preference", async ({ page }, testInfo) => {
   await page.route("https://img.shields.io/**", (route) =>
     route.fulfill({
       contentType: "image/svg+xml",
@@ -253,6 +429,10 @@ test("persists the language preference", async ({ page }) => {
       () => document.documentElement.scrollWidth > innerWidth,
     ),
   ).toBe(false);
+  await page.screenshot({
+    path: `test-results/${testInfo.project.name}-320.png`,
+    fullPage: true,
+  });
   await language.focus();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("button", { name: "切换到中文" })).toHaveText(
@@ -276,7 +456,7 @@ test("uses the previous Shanghai Sunday in both languages and keeps the example"
     page.getByText("赞赏榜 · 更新于 2026.11.08", { exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "填入范例链接", exact: true }).click();
-  await expect(page.getByLabel("歌单链接或酷狗码")).toHaveValue(
+  await expect(page.getByLabel("音乐链接或酷狗码")).toHaveValue(
     "http://163cn.tv/zoIxm3",
   );
   await page.getByRole("button", { name: "Switch to English" }).click();
@@ -309,18 +489,18 @@ test("shows Kugou's 10 of 12 preview as incomplete", async ({ page }) => {
   );
   await page.goto("/");
   await page
-    .getByLabel("歌单链接或酷狗码")
+    .getByLabel("音乐链接或酷狗码")
     .fill(
       "https://m.kugou.com/songlist/gcid_3zbivkavz4z072/?src_cid=3zbivkavz4z072&uid=606105881&chl=wechat&iszlist=1",
     );
-  await page.getByRole("button", { name: "获取歌单", exact: true }).click();
-  await expect(page.getByText("部分歌曲未获取", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "获取", exact: true }).click();
+  await expect(page.getByText("完整性未确认", { exact: true })).toBeVisible();
   await expect(page.getByText("平台显示 12", { exact: false })).toBeVisible();
   await expect(
     page.getByText("该酷狗分享页仅提供公开预览。", { exact: false }),
   ).toBeVisible();
   expect(
-    (await page.getByLabel("可编辑的歌单文本").inputValue()).split("\n"),
+    (await page.getByLabel("可编辑的歌曲文本").inputValue()).split("\n"),
   ).toHaveLength(10);
 });
 
@@ -345,15 +525,13 @@ test("replaces a Kugou preview with the complete twelve tracks on retry", async 
   });
   await page.goto("/");
   await page
-    .getByLabel("歌单链接或酷狗码")
+    .getByLabel("音乐链接或酷狗码")
     .fill("https://m.kugou.com/songlist/gcid_3zbivkavz4z072/");
-  const fetch = page.getByRole("button", { name: "获取歌单", exact: true });
+  const fetch = page.getByRole("button", { name: "获取", exact: true });
   await fetch.click();
-  await expect(page.getByText("部分歌曲未获取", { exact: true })).toBeVisible();
+  await expect(page.getByText("完整性未确认", { exact: true })).toBeVisible();
   await fetch.click();
-  await expect(page.getByText("部分歌曲未获取", { exact: true })).toHaveCount(
-    0,
-  );
+  await expect(page.getByText("完整性未确认", { exact: true })).toHaveCount(0);
   await expect(
     page.getByText("该酷狗分享页仅提供公开预览。", { exact: false }),
   ).toHaveCount(0);
@@ -361,7 +539,7 @@ test("replaces a Kugou preview with the complete twelve tracks on retry", async 
     "已获取 12 首歌曲",
   );
   expect(
-    (await page.getByLabel("可编辑的歌单文本").inputValue()).split("\n"),
+    (await page.getByLabel("可编辑的歌曲文本").inputValue()).split("\n"),
   ).toHaveLength(12);
   expect(requests).toBe(2);
 });
@@ -377,21 +555,21 @@ test("accepts raw and labelled Kugou codes and exports all twelve tracks", async
     return route.fulfill({ json: result });
   });
   await page.goto("/");
-  const input = page.getByLabel("歌单链接或酷狗码");
+  const input = page.getByLabel("音乐链接或酷狗码");
   await expect(input).toHaveAttribute("placeholder", /酷狗码/);
   for (const code of ["40725013", "酷狗码：40725013"]) {
     await input.fill(code);
     await expect(page.getByText("已识别平台：酷狗音乐")).toBeVisible();
-    await page.getByRole("button", { name: "获取歌单", exact: true }).click();
+    await page.getByRole("button", { name: "获取", exact: true }).click();
     await expect(page.locator(".result-heading")).toContainText(
       "已获取 12 首歌曲",
     );
     expect(
-      (await page.getByLabel("可编辑的歌单文本").inputValue()).split("\n"),
+      (await page.getByLabel("可编辑的歌曲文本").inputValue()).split("\n"),
     ).toHaveLength(12);
   }
   expect(inputs).toEqual(["40725013", "酷狗码：40725013"]);
-  const output = page.getByLabel("可编辑的歌单文本");
+  const output = page.getByLabel("可编辑的歌曲文本");
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "下载 TXT", exact: true }).click();
   const stream = await (await download).createReadStream();
@@ -420,8 +598,8 @@ test("explains expired Kugou codes in both languages and permits retry", async (
     return route.fulfill({ json: result });
   });
   await page.goto("/");
-  await page.getByLabel("歌单链接或酷狗码").fill("40725013");
-  await page.getByRole("button", { name: "获取歌单", exact: true }).click();
+  await page.getByLabel("音乐链接或酷狗码").fill("40725013");
+  await page.getByRole("button", { name: "获取", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("酷狗码无效、已过期");
   await expect(
     page.getByRole("button", { name: "复制结果", exact: true }),
