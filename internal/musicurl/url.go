@@ -18,7 +18,6 @@ const (
 	Migu     = "migu"
 	Qianqian = "qianqian"
 	Bodian   = "bodian"
-	Apple    = "apple"
 	Deezer   = "deezer"
 )
 
@@ -58,10 +57,6 @@ var miguHashPlaylistPath = regexp.MustCompile(`^/playlist/?$`)
 var qianqianPlaylistPath = regexp.MustCompile(`^/songlist/([0-9]+)(?:/|$)`)
 var bodianCollectionPath = regexp.MustCompile(`^/m/bodian/collection\.html/?$`)
 var bodianSourceID = regexp.MustCompile(`^[0-9]{1,3}$`)
-var appleAlbumPath = regexp.MustCompile(`^/(?:[a-z]{2}/)?album/(?:[^/]+/)?(?:id)?([0-9]{5,20})/?$`)
-var appleSongPath = regexp.MustCompile(`^/(?:[a-z]{2}/)?song/(?:[^/]+/)?(?:id)?([0-9]{5,20})/?$`)
-var applePlaylistPath = regexp.MustCompile(`^/(?:[a-z]{2}/)?playlist/(?:[^/]+/)?(pl\.[A-Za-z0-9._-]{8,128})/?$`)
-var applePlaylistID = regexp.MustCompile(`^pl\.[A-Za-z0-9._-]{8,128}$`)
 var deezerPlaylistPath = regexp.MustCompile(`^/(?:[a-z]{2}(?:-[a-z]{2})?/)?playlist/([0-9]+)(?:/|$)`)
 var deezerAlbumPath = regexp.MustCompile(`^/(?:[a-z]{2}(?:-[a-z]{2})?/)?album/([0-9]+)(?:/|$)`)
 var deezerTrackPath = regexp.MustCompile(`^/(?:[a-z]{2}(?:-[a-z]{2})?/)?track/([0-9]+)(?:/|$)`)
@@ -80,8 +75,6 @@ var hosts = map[string]string{
 	"music.migu.cn": Migu, "app.c.nf.migu.cn": Migu,
 	"music.91q.com": Qianqian,
 	"h5app.kuwo.cn": Bodian, "bodian.kuwo.cn": Bodian, "bd-api.kuwo.cn": Bodian,
-	"music.apple.com": Apple, "beta.music.apple.com": Apple, "classical.music.apple.com": Apple, "api.music.apple.com": Apple,
-	"itunes.apple.com": Apple, "www.itunes.apple.com": Apple,
 	"deezer.com": Deezer, "www.deezer.com": Deezer, "link.deezer.com": Deezer, "api.deezer.com": Deezer,
 }
 
@@ -96,7 +89,7 @@ func Validate(u *url.URL) (string, error) {
 	}
 	p, ok := hosts[strings.ToLower(u.Host)]
 	if !ok {
-		return "", errors.New("仅支持网易云音乐、QQ 音乐、汽水音乐、酷狗音乐、酷我音乐、咪咕音乐、千千音乐、波点音乐、Apple Music 和 Deezer 的官方链接")
+		return "", errors.New("仅支持网易云音乐、QQ 音乐、汽水音乐、酷狗音乐、酷我音乐、咪咕音乐、千千音乐、波点音乐和 Deezer 的官方链接")
 	}
 	return p, nil
 }
@@ -357,30 +350,6 @@ func parseLinkInput(input string) (Link, error) {
 				continue
 			}
 		}
-		if provider == Apple {
-			if match := appleAlbumPath.FindStringSubmatch(path); len(match) > 1 {
-				if trackID := query.Get("i"); trackID != "" {
-					if !digits.MatchString(trackID) {
-						routeErr = errors.New("请使用 Apple Music 的公开歌单分享链接")
-						continue
-					}
-					link.Kind = "track"
-					link.ID = trackID
-				} else {
-					link.Kind = "album"
-					link.ID = match[1]
-				}
-			} else if match := appleSongPath.FindStringSubmatch(path); len(match) > 1 {
-				link.Kind = "track"
-				link.ID = match[1]
-			} else if match := applePlaylistPath.FindStringSubmatch(path); len(match) > 1 {
-				link.Kind = "playlist"
-				link.ID = match[1]
-			} else {
-				routeErr = errors.New("请使用 Apple Music 的公开歌单分享链接")
-				continue
-			}
-		}
 		if provider == Deezer {
 			host := strings.ToLower(u.Hostname())
 			if host == "link.deezer.com" {
@@ -456,9 +425,8 @@ func parseLinkInput(input string) (Link, error) {
 			routeErr = errors.New("GoMusic 当前仅支持获取公开歌单")
 			continue
 		}
-		validApplePlaylistID := provider == Apple && link.Kind == "playlist" && applePlaylistID.MatchString(link.ID)
 		validQQResourceID := provider == QQ && (link.Kind == "album" || link.Kind == "track") && qqMID.MatchString(link.ID)
-		if link.ID != "" && !digits.MatchString(link.ID) && !validQQResourceID && !validApplePlaylistID {
+		if link.ID != "" && !digits.MatchString(link.ID) && !validQQResourceID {
 			routeErr = errors.New("歌单 ID 无效")
 			continue
 		}

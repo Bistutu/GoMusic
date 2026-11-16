@@ -30,7 +30,6 @@ func TestParseMusicLinks(t *testing.T) {
 		{"https://music.migu.cn/v3/music/playlist/12345", Migu, "playlist", "12345"},
 		{"https://music.91q.com/songlist/295893", Qianqian, "playlist", "295893"},
 		{"https://h5app.kuwo.cn/m/bodian/collection.html?uid=45780003&playlistId=86749638&source=5&owerId=", Bodian, "playlist", "86749638"},
-		{"https://music.apple.com/cn/playlist/%E4%BB%8A%E6%97%A5%E7%83%AD%E9%97%A8/pl.f4d106fed2bd41149aaacabb233eb5eb", Apple, "playlist", "pl.f4d106fed2bd41149aaacabb233eb5eb"},
 		{"https://www.deezer.com/en/playlist/5339620562", Deezer, "playlist", "5339620562"},
 		{"Deezer playlist https://link.deezer.com/s/32zD0iv1H70Dypq0V2AHe", Deezer, "playlist", ""},
 		{"https://www.kugou.com/songlist/gcid_3z17seve8z2z051/", Kugou, "gcid", "gcid_3z17seve8z2z051"},
@@ -48,18 +47,6 @@ func TestParseMusicLinks(t *testing.T) {
 				t.Fatalf("got %#v", got)
 			}
 		})
-	}
-}
-
-func TestRejectMalformedAppleMusicTrackLinks(t *testing.T) {
-	for _, input := range []string{
-		"https://music.apple.com/us/song/right-on/not-a-track-id",
-		"https://music.apple.com/us/album/right-on/1618153462?i=not-a-track-id",
-		"https://music.apple.com/us/album/right-on/1618153462?i=0",
-	} {
-		if _, err := Parse(input); err == nil {
-			t.Errorf("accepted %q", input)
-		}
 	}
 }
 
@@ -155,7 +142,7 @@ func TestRejectUnofficialHosts(t *testing.T) {
 		"https://music.douyin.com/user/home?playlist_id=1",
 		"https://beta-luna.douyin.com/untrusted?playlist_id=1",
 		"https://qishui.douyin.com/qishui/share/playlist?playlist_id=1",
-		"https://music.apple.com/cn/artist/foo/123456789",
+		"https://music.apple.com/cn/playlist/example/pl.f4d106fed2bd41149aaacabb233eb5eb",
 		"https://music.migu.cn/v3/music/song/123",
 		"https://music.migu.cn/v3/music/album/not-an-id",
 		"https://t.kuwo.cn/",

@@ -1,6 +1,6 @@
 # GoMusic API
 
-GoMusic reads public playlists from NetEase, QQ, Qishui, Kugou, Kuwo, Migu, Qianqian, Bodian, Apple Music and Deezer. No music source requires platform credentials. Apple Music playlist data comes from its public page and may be partial when the page does not expose the full list. GoMusic exports playlist text; transferring tracks to another platform is handled by the user's chosen transfer tool. Audio download, account login and private playlists are not supported.
+GoMusic reads public playlists from NetEase, QQ, Qishui, Kugou, Kuwo, Migu, Qianqian, Bodian and Deezer. No music source requires platform credentials. GoMusic exports playlist text; transferring tracks to another platform is handled by the user's chosen transfer tool. Audio download, account login and private playlists are not supported.
 
 ## Fetch a playlist
 
@@ -29,7 +29,6 @@ The same string `url` field also accepts a numeric Kugou playlist code, for exam
 | `bodian` | `h5app.kuwo.cn/m/bodian/collection.html?playlistId=ID&source=5` public playlist shares |
 | `migu` | `music.migu.cn/v5/#/playlist?playlistId=ID` (ordinary sample verified); legacy `/v3/music/playlist/ID` links are accepted |
 | `qianqian` | `music.91q.com/songlist/ID` public playlist links and share text |
-| `apple` | `music.apple.com/{storefront}/playlist/{slug}/pl.{ID}` public playlists |
 | `deezer` | `www.deezer.com/{locale}/playlist/ID` public links; `link.deezer.com/s/{code}` short shares resolve through Deezer-only redirects and are accepted only when they point to a playlist |
 
 Deezer playlists use the public `api.deezer.com/playlist/{id}` and `/tracks` endpoints without an account token or API key. Playlist metadata must report `public=true`; the metadata ID is checked against the share URL. GoMusic follows only HTTPS `next` links for the same playlist on the exact API host, and verifies that each page index advances by the number of returned rows. Track IDs, playlist order, and the largest known total are preserved. Page failures, bad next links, count conflicts, or export limits remain explicitly partial. Deezer short shares are accepted only when the final Deezer URL is a playlist. Old `deezer.page.link` and `dzr.page.link` Firebase Dynamic Links have stopped resolving; GoMusic returns a short recovery hint instead of sending them through the current adapter.
@@ -59,7 +58,7 @@ For a code response, GoMusic keeps the command metadata's known total even if a 
 
 When a legacy endpoint or share-page fallback reports a smaller playlist total, GoMusic retains the largest total observed across the responses. A 60-track preview cannot turn a known 2,800-track playlist into a complete export. Paginated QQ, Qishui and Kugou results reconcile overlapping pages by stable song ID; different song IDs with the same title remain separate tracks. Pagination stops with a partial-result warning when subsequent pages contain no new valid tracks.
 
-NetEase reuses the public song-detail endpoint to fill track metadata for playlist rows. QQ, Kuwo, Migu, Deezer and Apple Music preserve each playlist's source order and report incomplete totals or interrupted pages as partial. Apple Music uses public page data; GoMusic marks it partial because page structure and full-list coverage are not a published API contract.
+NetEase reuses the public song-detail endpoint to fill track metadata for playlist rows. QQ, Kuwo, Migu and Deezer preserve each playlist's source order and report incomplete totals or interrupted pages as partial.
 
 Kugou standard-edition `gcid` share pages sometimes return only a preview. GoMusic reports it as partial when the advertised count is larger. Public Concept Edition collections and official special playlists have separate paginated adapters. Kuwo's official web share dialog currently copies the canonical `/playlist_detail/{ID}` URL; mobile share pages also use `/newh5app/playlist_detail/{ID}`. The H5 share page provides ordered rows and its visible “获取更多” action exposes an HTML continuation route. GoMusic follows that route in 30-row pages, keeps source order, deduplicates stable track IDs, and stops on a short or empty response. A continuation failure or export cap keeps the result explicitly partial. Kuwo's separate metadata endpoint may report a sparse track subset, so total conflicts remain visible. Short links from `t.kuwo.cn` and supported `/s/` routes resolve only through same-provider redirects and must end at a playlist. If the share page is unreadable, a second public Kuwo H5 JSON route is used as a fallback; it may return fewer songs than the H5 page and remains explicitly partial. Availability remains dependent on the music platform; a successful sample does not guarantee every playlist is publicly accessible.
 

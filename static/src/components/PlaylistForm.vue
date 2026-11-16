@@ -25,7 +25,6 @@ const platform = computed(() => {
           | "migu"
           | "qianqian"
           | "bodian"
-          | "apple"
           | "deezer"
       ]
     : "";

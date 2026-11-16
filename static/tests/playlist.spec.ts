@@ -240,15 +240,6 @@ test("explains retired Deezer links in both languages", async ({
   );
 });
 
-test("detects Apple Music links in the shared input", async ({ page }) => {
-  await page.goto("/");
-  await page
-    .getByLabel("音乐链接或酷狗码")
-    .fill(
-      "https://music.apple.com/cn/playlist/example/pl.f4d106fed2bd41149aaacabb233eb5eb",
-    );
-  await expect(page.getByText("已识别平台：Apple Music")).toBeVisible();
-});
 test("formats locally, reverses, edits and downloads the selected text", async ({
   page,
 }, testInfo) => {

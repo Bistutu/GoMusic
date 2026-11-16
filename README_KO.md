@@ -2,13 +2,13 @@
 
 # GoMusic
 
-**10개 음악 플랫폼의 공개 플레이리스트를 텍스트로 내보내세요.**
+**9개 음악 플랫폼의 공개 플레이리스트를 텍스트로 내보내세요.**
 
 [온라인 사용](https://music.unmeta.cn) · [English](README.md) · [简体中文](misc/README_ZH.md)
 
 </div>
 
-NetEase Cloud Music, QQ Music, Qishui, Kugou, Kuwo, Bodian, Migu, Qianqian, Apple Music 및 Deezer의 공개 플레이리스트를 지원합니다. 모든 음악 소스는 별도의 플랫폼 인증 정보 없이 사용할 수 있으며, Apple Music은 공개 페이지에서 전체 곡 목록을 확인할 수 없으면 결과를 부분 항목으로 표시합니다. 웹사이트는 중국어와 영어를 지원합니다.
+NetEase Cloud Music, QQ Music, Qishui, Kugou, Kuwo, Bodian, Migu, Qianqian 및 Deezer의 공개 플레이리스트를 지원합니다. 모든 음악 소스는 별도의 플랫폼 인증 정보 없이 사용할 수 있습니다. 웹사이트는 중국어와 영어를 지원합니다.
 
 <table align="center"><tr><td>
 <a href="misc/images/gomusic-en-desktop.png"><img src="misc/images/gomusic-en-desktop.png" alt="GoMusic 영어 인터페이스: Kugou 코드와 편집 가능한 곡 목록" width="600" /></a>
@@ -16,8 +16,7 @@ NetEase Cloud Music, QQ Music, Qishui, Kugou, Kuwo, Bodian, Migu, Qianqian, Appl
 
 ## 주요 기능
 
-- 10개 음악 플랫폼의 공개 플레이리스트 링크를 붙여넣을 수 있으며, Kugou 코드는 `40725013`처럼 숫자만 입력해도 됩니다.
-- Apple Music은 공개 플레이리스트 페이지에서 곡 정보를 읽으며, 전체 목록을 확인할 수 없으면 결과가 불완전할 수 있다고 표시합니다.
+- 9개 음악 플랫폼의 공개 플레이리스트 링크를 붙여넣을 수 있으며, Kugou 코드는 `40725013`처럼 숫자만 입력해도 됩니다.
 - 곡 목록을 편집하고 곡명·아티스트 형식과 순서를 바꿀 수 있습니다.
 - 복사 및 TXT 다운로드, 500곡씩 나누기 기능을 제공합니다. 줄 번호는 내보내기에 포함되지 않습니다.
 - 가져온 곡 수와 전체 곡 수를 비교하고 불완전한 결과를 표시합니다.

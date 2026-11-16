@@ -2,13 +2,13 @@
 
 # GoMusic
 
-**Export public music playlists from ten music platforms as text.**
+**Export public music playlists from nine music platforms as text.**
 
 [Try GoMusic](https://music.unmeta.cn) · [简体中文](misc/README_ZH.md) · [한국어](README_KO.md)
 
 </div>
 
-Export public playlists from NetEase Cloud Music, QQ Music, Qishui, Kugou, Kuwo, Bodian, Migu, Qianqian, Apple Music and Deezer.
+Export public playlists from NetEase Cloud Music, QQ Music, Qishui, Kugou, Kuwo, Bodian, Migu, Qianqian and Deezer.
 
 <table align="center"><tr><td>
 <a href="misc/images/gomusic-en-desktop.png"><img src="misc/images/gomusic-en-desktop.png" alt="GoMusic: a Kugou code resolves to 12 tracks with editable, numbered results" width="600" /></a>
@@ -25,8 +25,7 @@ Export public playlists from NetEase Cloud Music, QQ Music, Qishui, Kugou, Kuwo,
 
 ## Features
 
-- Paste a public playlist link from ten platforms, or a Kugou code such as `40725013`.
-- Apple Music uses public playlist page data and marks results partial when the page does not confirm the full track list.
+- Paste a public playlist link from nine platforms, or a Kugou code such as `40725013`.
 - Edit the result, choose the title/artist format and change the track order.
 - Copy or download TXT, with optional 500-track batches. Displayed line numbers stay out of exports.
 - Check fetched and total track counts; incomplete results are clearly marked.
@@ -37,7 +36,7 @@ Export public playlists from NetEase Cloud Music, QQ Music, Qishui, Kugou, Kuwo,
 2. Select **Get playlist**, check the result, then **Copy text** or **Download TXT**.
 3. Import the text with [TuneMyMusic](https://www.tunemymusic.com/transfer) for Apple Music, YouTube Music or Spotify, or use [Spotlistr](https://www.spotlistr.com/) for Spotify. Review the matches before transferring.
 
-GoMusic exports public playlist song information as text, not audio; the transfer service handles matching and importing. No music source credentials are needed. Apple Music results are marked partial when the public page does not confirm the full track list.
+GoMusic exports public playlist song information as text, not audio; the transfer service handles matching and importing. No music source credentials are needed.
 
 ## Support
 

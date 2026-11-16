@@ -103,8 +103,6 @@ func (s *Service) Fetch(ctx context.Context, input string, options Options) (*mo
 		list, err = s.qianqian(ctx, link)
 	case musicurl.Bodian:
 		list, err = s.bodian(ctx, link)
-	case musicurl.Apple:
-		list, err = s.appleMusicPlaylist(ctx, link)
 	case musicurl.Deezer:
 		list, err = s.deezer(ctx, link)
 	}
