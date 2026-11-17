@@ -125,6 +125,12 @@ h1 {
   line-height: 1.6;
   margin: 0;
 }
+.supported-sources {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #737373;
+}
 .input-label {
   display: block;
   font-size: 13px;
@@ -296,6 +302,20 @@ h1 {
 .partial-warning strong {
   color: #333;
   font-weight: 500;
+}
+.partial-details {
+  margin: -6px 0 14px 14px;
+  color: #737373;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.partial-details summary {
+  width: fit-content;
+  cursor: pointer;
+}
+.partial-details ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
 }
 .numbered-editor {
   --editor-padding-block: 13px;

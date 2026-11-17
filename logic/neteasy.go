@@ -52,9 +52,6 @@ func (s *Service) netEase(ctx context.Context, link musicurl.Link) (*models.Song
 	if err != nil {
 		return nil, err
 	}
-	if link.Kind == "album" {
-		return s.netEaseAlbum(ctx, link.ID)
-	}
 	body, _, err := s.HTTP.Do(ctx, http.MethodPost, "https://music.163.com/api/v6/playlist/detail",
 		strings.NewReader(url.Values{"id": {link.ID}, "n": {"100000"}}.Encode()), nil)
 	if err != nil {
@@ -113,53 +110,6 @@ func (s *Service) netEase(ctx context.Context, link musicurl.Link) (*models.Song
 		}
 	}
 	return list, nil
-}
-
-func (s *Service) netEaseAlbum(ctx context.Context, id string) (*models.SongList, error) {
-	var last error
-	for _, prefix := range []string{"https://music.163.com/api/v1/album/", "https://music.163.com/api/album/"} {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
-		body, _, err := s.HTTP.Do(ctx, http.MethodGet, prefix+id, nil, map[string]string{"Referer": "https://music.163.com/"})
-		if err != nil {
-			last = err
-			continue
-		}
-		var data struct {
-			Code  int `json:"code"`
-			Album *struct {
-				Name  string    `json:"name"`
-				Size  int       `json:"size"`
-				Songs []netSong `json:"songs"`
-			} `json:"album"`
-			Songs []netSong `json:"songs"`
-		}
-		if err = json.Unmarshal(body, &data); err != nil {
-			last = err
-			continue
-		}
-		if data.Code != 200 || data.Album == nil {
-			last = fmt.Errorf("网易云专辑不存在或暂时不可访问 (code=%d)", data.Code)
-			continue
-		}
-		songs := data.Songs
-		if songs == nil {
-			songs = data.Album.Songs
-		}
-		if data.Album.Name == "" || (data.Album.Size > 0 && songs == nil) {
-			last = fmt.Errorf("网易云未返回有效专辑数据")
-			continue
-		}
-		list := &models.SongList{Name: data.Album.Name, TotalCount: data.Album.Size}
-		for _, song := range songs {
-			if song.Name != "" {
-				list.Tracks = append(list.Tracks, song.track())
-			}
-		}
-		return list, nil
-	}
-	return nil, last
 }
 
 func (s *Service) netEaseSongs(ctx context.Context, ids []string, seeds map[string]models.Track) (map[string]models.Track, error) {

@@ -194,7 +194,7 @@ func TestQishuiCursorPagination(t *testing.T) {
 		}
 		return response(r, map[string]any{"playlist": map[string]any{"title": "汽水", "count_tracks": 2}, "next_cursor": next, "media_resources": []map[string]any{{"type": "track", "entity": map[string]any{"track": map[string]any{"id": input.Cursor, "name": name, "artists": []map[string]string{{"name": "Artist"}}}}}}}), nil
 	})
-	list, err := s.Fetch(context.Background(), "https://music.douyin.com/qishui/share/playlist?playlist_id=1", Options{})
+	list, err := s.Fetch(context.Background(), "https://music.douyin.com/qishui/share/playlist?auto_play_bgm=1&playlist_id=1&hybrid_sdk_version=2", Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -302,33 +302,6 @@ func TestNetEaseReusesMetadataTracks(t *testing.T) {
 	}
 }
 
-func TestAlbumSupportsCurrentAndLegacyShapes(t *testing.T) {
-	for _, legacy := range []bool{false, true} {
-		calls := 0
-		s := testService(func(r *http.Request) (*http.Response, error) {
-			calls++
-			if legacy && strings.Contains(r.URL.Path, "/v1/") {
-				return response(r, map[string]int{"code": -462}), nil
-			}
-			song := map[string]any{"id": 1, "name": "Album song", "artists": []map[string]string{{"name": "Artist"}}}
-			album := map[string]any{"name": "Album", "size": 1}
-			data := map[string]any{"code": 200, "album": album}
-			if legacy {
-				album["songs"] = []any{song}
-			} else {
-				data["songs"] = []any{song}
-			}
-			return response(r, data), nil
-		})
-		list, err := s.Fetch(context.Background(), "https://music.163.com/album?id=1", Options{})
-		if err != nil || list == nil || !list.Complete || list.Songs[0] != "Album song - Artist" {
-			t.Fatalf("legacy=%v list=%v err=%v", legacy, list, err)
-		}
-		if legacy && calls != 2 {
-			t.Fatal("album fallback not used")
-		}
-	}
-}
 func TestMalformedProviderObjectsNeverBecomeCompleteEmptyPlaylists(t *testing.T) {
 	for _, url := range []string{"https://music.163.com/playlist?id=1", "https://y.qq.com/n/ryqq/playlist/1", "https://music.douyin.com/qishui/share/playlist?playlist_id=1", "https://activity.kugou.com/share/index.html?global_specialid=collection_3_1_2_0"} {
 		s := testService(func(r *http.Request) (*http.Response, error) {

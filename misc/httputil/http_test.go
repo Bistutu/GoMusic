@@ -32,6 +32,31 @@ func TestRedirectHostValidationAndBodyClosure(t *testing.T) {
 		}
 	}
 }
+
+func TestKuwoShortLinkCannotRedirectToAnotherProvider(t *testing.T) {
+	calls := 0
+	body := &observedBody{Reader: strings.NewReader("redirect")}
+	client := NewClient(&http.Client{Transport: transportFunc(func(r *http.Request) (*http.Response, error) {
+		calls++
+		return &http.Response{StatusCode: http.StatusFound, Body: body, Header: http.Header{"Location": []string{"https://qishui.douyin.com/s/share"}}, Request: r}, nil
+	})})
+	if _, err := client.Resolve(context.Background(), "https://t.kuwo.cn/AbC123", nil); err == nil || calls != 1 || !body.closed {
+		t.Fatalf("cross-provider redirect accepted or body leaked: err=%v calls=%d closed=%v", err, calls, body.closed)
+	}
+}
+
+func TestDeezerShortLinkCannotRedirectToAnotherProvider(t *testing.T) {
+	calls := 0
+	body := &observedBody{Reader: strings.NewReader("redirect")}
+	client := NewClient(&http.Client{Transport: transportFunc(func(r *http.Request) (*http.Response, error) {
+		calls++
+		return &http.Response{StatusCode: http.StatusFound, Body: body, Header: http.Header{"Location": []string{"https://music.163.com/playlist?id=1"}}, Request: r}, nil
+	})})
+	if _, err := client.Resolve(context.Background(), "https://link.deezer.com/s/32zD0iv1H70Dypq0V2AHe", nil); err == nil || calls != 1 || !body.closed {
+		t.Fatalf("cross-provider redirect accepted or body leaked: err=%v calls=%d closed=%v", err, calls, body.closed)
+	}
+}
+
 func TestResponseLimitAndHTTPStatus(t *testing.T) {
 	for _, tt := range []struct {
 		status int
@@ -49,6 +74,7 @@ func TestResponseLimitAndHTTPStatus(t *testing.T) {
 		}
 	}
 }
+
 func TestRelativeRedirect(t *testing.T) {
 	calls := 0
 	client := NewClient(&http.Client{Transport: transportFunc(func(r *http.Request) (*http.Response, error) {
@@ -79,5 +105,22 @@ func TestResolveClosesWithoutDownloadingSharePage(t *testing.T) {
 	final, err := client.Resolve(context.Background(), "https://y.qq.com/n/ryqq/playlist/1", nil)
 	if err != nil || final == nil || body.read || !body.closed {
 		t.Fatalf("err=%v read=%v closed=%v", err, body.read, body.closed)
+	}
+}
+
+func TestDoWithCookiesReturnsResponseCookiesAndClosesBody(t *testing.T) {
+	body := &observedBody{Reader: strings.NewReader("ok")}
+	client := NewClient(&http.Client{Transport: transportFunc(func(r *http.Request) (*http.Response, error) {
+		header := make(http.Header)
+		header.Add("Set-Cookie", "Hm_Iuvt_test=0123456789abcdef; Path=/; HttpOnly")
+		return &http.Response{StatusCode: http.StatusOK, Body: body, Header: header, Request: r}, nil
+	})})
+
+	data, cookies, final, err := client.DoWithCookies(context.Background(), http.MethodGet, "https://www.kuwo.cn/", nil, nil)
+	if err != nil || string(data) != "ok" || final == nil || final.Host != "www.kuwo.cn" || !body.closed {
+		t.Fatalf("data=%q final=%v err=%v closed=%v", data, final, err, body.closed)
+	}
+	if len(cookies) != 1 || cookies[0].Name != "Hm_Iuvt_test" || cookies[0].Value != "0123456789abcdef" {
+		t.Fatalf("unexpected cookies: %#v", cookies)
 	}
 }

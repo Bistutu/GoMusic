@@ -34,22 +34,22 @@ try {
       path: path.join(evidence, `${name}-initial.png`),
       fullPage: true,
     });
-    if ((await page.getByLabel("歌单链接或酷狗码").inputValue()) !== "")
+    if ((await page.getByLabel("音乐链接或酷狗码").inputValue()) !== "")
       throw new Error("Initial playlist input must be empty");
-    await page.getByLabel("歌单链接或酷狗码").fill(link);
+    await page.getByLabel("音乐链接或酷狗码").fill(link);
     const response = page.waitForResponse((response) =>
       response.url().endsWith("/api/v1/songlists"),
     );
-    await page.getByRole("button", { name: "获取歌单", exact: true }).click();
+    await page.getByRole("button", { name: "获取", exact: true }).click();
     const api = await response;
     const body = await api.json();
     if (!api.ok() || body.code !== 1)
       throw new Error(`Live request failed: ${api.status()} ${body.msg}`);
-    await page.getByLabel("可编辑的歌单文本").waitFor({ timeout: 100_000 });
+    await page.getByLabel("可编辑的歌曲文本").waitFor({ timeout: 100_000 });
     await page.getByRole("button", { name: "复制结果", exact: true }).click();
     await page.getByText("已复制到剪贴板", { exact: true }).waitFor();
     const copied = await page.evaluate(() => navigator.clipboard.readText());
-    if (copied !== (await page.getByLabel("可编辑的歌单文本").inputValue()))
+    if (copied !== (await page.getByLabel("可编辑的歌曲文本").inputValue()))
       throw new Error("Clipboard does not match export");
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({

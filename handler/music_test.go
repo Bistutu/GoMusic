@@ -68,6 +68,23 @@ func TestRequestValidation(t *testing.T) {
 		}
 	}
 }
+
+func TestRetiredDeezerShareHintReachesAPI(t *testing.T) {
+	cfg, _ := config.FromEnv(func(string) string { return "" })
+	router := NewRouterWithService(logic.NewService(nil, nil, nil, 10000, 4), cfg, nil)
+	request := httptest.NewRequest("POST", "/api/v1/songlists", strings.NewReader(`{"url":"https://deezer.page.link/abc123"}`))
+	request.Header.Set("Content-Type", "application/json")
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, request)
+	var result models.Result
+	if err := json.Unmarshal(recorder.Body.Bytes(), &result); err != nil {
+		t.Fatal(err)
+	}
+	if recorder.Code != http.StatusBadRequest || !strings.Contains(result.Msg, "旧版 page.link 短链已停止跳转") || !strings.Contains(result.Msg, "link.deezer.com/s/") {
+		t.Fatalf("retired Deezer link recovery hint was lost: status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+}
+
 func TestTimeoutAndUpstreamErrors(t *testing.T) {
 	for _, tt := range []struct {
 		err    error

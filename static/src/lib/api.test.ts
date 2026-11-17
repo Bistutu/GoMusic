@@ -38,6 +38,7 @@ it("preserves a structured server error", async () => {
 it.each([
   [400, "invalid"],
   [504, "timeout"],
+  [503, "server"],
 ])("classifies HTTP %i as %s", async (status, kind) => {
   vi.stubGlobal(
     "fetch",

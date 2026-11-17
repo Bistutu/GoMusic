@@ -26,9 +26,9 @@ async function load(page: import("@playwright/test").Page, titles: string[]) {
     route.fulfill({ json: playlist(titles) }),
   );
   await page.goto("/");
-  await page.getByLabel("歌单链接或酷狗码").fill("40725013");
+  await page.getByLabel("公开歌单链接或酷狗码").fill("40725013");
   await page.getByRole("button", { name: "获取歌单", exact: true }).click();
-  await expect(page.getByLabel("可编辑的歌单文本")).toBeEnabled();
+  await expect(page.getByLabel("可编辑的歌曲文本")).toBeEnabled();
 }
 
 test("line numbers stay out of edited text, selection, clipboard and TXT", async ({
@@ -41,7 +41,7 @@ test("line numbers stay out of edited text, selection, clipboard and TXT", async
   await expect(rows).toHaveCount(3);
   await expect(rows.nth(0)).toHaveAttribute("data-line", "1");
   await expect(rows.nth(2)).toHaveAttribute("data-line", "3");
-  const output = page.getByLabel("可编辑的歌单文本");
+  const output = page.getByLabel("可编辑的歌曲文本");
   const gutter = await page.evaluate(() => {
     const area = document.querySelector(".result-text")!;
     const number = getComputedStyle(
@@ -108,7 +108,7 @@ test("line numbers align with native wrapping after scroll and resize", async ({
     "第二首",
     ...Array.from({ length: 30 }, (_, i) => `歌曲 ${i + 3}`),
   ]);
-  const output = page.getByLabel("可编辑的歌单文本");
+  const output = page.getByLabel("可编辑的歌曲文本");
   const alignment = () =>
     page.evaluate(() => {
       const area = document.querySelector<HTMLTextAreaElement>(".result-text")!;
@@ -200,7 +200,7 @@ test("line numbers continue across batches and follow inserted lines", async ({
     "data-line",
     "501",
   );
-  const output = page.getByLabel("可编辑的歌单文本");
+  const output = page.getByLabel("可编辑的歌曲文本");
   await output.fill("Song 501 - Singer\nNew song - Singer");
   await expect(page.locator(".editor-line").last()).toHaveAttribute(
     "data-line",
@@ -226,7 +226,7 @@ test("a ten-thousand-track editor keeps the last number visible when scrolled", 
     page,
     Array.from({ length: 10000 }, (_, i) => `Song ${i + 1}`),
   );
-  const output = page.getByLabel("可编辑的歌单文本");
+  const output = page.getByLabel("可编辑的歌曲文本");
   await expect(page.locator(".editor-line")).toHaveCount(10000);
   await expect(page.locator(".editor-line").last()).toHaveAttribute(
     "data-line",

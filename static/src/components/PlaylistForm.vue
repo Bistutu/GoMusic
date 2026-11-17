@@ -14,7 +14,20 @@ const emit = defineEmits<{ submit: []; cancel: [] }>();
 const exampleUrl = "http://163cn.tv/zoIxm3";
 const platform = computed(() => {
   const p = platformOf(link.value);
-  return p ? props.t[p as "netease" | "qq" | "qishui" | "kugou"] : "";
+  return p
+    ? props.t[
+        p as
+          | "netease"
+          | "qq"
+          | "qishui"
+          | "kugou"
+          | "kuwo"
+          | "migu"
+          | "qianqian"
+          | "bodian"
+          | "deezer"
+      ]
+    : "";
 });
 </script>
 <template>
@@ -34,6 +47,7 @@ const platform = computed(() => {
       @keydown.ctrl.enter.prevent="emit('submit')"
       @keydown.meta.enter.prevent="emit('submit')"
     />
+    <p class="supported-sources">{{ t.sources }}</p>
     <div class="input-helper">
       <span>{{ platform ? t.detected + platform : t.privacy }}</span>
       <button

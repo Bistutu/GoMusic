@@ -30,6 +30,6 @@ func TestConfig(t *testing.T) {
 		return map[string]string{"GOMUSIC_STATS_TOKEN": " local-test-token ", "GOMUSIC_STATS_COOKIE_SECURE": "true"}[k]
 	})
 	if err != nil || cfg.StatsToken != "local-test-token" || !cfg.StatsCookieSecure {
-		t.Fatal("stats configuration was not loaded")
+		t.Fatal("statistics configuration was not loaded")
 	}
 }
