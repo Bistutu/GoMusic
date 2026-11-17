@@ -27,7 +27,7 @@ async function load(page: import("@playwright/test").Page, titles: string[]) {
   );
   await page.goto("/");
   await page.getByLabel("公开歌单链接或酷狗码").fill("40725013");
-  await page.getByRole("button", { name: "获取", exact: true }).click();
+  await page.getByRole("button", { name: "获取歌单", exact: true }).click();
   await expect(page.getByLabel("可编辑的歌曲文本")).toBeEnabled();
 }
 
