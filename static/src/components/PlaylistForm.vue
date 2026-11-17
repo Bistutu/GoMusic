@@ -47,6 +47,7 @@ const platform = computed(() => {
       @keydown.ctrl.enter.prevent="emit('submit')"
       @keydown.meta.enter.prevent="emit('submit')"
     />
+    <p class="supported-sources">{{ t.sources }}</p>
     <div class="input-helper">
       <span>{{ platform ? t.detected + platform : t.privacy }}</span>
       <button

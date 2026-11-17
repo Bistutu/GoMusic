@@ -110,7 +110,6 @@ const errorMessage = computed(() => {
           >
         </h1>
         <p>{{ t.subtitle }}</p>
-        <p class="supported-sources">{{ t.sources }}</p>
       </div>
       <PlaylistForm
         v-model="link"

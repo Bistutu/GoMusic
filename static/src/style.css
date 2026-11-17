@@ -125,11 +125,11 @@ h1 {
   line-height: 1.6;
   margin: 0;
 }
-.page-intro .supported-sources {
-  max-width: 740px;
-  margin: 7px auto 0;
+.supported-sources {
+  margin: 6px 0 0;
   font-size: 13px;
   line-height: 1.7;
+  color: #737373;
 }
 .input-label {
   display: block;
