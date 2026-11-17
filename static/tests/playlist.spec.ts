@@ -62,13 +62,13 @@ test("keeps the page usable on desktop and mobile", async ({
 test("validates links and shows useful network errors", async ({ page }) => {
   await page.goto("/");
   await page
-    .getByLabel("音乐链接或酷狗码")
+    .getByLabel("公开歌单链接或酷狗码")
     .fill("https://y.qq.com.evil.test/playlist/1");
   await page.getByRole("button", { name: "获取", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("官方链接");
   await page.route("**/api/v1/songlists", (route) => route.abort("failed"));
   await page
-    .getByLabel("音乐链接或酷狗码")
+    .getByLabel("公开歌单链接或酷狗码")
     .fill("https://y.qq.com/n/ryqq/playlist/1");
   await page.getByRole("button", { name: "获取", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("连接失败");
@@ -92,7 +92,7 @@ test("accepts a Kuwo short share link in the shared input flow", async ({
   });
   await page.goto("/");
   const shareText = "酷我歌单 https://t.kuwo.cn/AbC123";
-  await page.getByLabel("音乐链接或酷狗码").fill(shareText);
+  await page.getByLabel("公开歌单链接或酷狗码").fill(shareText);
   await expect(page.getByText("已识别平台：酷我音乐")).toBeVisible();
   await page.getByRole("button", { name: "获取", exact: true }).click();
   await expect(page.locator(".playlist-name")).toContainText(
@@ -124,7 +124,7 @@ test("accepts a percent-encoded Kuwo link in the shared input flow", async ({
   });
   await page.goto("/");
   const encodedUrl = "https%3A%2F%2Fwww.kuwo.cn%2Fplaylist_detail%2F236289985";
-  await page.getByLabel("音乐链接或酷狗码").fill(encodedUrl);
+  await page.getByLabel("公开歌单链接或酷狗码").fill(encodedUrl);
   await expect(page.getByText("已识别平台：酷我音乐")).toBeVisible();
   await page.getByRole("button", { name: "获取", exact: true }).click();
   await expect(page.locator(".playlist-name")).toContainText(
@@ -156,7 +156,7 @@ test("recognizes JSON-escaped share links without rewriting the input", async ({
   await page.goto("/");
   const shareText =
     '{"url":"https:\\/\\/music.douyin.com\\/qishui\\/share\\/playlist?auto_play_bgm=1\\u0026playlist_id=7203983736064622592"}';
-  await page.getByLabel("音乐链接或酷狗码").fill(shareText);
+  await page.getByLabel("公开歌单链接或酷狗码").fill(shareText);
   await expect(page.getByText("已识别平台：汽水音乐")).toBeVisible();
   await page.getByRole("button", { name: "获取", exact: true }).click();
   await expect(page.locator(".playlist-name")).toContainText(
@@ -181,7 +181,7 @@ test("accepts a Bodian public playlist share link", async ({
   );
   await page.goto("/");
   await page
-    .getByLabel("音乐链接或酷狗码")
+    .getByLabel("公开歌单链接或酷狗码")
     .fill(
       "https://h5app.kuwo.cn/m/bodian/collection.html?uid=45780003&playlistId=86749638&source=5&owerId=",
     );
@@ -199,7 +199,7 @@ test("recognizes a Deezer short share link in the shared input", async ({
 }) => {
   await page.goto("/");
   await page
-    .getByLabel("音乐链接或酷狗码")
+    .getByLabel("公开歌单链接或酷狗码")
     .fill("https://link.deezer.com/s/32zD0iv1H70Dypq0V2AHe");
   await expect(page.getByText("已识别平台：Deezer")).toBeVisible();
   await expect(
@@ -224,7 +224,7 @@ test("explains retired Deezer links in both languages", async ({
     });
   });
   await page.goto("/");
-  await page.getByLabel("音乐链接或酷狗码").fill(shareURL);
+  await page.getByLabel("公开歌单链接或酷狗码").fill(shareURL);
   await expect(page.getByText("已识别平台：Deezer")).toBeVisible();
   await page.getByRole("button", { name: "获取", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("旧版分享链接已失效");
@@ -250,7 +250,7 @@ test("formats locally, reverses, edits and downloads the selected text", async (
   });
   await page.goto("/");
   await page
-    .getByLabel("音乐链接或酷狗码")
+    .getByLabel("公开歌单链接或酷狗码")
     .fill("分享歌单 https://y.qq.com/n/ryqq/playlist/1");
   await page.getByRole("button", { name: "获取", exact: true }).click();
   const output = page.getByLabel("可编辑的歌曲文本");
@@ -287,7 +287,7 @@ test("shows incomplete counts and supports a final 1-track batch", async ({
   );
   await page.goto("/");
   await page
-    .getByLabel("音乐链接或酷狗码")
+    .getByLabel("公开歌单链接或酷狗码")
     .fill("https://y.qq.com/n/ryqq/playlist/1");
   await page.getByRole("button", { name: "获取", exact: true }).click();
   await expect(page.getByText("完整性未确认", { exact: true })).toBeVisible();
@@ -388,7 +388,7 @@ test("cancels without stale data or an error and can retry", async ({
   });
   await page.goto("/");
   await page
-    .getByLabel("音乐链接或酷狗码")
+    .getByLabel("公开歌单链接或酷狗码")
     .fill("https://y.qq.com/n/ryqq/playlist/1");
   await page.getByRole("button", { name: "获取", exact: true }).click();
   await firstRequest;
@@ -447,7 +447,7 @@ test("uses the previous Shanghai Sunday in both languages and keeps the example"
     page.getByText("赞赏榜 · 更新于 2026.11.08", { exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "填入范例链接", exact: true }).click();
-  await expect(page.getByLabel("音乐链接或酷狗码")).toHaveValue(
+  await expect(page.getByLabel("公开歌单链接或酷狗码")).toHaveValue(
     "http://163cn.tv/zoIxm3",
   );
   await page.getByRole("button", { name: "Switch to English" }).click();
@@ -480,7 +480,7 @@ test("shows Kugou's 10 of 12 preview as incomplete", async ({ page }) => {
   );
   await page.goto("/");
   await page
-    .getByLabel("音乐链接或酷狗码")
+    .getByLabel("公开歌单链接或酷狗码")
     .fill(
       "https://m.kugou.com/songlist/gcid_3zbivkavz4z072/?src_cid=3zbivkavz4z072&uid=606105881&chl=wechat&iszlist=1",
     );
@@ -516,7 +516,7 @@ test("replaces a Kugou preview with the complete twelve tracks on retry", async 
   });
   await page.goto("/");
   await page
-    .getByLabel("音乐链接或酷狗码")
+    .getByLabel("公开歌单链接或酷狗码")
     .fill("https://m.kugou.com/songlist/gcid_3zbivkavz4z072/");
   const fetch = page.getByRole("button", { name: "获取", exact: true });
   await fetch.click();
@@ -546,7 +546,7 @@ test("accepts raw and labelled Kugou codes and exports all twelve tracks", async
     return route.fulfill({ json: result });
   });
   await page.goto("/");
-  const input = page.getByLabel("音乐链接或酷狗码");
+  const input = page.getByLabel("公开歌单链接或酷狗码");
   await expect(input).toHaveAttribute("placeholder", /酷狗码/);
   for (const code of ["40725013", "酷狗码：40725013"]) {
     await input.fill(code);
@@ -589,7 +589,7 @@ test("explains expired Kugou codes in both languages and permits retry", async (
     return route.fulfill({ json: result });
   });
   await page.goto("/");
-  await page.getByLabel("音乐链接或酷狗码").fill("40725013");
+  await page.getByLabel("公开歌单链接或酷狗码").fill("40725013");
   await page.getByRole("button", { name: "获取", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("酷狗码无效、已过期");
   await expect(
