@@ -33,8 +33,7 @@ const zh = {
   fetch: "获取歌单",
   loading: "正在获取歌单…",
   cancel: "取消",
-  privacy:
-    "仅支持获取公开歌单",
+  privacy: "仅支持获取公开歌单",
   errorInvalid: "请输入支持平台的公开歌单链接或有效酷狗码（最多 4096 字节）。",
   errorKugouCode: "酷狗码无效、已过期或不是公开歌单，请核对后重试。",
   errorDeezerRetiredLink:
@@ -75,8 +74,7 @@ const zh = {
   copied: "已复制到剪贴板",
   copyFailed: "复制失败，请选中文本后手动复制。",
   downloaded: "已下载文本文件",
-  guideOneBody:
-    "粘贴公开歌单链接，也可输入酷狗码。",
+  guideOneBody: "粘贴公开歌单链接，也可输入酷狗码。",
   guideTwoBody: "核对歌曲数量，点击“复制结果”。",
   guideThreeBody:
     "选择“文本”作为歌单来源，粘贴复制的结果，再选择 Apple Music、YouTube Music 或 Spotify 作为目的地，确认迁移。",
@@ -118,13 +116,13 @@ const en: Record<keyof typeof zh, string> = {
   bodian: "Bodian Music",
   deezer: "Deezer",
   inputLabel: "Public playlist link or Kugou code",
-  inputPlaceholder: "Paste a public playlist link, share message or Kugou code…",
+  inputPlaceholder:
+    "Paste a public playlist link, share message or Kugou code…",
   example: "Use an example link",
   fetch: "Get playlist",
   loading: "Getting playlist…",
   cancel: "Cancel",
-  privacy:
-    "Public playlists only",
+  privacy: "Public playlists only",
   errorInvalid:
     "Enter a supported public playlist link or a valid Kugou code (up to 4096 bytes).",
   errorKugouCode:
@@ -171,8 +169,7 @@ const en: Record<keyof typeof zh, string> = {
   copied: "Copied to clipboard",
   copyFailed: "Could not copy. Select the text and copy it manually.",
   downloaded: "Text file downloaded",
-  guideOneBody:
-    "Paste a public playlist link or a Kugou code.",
+  guideOneBody: "Paste a public playlist link or a Kugou code.",
   guideTwoBody: "Check the track count, then copy the result.",
   guideThreeBody:
     "choose text as the playlist source, paste the copied result, then select Apple Music, YouTube Music or Spotify as your destination to transfer.",

@@ -2,12 +2,7 @@ import type { Playlist } from "./playlist";
 
 export class PlaylistError extends Error {
   constructor(
-    public kind:
-      | "invalid"
-      | "network"
-      | "timeout"
-      | "server"
-      | "response",
+    public kind: "invalid" | "network" | "timeout" | "server" | "response",
     message = "",
   ) {
     super(message);
