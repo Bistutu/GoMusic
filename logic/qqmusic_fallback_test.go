@@ -116,7 +116,8 @@ func TestQQMusicDeadPlaylistStillErrors(t *testing.T) {
 
 func TestQQFallbackOrder(t *testing.T) {
 	fallbacks := NewService(nil, nil, nil, 10000, 4).qqFallbacks()
-	want := []string{"legacy", "plain-musicu", "v8-playlist", "qzone-music"}
+	// v8/qzone 单次请求即可返回整份歌单，优先于需要分页的 plain-musicu。
+	want := []string{"legacy", "v8-playlist", "qzone-music", "plain-musicu"}
 	if len(fallbacks) != len(want) {
 		t.Fatalf("fallback count = %d, want %d", len(fallbacks), len(want))
 	}

@@ -25,8 +25,9 @@ const (
 // qqFallback 是一种备用歌单接口，返回统一的 SongList。
 type qqFallback func(ctx context.Context, id string) (*models.SongList, error)
 
-// qqFallbacks 按优先级排列。顺序刻意把与主接口响应格式一致的明文 musicu
-// 放在最前，以提高分页数据的连续性。
+// qqFallbacks 按优先级排列。v8/qzone 一次请求即可返回整份歌单，远快于需要
+// 逐页拉取的明文 musicu，因此放在分页接口之前；只有当前者返回的数据不完整时
+// 才会继续尝试后续接口补全。legacy 保留在最前以维持原有的错误语义。
 func (s *Service) qqFallbacks() []struct {
 	name  string
 	fetch qqFallback
@@ -36,9 +37,9 @@ func (s *Service) qqFallbacks() []struct {
 		fetch qqFallback
 	}{
 		{"legacy", s.qqLegacy},
-		{"plain-musicu", s.qqPlainPages},
 		{"v8-playlist", s.qqV8Playlist},
 		{"qzone-music", s.qqQzoneMusic},
+		{"plain-musicu", s.qqPlainPages},
 	}
 }
 
