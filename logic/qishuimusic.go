@@ -48,17 +48,69 @@ func (s *Service) qishui(ctx context.Context, link musicurl.Link) (*models.SongL
 	return nil, fmt.Errorf("汽水音乐未返回可读取的歌单: %w", errors.Join(apiErr, pageErr, previewErr))
 }
 
+type qishuiTrack struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Artists []struct {
+		Name string `json:"name"`
+	} `json:"artists"`
+}
+
 type qishuiMedia struct {
 	Type   string `json:"type"`
 	Entity struct {
-		Track struct {
-			ID      string `json:"id"`
-			Name    string `json:"name"`
-			Artists []struct {
-				Name string `json:"name"`
-			} `json:"artists"`
-		} `json:"track"`
+		Track        *qishuiTrack `json:"track"`
+		TrackWrapper *struct {
+			Track *qishuiTrack `json:"track"`
+		} `json:"track_wrapper"`
 	} `json:"entity"`
+}
+
+// track 兼容汽水 API 的两种响应结构：早期为 entity.track，
+// 现在改为 entity.track_wrapper.track。优先取新结构，缺失时回退旧结构。
+func (m qishuiMedia) track() *qishuiTrack {
+	if m.Entity.TrackWrapper != nil && m.Entity.TrackWrapper.Track != nil {
+		return m.Entity.TrackWrapper.Track
+	}
+	return m.Entity.Track
+}
+
+// qishuiAPIEndpoints are official Qishui/Luna hosts observed serving the same
+// public playlist detail protocol. Rotating them keeps pagination alive when a
+// single CDN or DNS name is unavailable; the share-page parser remains a
+// separate, independent fallback.
+var qishuiAPIEndpoints = []string{
+	"https://beta-luna.douyin.com/luna/playlist/detail",
+	"https://api.qishui.com/luna/playlist/detail",
+	"https://api5-lf.qishui.com/luna/playlist/detail",
+}
+
+// qishuiPageBody tries every official host for one cursor page. A fresh payload
+// reader is required for each attempt because the HTTP client consumes it.
+func (s *Service) qishuiPageBody(ctx context.Context, payload []byte) ([]byte, error) {
+	failures := make([]error, 0, len(qishuiAPIEndpoints))
+	for _, endpoint := range qishuiAPIEndpoints {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		body, _, err := s.HTTP.Do(ctx, http.MethodPost, endpoint, bytes.NewReader(payload),
+			map[string]string{"Content-Type": "application/json", "User-Agent": "Luna/19.1.0 Android"})
+		if err == nil && len(body) > 0 {
+			return body, nil
+		}
+		if err != nil {
+			failures = append(failures, err)
+			if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+				return nil, err
+			}
+		} else {
+			failures = append(failures, fmt.Errorf("汽水备用主机返回空响应: %s", endpoint))
+		}
+	}
+	if len(failures) == 0 {
+		return nil, fmt.Errorf("汽水音乐所有备用主机均不可用")
+	}
+	return nil, errors.Join(failures...)
 }
 
 func (s *Service) qishuiPages(ctx context.Context, id string) (*models.SongList, error) {
@@ -69,7 +121,7 @@ func (s *Service) qishuiPages(ctx context.Context, id string) (*models.SongList,
 	for len(seen) < 100 && !seen[cursor] {
 		seen[cursor] = true
 		payload, _ := json.Marshal(map[string]any{"playlist_id": id, "cursor": cursor, "count": 200})
-		body, _, err := s.HTTP.Do(ctx, http.MethodPost, "https://beta-luna.douyin.com/luna/playlist/detail", bytes.NewReader(payload), map[string]string{"Content-Type": "application/json", "User-Agent": "Luna/19.1.0 Android"})
+		body, err := s.qishuiPageBody(ctx, payload)
 		if err != nil {
 			return list, err
 		}
@@ -95,8 +147,11 @@ func (s *Service) qishuiPages(ctx context.Context, id string) (*models.SongList,
 		before := len(list.Tracks)
 		hasTracks := false
 		for _, media := range page.Medias {
-			song := media.Entity.Track
-			if media.Type != "track" || song.Name == "" {
+			if media.Type != "track" {
+				continue
+			}
+			song := media.track()
+			if song == nil || song.Name == "" {
 				continue
 			}
 			hasTracks = true
@@ -149,18 +204,7 @@ func parseQishui(body io.Reader) (*models.SongList, error) {
 						Title string `json:"title"`
 						Count int    `json:"count_tracks"`
 					} `json:"playlistInfo"`
-					Medias []struct {
-						Type   string `json:"type"`
-						Entity struct {
-							Track struct {
-								ID      string `json:"id"`
-								Name    string `json:"name"`
-								Artists []struct {
-									Name string `json:"name"`
-								} `json:"artists"`
-							} `json:"track"`
-						} `json:"entity"`
-					} `json:"medias"`
+					Medias []qishuiMedia `json:"medias"`
 				} `json:"playlist_page"`
 			} `json:"loaderData"`
 		}
@@ -171,10 +215,13 @@ func parseQishui(body io.Reader) (*models.SongList, error) {
 		page := data.LoaderData.Page
 		list = &models.SongList{Name: page.Info.Title, TotalCount: page.Info.Count}
 		for _, media := range page.Medias {
-			if media.Type != "track" || media.Entity.Track.Name == "" {
+			if media.Type != "track" {
 				continue
 			}
-			song := media.Entity.Track
+			song := media.track()
+			if song == nil || song.Name == "" {
+				continue
+			}
 			track := models.Track{ID: song.ID, Title: song.Name, Artists: []string{}}
 			for _, artist := range song.Artists {
 				if artist.Name != "" {
