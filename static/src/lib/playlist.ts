@@ -29,7 +29,6 @@ export const playlistSources = [
   "bodian",
   "migu",
   "qianqian",
-  "deezer",
 ] as const;
 type PlaylistSource = (typeof playlistSources)[number];
 
@@ -62,11 +61,6 @@ const hosts: Partial<Record<string, PlaylistSource>> = {
   "bodian.kuwo.cn": "bodian",
   "music.migu.cn": "migu",
   "music.91q.com": "qianqian",
-  "deezer.com": "deezer",
-  "www.deezer.com": "deezer",
-  "link.deezer.com": "deezer",
-  "deezer.page.link": "deezer",
-  "dzr.page.link": "deezer",
 };
 export function platformOf(input: string): PlaylistSource | undefined {
   const escapedQuerySeparators = /\\u0026/gi;

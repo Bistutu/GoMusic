@@ -26,7 +26,6 @@ const zh = {
   migu: "咪咕音乐",
   qianqian: "千千音乐",
   bodian: "波点音乐",
-  deezer: "Deezer",
   inputLabel: "公开歌单链接或酷狗码",
   inputPlaceholder: "粘贴公开歌单链接、分享文字或酷狗码…",
   example: "填入范例链接",
@@ -35,8 +34,6 @@ const zh = {
   cancel: "取消",
   errorInvalid: "请输入支持平台的公开歌单链接或有效酷狗码（最多 4096 字节）。",
   errorKugouCode: "酷狗码无效、已过期或不是公开歌单，请核对后重试。",
-  errorDeezerRetiredLink:
-    "这个 Deezer 旧版分享链接已失效。请重新复制当前公开歌单分享链接，或粘贴 deezer.com 歌单链接。",
   errorNetwork: "连接失败，请检查网络或确认服务已启动后重试。",
   errorTimeout: "获取超时，请稍后再试。",
   errorServer: "音乐平台暂时未返回可读取的歌曲，请检查链接和公开权限后重试。",
@@ -113,7 +110,6 @@ const en: Record<keyof typeof zh, string> = {
   migu: "Migu Music",
   qianqian: "Qianqian Music",
   bodian: "Bodian Music",
-  deezer: "Deezer",
   inputLabel: "Public playlist link or Kugou code",
   inputPlaceholder:
     "Paste a public playlist link, share message or Kugou code…",
@@ -125,8 +121,6 @@ const en: Record<keyof typeof zh, string> = {
     "Enter a supported public playlist link or a valid Kugou code (up to 4096 bytes).",
   errorKugouCode:
     "This Kugou code is invalid, expired or not a public playlist. Check the code and try again.",
-  errorDeezerRetiredLink:
-    "This old Deezer share link no longer works. Copy a current public playlist link from Deezer or paste a deezer.com playlist link.",
   errorNetwork:
     "Could not connect. Check your connection and that the service is running.",
   errorTimeout: "The request timed out. Please try again.",

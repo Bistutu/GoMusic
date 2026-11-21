@@ -45,15 +45,13 @@ func TestKuwoShortLinkCannotRedirectToAnotherProvider(t *testing.T) {
 	}
 }
 
-func TestDeezerShortLinkCannotRedirectToAnotherProvider(t *testing.T) {
-	calls := 0
-	body := &observedBody{Reader: strings.NewReader("redirect")}
+func TestUnsupportedProviderIsRejectedBeforeTransport(t *testing.T) {
 	client := NewClient(&http.Client{Transport: transportFunc(func(r *http.Request) (*http.Response, error) {
-		calls++
-		return &http.Response{StatusCode: http.StatusFound, Body: body, Header: http.Header{"Location": []string{"https://music.163.com/playlist?id=1"}}, Request: r}, nil
+		t.Fatalf("unexpected outbound request to %s", r.URL.Host)
+		return nil, nil
 	})})
-	if _, err := client.Resolve(context.Background(), "https://link.deezer.com/s/32zD0iv1H70Dypq0V2AHe", nil); err == nil || calls != 1 || !body.closed {
-		t.Fatalf("cross-provider redirect accepted or body leaked: err=%v calls=%d closed=%v", err, calls, body.closed)
+	if _, err := client.Resolve(context.Background(), "https://link.deezer.com/s/32zD0iv1H70Dypq0V2AHe", nil); err == nil {
+		t.Fatal("expected unsupported provider to be rejected")
 	}
 }
 

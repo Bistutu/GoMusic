@@ -1,7 +1,6 @@
 package musicurl
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -32,8 +31,6 @@ func TestParseMusicLinks(t *testing.T) {
 		{"https://music.migu.cn/v3/music/playlist/12345", Migu, "playlist", "12345"},
 		{"https://music.91q.com/songlist/295893", Qianqian, "playlist", "295893"},
 		{"https://h5app.kuwo.cn/m/bodian/collection.html?uid=45780003&playlistId=86749638&source=5&owerId=", Bodian, "playlist", "86749638"},
-		{"https://www.deezer.com/en/playlist/5339620562", Deezer, "playlist", "5339620562"},
-		{"Deezer playlist https://link.deezer.com/s/32zD0iv1H70Dypq0V2AHe", Deezer, "playlist", ""},
 		{"https://www.kugou.com/songlist/gcid_3z17seve8z2z051/", Kugou, "gcid", "gcid_3z17seve8z2z051"},
 		{"https://www.kugou.com/yy/special/single/546903.html", Kugou, "special", "546903"},
 		{"https://activity.kugou.com/share/index.html?global_specialid=collection_3_2248574973_2_0", Kugou, "collection", "collection_3_2248574973_2_0"},
@@ -153,30 +150,15 @@ func TestRejectUnofficialHosts(t *testing.T) {
 		"https://t.kuwo.cn/a/b/",
 		"https://t.kuwo.cn.evil.test/AbC123",
 		"https://kbangserver.kuwo.cn/ksong.s?id=16",
-		"https://deezer.com.evil.test/playlist/5339620562",
+		"https://www.deezer.com/en/playlist/5339620562",
 		"https://api.deezer.com/playlist/5339620562",
-		"https://www.deezer.com/en/artist/not-a-playlist",
-		"https://www.deezer.com/track/not-a-number",
-		"https://link.deezer.com.evil.test/s/32zD0iv1H70Dypq0V2AHe",
-		"https://link.deezer.com/track/3135556",
-		"https://link.deezer.com/playlist/123",
-		"https://link.deezer.com/s/",
+		"https://link.deezer.com/s/32zD0iv1H70Dypq0V2AHe",
+		"https://deezer.page.link/kHcRMSzZEddVF4dd9",
+		"https://dzr.page.link/abc123",
 		"https%3A%2F%2Fevil.test%2Fplaylist%2F1",
 	} {
 		if _, err := Parse(input); err == nil {
 			t.Errorf("accepted %q", input)
-		}
-	}
-}
-
-func TestRetiredDeezerShareLinksExplainRecovery(t *testing.T) {
-	for _, input := range []string{
-		"https://deezer.page.link/kHcRMSzZEddVF4dd9",
-		"https://dzr.page.link/abc123",
-	} {
-		_, err := Parse(input)
-		if err == nil || !strings.Contains(err.Error(), "已停止跳转") || !strings.Contains(err.Error(), "link.deezer.com/s/") {
-			t.Errorf("expected a recovery hint for retired Deezer link %q, got %v", input, err)
 		}
 	}
 }
