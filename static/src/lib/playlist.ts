@@ -20,7 +20,20 @@ export interface ExportOptions {
   order: "normal" | "reverse";
 }
 
-const hosts: Record<string, string> = {
+export const playlistSources = [
+  "netease",
+  "qq",
+  "qishui",
+  "kugou",
+  "kuwo",
+  "bodian",
+  "migu",
+  "qianqian",
+  "deezer",
+] as const;
+type PlaylistSource = (typeof playlistSources)[number];
+
+const hosts: Partial<Record<string, PlaylistSource>> = {
   "music.163.com": "netease",
   "y.music.163.com": "netease",
   "163cn.tv": "netease",
@@ -55,7 +68,7 @@ const hosts: Record<string, string> = {
   "deezer.page.link": "deezer",
   "dzr.page.link": "deezer",
 };
-export function platformOf(input: string): string | undefined {
+export function platformOf(input: string): PlaylistSource | undefined {
   const escapedQuerySeparators = /\\u0026/gi;
   const inputs = [input];
   for (let depth = 0; depth < 2; depth++) {
