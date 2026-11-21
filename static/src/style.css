@@ -124,21 +124,22 @@ h1 {
   text-wrap: balance;
 }
 .source-list {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px;
-  margin: 12px 0;
+  margin: 9px 0;
   padding: 0;
   list-style: none;
   color: #333;
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 0;
+  line-height: 0;
+  text-wrap: balance;
 }
 .source-list li {
   display: inline-flex;
   align-items: baseline;
   gap: 6px;
+  margin: 3px;
+  vertical-align: top;
+  font-size: 14px;
+  line-height: 1.6;
   white-space: nowrap;
 }
 .source-prefix {
@@ -595,8 +596,8 @@ h1 {
   h1 {
     font-size: 24px;
   }
-  .source-list {
-    gap: 5px;
+  .source-list li {
+    margin: 2.5px;
   }
   .source-name {
     padding-inline: 5px;

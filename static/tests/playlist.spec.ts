@@ -25,9 +25,7 @@ test("keeps the page usable on desktop and mobile", async ({
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-    "音乐迁移",
-  );
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("音乐迁移");
   await expect(page.getByText("从", { exact: true })).toBeVisible();
   const sources = page.getByRole("list", { name: "歌单来源" });
   await expect(sources).toBeInViewport({ ratio: 1 });
@@ -44,7 +42,7 @@ test("keeps the page usable on desktop and mobile", async ({
   ]);
   const sourceBounds = (await sources.boundingBox())!;
   const destinations = page.getByText(
-    "至 Apple Music / YouTube Music / Spotify",
+    "迁移至 Apple Music / YouTube Music / Spotify",
     {
       exact: true,
     },
@@ -85,6 +83,17 @@ test("keeps the page usable on desktop and mobile", async ({
     path: `test-results/${testInfo.project.name}-initial.png`,
     fullPage: true,
   });
+  await page.setViewportSize({ width: 520, height: 844 });
+  const rowCounts = await sources.evaluate((list) => {
+    const rows = new Map<number, number>();
+    for (const item of list.children) {
+      const top = item.getBoundingClientRect().top;
+      rows.set(top, (rows.get(top) ?? 0) + 1);
+    }
+    return [...rows.values()].sort();
+  });
+  expect(rowCounts.length).toBeLessThanOrEqual(2);
+  if (rowCounts.length === 2) expect(rowCounts).toEqual([4, 5]);
   expect(errors).toEqual([]);
 });
 test("validates links and shows useful network errors", async ({ page }) => {
@@ -466,6 +475,11 @@ test("persists the language preference", async ({ page }, testInfo) => {
     "Music Transfer",
   );
   await expect(page.getByText("From", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Transfer to Apple Music / YouTube Music / Spotify", {
+      exact: true,
+    }),
+  ).toBeVisible();
   const sources = page.getByRole("list", {
     name: "Playlist sources",
   });
