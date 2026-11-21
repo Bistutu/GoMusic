@@ -72,6 +72,10 @@ func (s *Service) netEase(ctx context.Context, link musicurl.Link) (*models.Song
 		return nil, legacyErr
 	}
 	if legacyErr == nil {
+		// The legacy endpoint can report its preview length as the playlist total.
+		if list == nil && len(legacy.Tracks) == legacy.TotalCount && len(legacy.Warnings) == 0 {
+			legacy.Warnings = append(legacy.Warnings, "网易云主接口暂不可用，无法核对备用接口返回的歌单总数")
+		}
 		return preferPlaylist(list, legacy), nil
 	}
 	if list != nil && (len(list.Tracks) > 0 || primaryErr == nil) {

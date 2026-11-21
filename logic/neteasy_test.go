@@ -20,8 +20,8 @@ func TestFormatTrackPreservesHyphens(t *testing.T) {
 	}
 }
 
-// v6 接口失败（这里用 500 模拟）时，应降级到老接口 /api/playlist/detail。
-func TestNetEaseFallsBackToLegacyEndpoint(t *testing.T) {
+// 实测旧接口可能把预览条数当作歌单总数，主接口失败时无法据此确认完整性。
+func TestNetEaseLegacyResultWithoutPrimaryTotalIsUnconfirmed(t *testing.T) {
 	s := testService(func(r *http.Request) (*http.Response, error) {
 		if r.URL.Path == "/api/v6/playlist/detail" {
 			return &http.Response{StatusCode: 500, Body: io.NopCloser(strings.NewReader("err")), Header: make(http.Header), Request: r}, nil
@@ -41,8 +41,11 @@ func TestNetEaseFallsBackToLegacyEndpoint(t *testing.T) {
 	if err != nil {
 		t.Fatalf("fallback error = %v", err)
 	}
-	if list.Name != "备用歌单" || list.SongsCount != 2 || list.TotalCount != 2 || !list.Complete {
+	if list.Name != "备用歌单" || list.SongsCount != 2 || list.TotalCount != 2 || list.Complete {
 		t.Fatalf("list=%#v", list)
+	}
+	if len(list.Warnings) != 1 || !strings.Contains(list.Warnings[0], "无法核对") {
+		t.Fatalf("warnings=%q", list.Warnings)
 	}
 	if list.Tracks[0].Title != "歌曲甲" || list.Tracks[1].Artists[0] != "歌手乙" {
 		t.Fatalf("tracks=%#v", list.Tracks)
