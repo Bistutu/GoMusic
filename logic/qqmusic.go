@@ -36,22 +36,32 @@ func (s *Service) qqMusic(ctx context.Context, link musicurl.Link) (*models.Song
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-	legacy, legacyErr := s.qqLegacy(ctx, link.ID)
-	if legacyErr == nil {
-		best := preferPlaylist(primary, legacy)
-		if len(best.Tracks) < best.TotalCount {
-			best.Warnings = append(best.Warnings, "QQ 音乐未返回完整歌单，请检查公开权限或稍后重试")
+
+	// 主接口失败或不完整时，依次尝试所有备用接口，保留数据最完整的结果。
+	best := primary
+	failures := make([]error, 0, 5)
+	if primaryErr != nil {
+		failures = append(failures, fmt.Errorf("签名接口: %w", primaryErr))
+	}
+	for _, fallback := range s.qqFallbacks() {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
 		}
+		candidate, err := fallback.fetch(ctx, link.ID)
+		if err != nil {
+			failures = append(failures, fmt.Errorf("%s: %w", fallback.name, err))
+			continue
+		}
+		best = preferPlaylist(best, candidate)
+		if best != nil && best.TotalCount > 0 && len(best.Tracks) >= best.TotalCount {
+			return best, nil
+		}
+	}
+	if best != nil {
+		best.Warnings = append(best.Warnings, "QQ 音乐未返回完整歌单，请检查公开权限或稍后重试")
 		return best, nil
 	}
-	if primary != nil {
-		primary.Warnings = append(primary.Warnings, "QQ 音乐未返回完整歌单，请检查公开权限或稍后重试")
-		return primary, nil
-	}
-	if legacyErr == nil {
-		return legacy, nil
-	}
-	return nil, fmt.Errorf("QQ 音乐歌单暂时不可访问，请确认歌单已公开: %w", errors.Join(primaryErr, legacyErr))
+	return nil, fmt.Errorf("QQ 音乐歌单暂时不可访问，请确认歌单已公开: %w", errors.Join(failures...))
 }
 
 func (s *Service) qqPages(ctx context.Context, id int) (*models.SongList, error) {
