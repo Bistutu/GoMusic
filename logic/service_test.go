@@ -215,6 +215,61 @@ func TestQishuiSSRAndMalformedPage(t *testing.T) {
 		t.Fatal("blank page treated as empty playlist")
 	}
 }
+
+// 汽水 API 把曲目从 entity.track 改成了 entity.track_wrapper.track。
+// 两种结构都必须能解析，否则大歌单会因 API 路径失效而退回 HTML 预览，只拿到部分歌曲。
+func TestQishuiAPITrackWrapperStructure(t *testing.T) {
+	track := func(id, name string) map[string]any {
+		return map[string]any{"id": id, "name": name, "artists": []map[string]string{{"name": "歌手"}}}
+	}
+	// 新结构 track_wrapper.track + 旧结构 track 混在同一页，验证兼容且按游标翻页。
+	s := testService(func(r *http.Request) (*http.Response, error) {
+		var input struct {
+			Cursor string `json:"cursor"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&input)
+		if input.Cursor == "0" {
+			return response(r, map[string]any{
+				"playlist":    map[string]any{"title": "汽水", "count_tracks": 2},
+				"next_cursor": "1", "has_more": true,
+				"media_resources": []map[string]any{{
+					"type":   "track",
+					"entity": map[string]any{"track_wrapper": map[string]any{"track": track("1", "新结构")}},
+				}},
+			}), nil
+		}
+		return response(r, map[string]any{
+			"playlist": map[string]any{"title": "汽水", "count_tracks": 2},
+			"has_more": false,
+			"media_resources": []map[string]any{{
+				"type":   "track",
+				"entity": map[string]any{"track": track("2", "旧结构")},
+			}},
+		}), nil
+	})
+	list, err := s.Fetch(context.Background(), "https://music.douyin.com/qishui/share/playlist?playlist_id=1", Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !list.Complete || list.SongsCount != 2 || list.TotalCount != 2 {
+		t.Fatalf("list=%#v", list)
+	}
+	if list.Tracks[0].Title != "新结构" || list.Tracks[1].Title != "旧结构" {
+		t.Fatalf("tracks=%v/%v", list.Tracks[0].Title, list.Tracks[1].Title)
+	}
+}
+
+func TestQishuiHTMLTrackWrapperStructure(t *testing.T) {
+	html := `<script>_ROUTER_DATA = {"loaderData":{"playlist_page":{"playlistInfo":{"title":"test","count_tracks":1},"medias":[{"type":"track","entity":{"track_wrapper":{"track":{"id":"1","name":"包装曲目","artists":[{"name":"歌手"}]}}}}]}}}; window.untrustedCode();</script>`
+	list, err := parseQishui(strings.NewReader(html))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list.Tracks) != 1 || list.Tracks[0].Title != "包装曲目" || list.Tracks[0].Artists[0] != "歌手" {
+		t.Fatalf("list=%#v", list)
+	}
+}
+
 func TestKugouPreviewAndArtistParsing(t *testing.T) {
 	s := testService(func(r *http.Request) (*http.Response, error) {
 		body := `<script>window.$output = {"info":{"listinfo":{"name":"Kugou","count":50},"songs":[{"hash":"x","name":"Artist - Song - Version","singerinfo":[{"name":"Artist"}]}]}};other();</script>`
