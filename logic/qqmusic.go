@@ -52,6 +52,12 @@ func (s *Service) qqMusic(ctx context.Context, link musicurl.Link) (*models.Song
 			failures = append(failures, fmt.Errorf("%s: %w", fallback.name, err))
 			continue
 		}
+		// 部分接口对失效/私密歌单会返回 200 + 空壳（无名称、无歌曲、无总数），
+		// 这不是有效歌单，不能当成成功结果，否则会吞掉原本应有的错误语义。
+		if isEmptyQQPlaylist(candidate) {
+			failures = append(failures, fmt.Errorf("%s: 返回空的歌单数据", fallback.name))
+			continue
+		}
 		best = preferPlaylist(best, candidate)
 		if best != nil && best.TotalCount > 0 && len(best.Tracks) >= best.TotalCount {
 			return best, nil
@@ -205,6 +211,17 @@ func QQMusicDiscover(link string, detailed bool) (*models.SongList, error) {
 	defer cancel()
 	return NewService(nil, nil, nil, 10000, 4).Fetch(ctx, link, Options{Detailed: detailed})
 }
+
+// isEmptyQQPlaylist 判断备用接口是否返回了无效的空壳歌单。
+// 失效/私密歌单在明文接口上会返回 200 + 空数据（无名称、无歌曲），此时应视为失败，
+// 保持与基线一致的「歌单不可访问」错误语义，避免返回空列表误导调用方。
+func isEmptyQQPlaylist(list *models.SongList) bool {
+	if list == nil {
+		return true
+	}
+	return list.Name == "" && len(list.Tracks) == 0
+}
+
 func extractPlaylistID(input string) (int, error) {
 	link, err := musicurl.Parse(input)
 	if err != nil {

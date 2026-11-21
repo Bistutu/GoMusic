@@ -11,6 +11,7 @@ import (
 
 	"GoMusic/internal/musicurl"
 	"GoMusic/misc/httputil"
+	"GoMusic/misc/models"
 )
 
 func TestDecodeQQV8Playlist(t *testing.T) {
@@ -65,6 +66,51 @@ func TestStripQQJSONP(t *testing.T) {
 	}
 	if _, err = stripQQJSONP([]byte(`{"code":0}`)); err == nil {
 		t.Fatal("expected error for plain JSON")
+	}
+}
+
+func TestIsEmptyQQPlaylist(t *testing.T) {
+	cases := []struct {
+		name string
+		list *models.SongList
+		want bool
+	}{
+		{"nil", nil, true},
+		{"空壳(明文接口死歌单)", &models.SongList{}, true},
+		{"仅有名称", &models.SongList{Name: "空歌单"}, false},
+		{"有歌曲但无名称", &models.SongList{Tracks: []models.Track{{Title: "歌"}}}, false},
+		{"正常歌单", &models.SongList{Name: "测试", TotalCount: 1, Tracks: []models.Track{{Title: "歌"}}}, false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := isEmptyQQPlaylist(c.list); got != c.want {
+				t.Fatalf("isEmptyQQPlaylist() = %v, want %v", got, c.want)
+			}
+		})
+	}
+}
+
+// TestQQMusicDeadPlaylistStillErrors 回归测试：失效/私密歌单即使明文接口返回
+// 200 + 空壳，也必须报错而非返回空列表（与基线行为一致）。
+// 运行：GOMUSIC_LIVE_TEST=1 go test ./logic -run TestQQMusicDeadPlaylistStillErrors -v
+func TestQQMusicDeadPlaylistStillErrors(t *testing.T) {
+	if os.Getenv("GOMUSIC_LIVE_TEST") != "1" {
+		t.Skip("set GOMUSIC_LIVE_TEST=1 for public upstream smoke tests")
+	}
+	service := NewService(nil, nil, nil, 10000, 4)
+	link, err := musicurl.Parse("https://i.y.qq.com/n2/m/share/details/taoge.html?id=9094523921")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+
+	list, err := service.qqMusic(ctx, link)
+	if err == nil {
+		t.Fatalf("dead playlist should error, got list: %#v", list)
+	}
+	if !strings.Contains(err.Error(), "暂时不可访问") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
