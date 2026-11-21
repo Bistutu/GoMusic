@@ -26,11 +26,12 @@ test("keeps the page usable on desktop and mobile", async ({
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-    "迁移公开歌单",
+    "音乐迁移",
   );
+  await expect(page.getByText("从", { exact: true })).toBeVisible();
   const sources = page.getByRole("list", { name: "歌单来源" });
   await expect(sources).toBeInViewport({ ratio: 1 });
-  await expect(sources.getByRole("listitem")).toHaveText([
+  await expect(sources.locator(".source-name")).toHaveText([
     "网易云音乐",
     "QQ 音乐",
     "汽水音乐",
@@ -462,8 +463,9 @@ test("persists the language preference", async ({ page }, testInfo) => {
     page.getByRole("button", { name: "Get playlist", exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-    "Transfer public playlists",
+    "Music Transfer",
   );
+  await expect(page.getByText("From", { exact: true })).toBeVisible();
   const sources = page.getByRole("list", {
     name: "Playlist sources",
   });

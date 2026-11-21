@@ -109,8 +109,11 @@ const errorMessage = computed(() => {
       <div class="page-intro">
         <h1>{{ t.title }}</h1>
         <ul class="source-list" role="list" :aria-label="t.sources">
-          <li v-for="source in playlistSources" :key="source">
-            {{ t[source] }}
+          <li v-for="(source, index) in playlistSources" :key="source">
+            <span v-if="index === 0" class="source-prefix" aria-hidden="true">
+              {{ t.from }}
+            </span>
+            <span class="source-name">{{ t[source] }}</span>
           </li>
         </ul>
         <p class="playlist-destinations">{{ t.destinations }}</p>

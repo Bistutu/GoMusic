@@ -136,10 +136,18 @@ h1 {
   line-height: 1.6;
 }
 .source-list li {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  white-space: nowrap;
+}
+.source-prefix {
+  color: #575757;
+}
+.source-name {
   padding: 2px 7px;
   border-radius: 4px;
   background: #f3f3f3;
-  white-space: nowrap;
 }
 .input-label {
   display: block;
@@ -590,7 +598,7 @@ h1 {
   .source-list {
     gap: 5px;
   }
-  .source-list li {
+  .source-name {
     padding-inline: 5px;
   }
   .link-input {

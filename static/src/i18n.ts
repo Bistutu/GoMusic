@@ -2,7 +2,7 @@ import { lastCompletedWeekDate } from "./lib/dates";
 
 const sponsorDate = lastCompletedWeekDate();
 const zh = {
-  title: "迁移公开歌单",
+  title: "音乐迁移",
   detected: "已识别平台：",
   order: "歌曲顺序",
   results: "获取结果",
@@ -15,6 +15,7 @@ const zh = {
   transferTools: "迁移工具：",
   guide: "使用指南",
   language: "Switch to English",
+  from: "从",
   destinations: "至 Apple\u00a0Music / YouTube\u00a0Music / Spotify",
   sources: "歌单来源",
   netease: "网易云音乐",
@@ -88,7 +89,7 @@ const zh = {
   sponsorAmount: "赞赏金额 / 元",
 };
 const en: Record<keyof typeof zh, string> = {
-  title: "Transfer public playlists",
+  title: "Music Transfer",
   detected: "Detected platform: ",
   order: "Track order",
   results: "Results",
@@ -101,6 +102,7 @@ const en: Record<keyof typeof zh, string> = {
   transferTools: "Transfer tools:",
   guide: "How it works",
   language: "切换到中文",
+  from: "From",
   destinations: "to Apple\u00a0Music / YouTube\u00a0Music / Spotify",
   sources: "Playlist sources",
   netease: "NetEase Cloud Music",
