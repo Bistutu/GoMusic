@@ -108,21 +108,12 @@ const errorMessage = computed(() => {
     <main>
       <div class="page-intro">
         <h1>{{ t.title }}</h1>
-        <div class="supported-sources">
-          <p id="playlist-sources-label" class="source-label">
-            {{ t.sources }}
-          </p>
-          <ul
-            class="source-list"
-            role="list"
-            aria-labelledby="playlist-sources-label"
-          >
-            <li v-for="source in playlistSources" :key="source">
-              {{ t[source] }}
-            </li>
-          </ul>
-        </div>
-        <p class="page-description">{{ t.subtitle }}</p>
+        <ul class="source-list" role="list" :aria-label="t.sources">
+          <li v-for="source in playlistSources" :key="source">
+            {{ t[source] }}
+          </li>
+        </ul>
+        <p class="playlist-destinations">{{ t.destinations }}</p>
       </div>
       <PlaylistForm
         v-model="link"

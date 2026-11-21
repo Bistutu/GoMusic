@@ -26,9 +26,9 @@ test("keeps the page usable on desktop and mobile", async ({
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-    "歌单导出与迁移",
+    "迁移公开歌单",
   );
-  const sources = page.getByRole("list", { name: "支持的公开歌单来源" });
+  const sources = page.getByRole("list", { name: "歌单来源" });
   await expect(sources).toBeInViewport({ ratio: 1 });
   await expect(sources.getByRole("listitem")).toHaveText([
     "网易云音乐",
@@ -42,12 +42,15 @@ test("keeps the page usable on desktop and mobile", async ({
     "Deezer",
   ]);
   const sourceBounds = (await sources.boundingBox())!;
-  const description = page.getByText("复制歌曲列表或下载 TXT", {
-    exact: false,
-  });
+  const destinations = page.getByText(
+    "至 Apple Music / YouTube Music / Spotify",
+    {
+      exact: true,
+    },
+  );
   const input = page.getByLabel("公开歌单链接或酷狗码");
   expect(sourceBounds.y + sourceBounds.height).toBeLessThan(
-    (await description.boundingBox())!.y,
+    (await destinations.boundingBox())!.y,
   );
   expect(sourceBounds.y + sourceBounds.height).toBeLessThan(
     (await input.boundingBox())!.y,
@@ -459,10 +462,10 @@ test("persists the language preference", async ({ page }, testInfo) => {
     page.getByRole("button", { name: "Get playlist", exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-    "Export and transfer playlists",
+    "Transfer public playlists",
   );
   const sources = page.getByRole("list", {
-    name: "Supported public playlist sources",
+    name: "Playlist sources",
   });
   await expect(sources).toBeInViewport({ ratio: 1 });
   await expect(sources.getByRole("listitem")).toHaveCount(9);

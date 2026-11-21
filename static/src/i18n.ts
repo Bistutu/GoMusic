@@ -2,7 +2,7 @@ import { lastCompletedWeekDate } from "./lib/dates";
 
 const sponsorDate = lastCompletedWeekDate();
 const zh = {
-  title: "歌单导出与迁移",
+  title: "迁移公开歌单",
   detected: "已识别平台：",
   order: "歌曲顺序",
   results: "获取结果",
@@ -15,9 +15,8 @@ const zh = {
   transferTools: "迁移工具：",
   guide: "使用指南",
   language: "Switch to English",
-  subtitle:
-    "复制歌曲列表或下载 TXT，再用迁移工具导入 Apple\u00a0Music、YouTube\u00a0Music 或 Spotify。",
-  sources: "支持的公开歌单来源",
+  destinations: "至 Apple\u00a0Music / YouTube\u00a0Music / Spotify",
+  sources: "歌单来源",
   netease: "网易云音乐",
   qq: "QQ 音乐",
   qishui: "汽水音乐",
@@ -89,7 +88,7 @@ const zh = {
   sponsorAmount: "赞赏金额 / 元",
 };
 const en: Record<keyof typeof zh, string> = {
-  title: "Export and transfer playlists",
+  title: "Transfer public playlists",
   detected: "Detected platform: ",
   order: "Track order",
   results: "Results",
@@ -102,9 +101,8 @@ const en: Record<keyof typeof zh, string> = {
   transferTools: "Transfer tools:",
   guide: "How it works",
   language: "切换到中文",
-  subtitle:
-    "Copy the track list or download a TXT file to use with transfer tools for Apple\u00a0Music, YouTube\u00a0Music, or Spotify.",
-  sources: "Supported public playlist sources",
+  destinations: "to Apple\u00a0Music / YouTube\u00a0Music / Spotify",
+  sources: "Playlist sources",
   netease: "NetEase Cloud Music",
   qq: "QQ Music",
   qishui: "Qishui",
