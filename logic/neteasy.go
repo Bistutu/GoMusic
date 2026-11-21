@@ -52,8 +52,25 @@ func (s *Service) netEase(ctx context.Context, link musicurl.Link) (*models.Song
 	if err != nil {
 		return nil, err
 	}
+	list, primaryErr := s.netEaseV6(ctx, link.ID)
+	if primaryErr == nil {
+		return list, nil
+	}
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	// v6 接口失败时降级到仍存活的老接口 /api/playlist/detail。
+	// 老接口一次返回完整 tracks（含歌名与歌手），无需再逐批请求歌曲详情。
+	if legacy, legacyErr := s.netEaseLegacy(ctx, link.ID); legacyErr == nil {
+		return legacy, nil
+	}
+	return nil, primaryErr
+}
+
+// netEaseV6 使用 v6 详情接口取 trackIds，再按批次补齐歌曲元数据。
+func (s *Service) netEaseV6(ctx context.Context, id string) (*models.SongList, error) {
 	body, _, err := s.HTTP.Do(ctx, http.MethodPost, "https://music.163.com/api/v6/playlist/detail",
-		strings.NewReader(url.Values{"id": {link.ID}, "n": {"100000"}}.Encode()), nil)
+		strings.NewReader(url.Values{"id": {id}, "n": {"100000"}}.Encode()), nil)
 	if err != nil {
 		return nil, fmt.Errorf("请求网易云歌单失败: %w", err)
 	}
@@ -108,6 +125,59 @@ func (s *Service) netEase(ctx context.Context, link musicurl.Link) (*models.Song
 		if track, ok := tracks[id]; ok {
 			list.Tracks = append(list.Tracks, track)
 		}
+	}
+	return list, nil
+}
+
+// netEaseLegacy 使用仍存活的老接口 /api/playlist/detail 获取完整歌单。
+// 该接口一次返回带歌名和歌手的 tracks，作为 v6 接口故障时的备用路径。
+func (s *Service) netEaseLegacy(ctx context.Context, id string) (*models.SongList, error) {
+	body, _, err := s.HTTP.Do(ctx, http.MethodGet, "https://music.163.com/api/playlist/detail?id="+url.QueryEscape(id), nil,
+		map[string]string{"Referer": "https://music.163.com/"})
+	if err != nil {
+		return nil, fmt.Errorf("请求网易云备用接口失败: %w", err)
+	}
+	var metadata struct {
+		Code   int `json:"code"`
+		Result *struct {
+			Name       string    `json:"name"`
+			TrackCount int       `json:"trackCount"`
+			Tracks     []netSong `json:"tracks"`
+		} `json:"result"`
+	}
+	if err = json.Unmarshal(body, &metadata); err != nil {
+		return nil, fmt.Errorf("网易云备用接口返回了无效数据: %w", err)
+	}
+	if metadata.Code == 401 || metadata.Code == 403 {
+		return nil, fmt.Errorf("%w: 该网易云歌单未公开，请先设置为公开", ErrPrivatePlaylist)
+	}
+	if metadata.Code != 200 || metadata.Result == nil || metadata.Result.Name == "" {
+		return nil, fmt.Errorf("网易云备用接口歌单不存在或暂时不可访问 (code=%d)", metadata.Code)
+	}
+	result := metadata.Result
+	list := &models.SongList{Name: result.Name, TotalCount: result.TrackCount, Tracks: make([]models.Track, 0, len(result.Tracks))}
+	seen := map[string]bool{}
+	for _, song := range result.Tracks {
+		if song.Name == "" {
+			continue
+		}
+		track := song.track()
+		if track.ID != "" && track.ID != "0" {
+			if seen[track.ID] {
+				continue
+			}
+			seen[track.ID] = true
+		}
+		list.Tracks = append(list.Tracks, track)
+		if len(list.Tracks) >= s.MaxSongs {
+			break
+		}
+	}
+	if len(list.Tracks) == 0 {
+		return nil, fmt.Errorf("网易云备用接口未返回有效歌曲")
+	}
+	if list.TotalCount < len(list.Tracks) {
+		list.TotalCount = len(list.Tracks)
 	}
 	return list, nil
 }
