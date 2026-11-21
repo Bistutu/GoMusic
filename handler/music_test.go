@@ -69,19 +69,29 @@ func TestRequestValidation(t *testing.T) {
 	}
 }
 
-func TestRetiredDeezerShareHintReachesAPI(t *testing.T) {
+func TestUnsupportedDeezerLinksReturnBadRequest(t *testing.T) {
 	cfg, _ := config.FromEnv(func(string) string { return "" })
 	router := NewRouterWithService(logic.NewService(nil, nil, nil, 10000, 4), cfg, nil)
-	request := httptest.NewRequest("POST", "/api/v1/songlists", strings.NewReader(`{"url":"https://deezer.page.link/abc123"}`))
-	request.Header.Set("Content-Type", "application/json")
-	recorder := httptest.NewRecorder()
-	router.ServeHTTP(recorder, request)
-	var result models.Result
-	if err := json.Unmarshal(recorder.Body.Bytes(), &result); err != nil {
-		t.Fatal(err)
-	}
-	if recorder.Code != http.StatusBadRequest || !strings.Contains(result.Msg, "旧版 page.link 短链已停止跳转") || !strings.Contains(result.Msg, "link.deezer.com/s/") {
-		t.Fatalf("retired Deezer link recovery hint was lost: status=%d body=%s", recorder.Code, recorder.Body.String())
+	for _, link := range []string{
+		"https://www.deezer.com/en/playlist/5339620562",
+		"https://link.deezer.com/s/32zD0iv1H70Dypq0V2AHe",
+		"https://deezer.page.link/abc123",
+	} {
+		payload, err := json.Marshal(map[string]string{"url": link})
+		if err != nil {
+			t.Fatal(err)
+		}
+		request := httptest.NewRequest(http.MethodPost, "/api/v1/songlists", strings.NewReader(string(payload)))
+		request.Header.Set("Content-Type", "application/json")
+		recorder := httptest.NewRecorder()
+		router.ServeHTTP(recorder, request)
+		var result models.Result
+		if err := json.Unmarshal(recorder.Body.Bytes(), &result); err != nil {
+			t.Fatal(err)
+		}
+		if recorder.Code != http.StatusBadRequest || result.Data != nil {
+			t.Fatalf("unsupported link %q: status=%d body=%s", link, recorder.Code, recorder.Body.String())
+		}
 	}
 }
 

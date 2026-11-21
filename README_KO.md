@@ -8,7 +8,7 @@
 
 </div>
 
-NetEase Cloud Music, QQ Music, Qishui, Kugou, Kuwo, Bodian, Migu, Qianqian 및 Deezer의 공개 플레이리스트를 지원합니다. 모든 음악 소스는 별도의 플랫폼 인증 정보 없이 사용할 수 있습니다. 웹사이트는 중국어와 영어를 지원합니다.
+NetEase Cloud Music, QQ Music, Qishui, Kugou, Kuwo, Bodian, Migu 및 Qianqian의 공개 플레이리스트를 지원합니다. 모든 음악 소스는 별도의 플랫폼 인증 정보 없이 사용할 수 있습니다. 웹사이트는 중국어와 영어를 지원합니다.
 
 <table align="center"><tr><td>
 <a href="misc/images/gomusic-en-desktop.png"><img src="misc/images/gomusic-en-desktop.png" alt="GoMusic 영어 인터페이스: Kugou 코드와 편집 가능한 곡 목록" width="600" /></a>

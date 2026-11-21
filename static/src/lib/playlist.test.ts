@@ -60,20 +60,18 @@ it("detects the expanded Chinese providers and link formats", () => {
       "https://beta-luna.douyin.com/luna/playlist/detail?playlist_id=1",
     ),
   ).toBe("qishui");
-  expect(platformOf("https://www.deezer.com/en/playlist/5339620562")).toBe(
-    "deezer",
-  );
-  expect(platformOf("https://deezer.page.link/abc123")).toBe("deezer");
-  expect(platformOf("https://dzr.page.link/abc123")).toBe("deezer");
-  expect(
-    platformOf("https://deezer.page.link.evil.test/abc123"),
-  ).toBeUndefined();
-  expect(platformOf("https://link.deezer.com/s/32zD0iv1H70Dypq0V2AHe")).toBe(
-    "deezer",
-  );
-  expect(platformOf("https://api.deezer.com/playlist/5339620562")).toBe(
-    undefined,
-  );
+});
+
+it("does not detect Deezer as a supported source", () => {
+  for (const link of [
+    "https://www.deezer.com/en/playlist/5339620562",
+    "https://link.deezer.com/s/32zD0iv1H70Dypq0V2AHe",
+    "https://api.deezer.com/playlist/5339620562",
+    "https://deezer.page.link/abc123",
+    "https://dzr.page.link/abc123",
+  ]) {
+    expect(platformOf(link)).toBeUndefined();
+  }
 });
 describe("export formatting", () => {
   const tracks = [

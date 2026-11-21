@@ -38,7 +38,6 @@ test("keeps the page usable on desktop and mobile", async ({
     "波点音乐",
     "咪咕音乐",
     "千千音乐",
-    "Deezer",
   ]);
   const sourceBounds = (await sources.boundingBox())!;
   const destinations = page.getByText(
@@ -93,7 +92,7 @@ test("keeps the page usable on desktop and mobile", async ({
     return [...rows.values()].sort();
   });
   expect(rowCounts.length).toBeLessThanOrEqual(2);
-  if (rowCounts.length === 2) expect(rowCounts).toEqual([4, 5]);
+  if (rowCounts.length === 2) expect(rowCounts).toEqual([4, 4]);
   expect(errors).toEqual([]);
 });
 test("validates links and shows useful network errors", async ({ page }) => {
@@ -231,52 +230,29 @@ test("accepts a Bodian public playlist share link", async ({
     fullPage: true,
   });
 });
-test("recognizes a Deezer short share link in the shared input", async ({
+test("rejects Deezer links before making a playlist request", async ({
   page,
 }) => {
-  await page.goto("/");
-  await page
-    .getByLabel("公开歌单链接或酷狗码")
-    .fill("https://link.deezer.com/s/32zD0iv1H70Dypq0V2AHe");
-  await expect(page.getByText("已识别平台：Deezer")).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "获取歌单", exact: true }),
-  ).toBeEnabled();
-});
-
-test("explains retired Deezer links in both languages", async ({
-  page,
-}, testInfo) => {
-  const shareURL = "https://deezer.page.link/kHcRMSzZEddVF4dd9";
-  let receivedURL = "";
-  await page.route("**/api/v1/songlists", async (route) => {
-    receivedURL = route.request().postDataJSON().url;
-    await route.fulfill({
-      status: 400,
-      json: {
-        code: -1,
-        msg: "Deezer 旧版 page.link 短链已停止跳转，请重新复制当前分享链接",
-        data: null,
-      },
-    });
+  let requests = 0;
+  await page.route("**/api/v1/songlists", (route) => {
+    requests++;
+    return route.abort();
   });
   await page.goto("/");
-  await page.getByLabel("公开歌单链接或酷狗码").fill(shareURL);
-  await expect(page.getByText("已识别平台：Deezer")).toBeVisible();
-  await page.getByRole("button", { name: "获取歌单", exact: true }).click();
-  await expect(page.getByRole("alert")).toContainText("旧版分享链接已失效");
-  await expect(page.getByRole("alert")).toContainText(
-    "重新复制当前公开歌单分享链接",
-  );
-  expect(receivedURL).toBe(shareURL);
-  await page.screenshot({
-    path: `test-results/${testInfo.project.name}-deezer-retired-link.png`,
-    fullPage: true,
-  });
+  const input = page.getByLabel("公开歌单链接或酷狗码");
+  for (const link of [
+    "https://www.deezer.com/en/playlist/5339620562",
+    "https://link.deezer.com/s/32zD0iv1H70Dypq0V2AHe",
+  ]) {
+    await input.fill(link);
+    await page.getByRole("button", { name: "获取歌单", exact: true }).click();
+    await expect(page.getByRole("alert")).toContainText("支持平台");
+  }
   await page.getByRole("button", { name: "Switch to English" }).click();
   await expect(page.getByRole("alert")).toContainText(
-    "This old Deezer share link no longer works",
+    "Enter a supported public playlist link",
   );
+  expect(requests).toBe(0);
 });
 
 test("formats locally, reverses, edits and downloads the selected text", async ({
@@ -484,7 +460,7 @@ test("persists the language preference", async ({ page }, testInfo) => {
     name: "Playlist sources",
   });
   await expect(sources).toBeInViewport({ ratio: 1 });
-  await expect(sources.getByRole("listitem")).toHaveCount(9);
+  await expect(sources.getByRole("listitem")).toHaveCount(8);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,

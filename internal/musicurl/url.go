@@ -18,7 +18,6 @@ const (
 	Migu     = "migu"
 	Qianqian = "qianqian"
 	Bodian   = "bodian"
-	Deezer   = "deezer"
 )
 
 var links = regexp.MustCompile(`(?i)https?://[^\s<>"'\x{3000}\x{200b}，。；！、（）【】《》〉,;!()\]]+`)
@@ -57,10 +56,6 @@ var miguHashPlaylistPath = regexp.MustCompile(`^/playlist/?$`)
 var qianqianPlaylistPath = regexp.MustCompile(`^/songlist/([0-9]+)(?:/|$)`)
 var bodianCollectionPath = regexp.MustCompile(`^/m/bodian/collection\.html/?$`)
 var bodianSourceID = regexp.MustCompile(`^[0-9]{1,3}$`)
-var deezerPlaylistPath = regexp.MustCompile(`^/(?:[a-z]{2}(?:-[a-z]{2})?/)?playlist/([0-9]+)(?:/|$)`)
-var deezerAlbumPath = regexp.MustCompile(`^/(?:[a-z]{2}(?:-[a-z]{2})?/)?album/([0-9]+)(?:/|$)`)
-var deezerTrackPath = regexp.MustCompile(`^/(?:[a-z]{2}(?:-[a-z]{2})?/)?track/([0-9]+)(?:/|$)`)
-var deezerShortSharePath = regexp.MustCompile(`^/s/[A-Za-z0-9_-]{4,128}/?$`)
 var kugouSpecial = regexp.MustCompile(`/special/single/([0-9]+)`)
 var kugouGcid = regexp.MustCompile(`/songlist/(gcid_[A-Za-z0-9]+)`)
 var kugouCollection = regexp.MustCompile(`^collection_[0-9]+_[0-9]+_[0-9]+_[0-9]+$`)
@@ -76,7 +71,6 @@ var hosts = map[string]string{
 	"music.migu.cn": Migu, "app.c.nf.migu.cn": Migu,
 	"music.91q.com": Qianqian,
 	"h5app.kuwo.cn": Bodian, "bodian.kuwo.cn": Bodian, "bd-api.kuwo.cn": Bodian,
-	"deezer.com": Deezer, "www.deezer.com": Deezer, "link.deezer.com": Deezer, "api.deezer.com": Deezer,
 }
 
 type Link struct {
@@ -91,7 +85,7 @@ func Validate(u *url.URL) (string, error) {
 	host := strings.ToLower(u.Host)
 	p, ok := hosts[host]
 	if !ok {
-		return "", errors.New("仅支持网易云音乐、QQ 音乐、汽水音乐、酷狗音乐、酷我音乐、咪咕音乐、千千音乐、波点音乐和 Deezer 的官方链接")
+		return "", errors.New("仅支持网易云音乐、QQ 音乐、汽水音乐、酷狗音乐、酷我音乐、咪咕音乐、千千音乐和波点音乐的官方链接")
 	}
 	if (host == "api.qishui.com" || host == "api5-lf.qishui.com") &&
 		(!strings.EqualFold(u.Scheme, "https") || !qishuiPlaylistDetailPath.MatchString(u.Path)) {
@@ -169,12 +163,6 @@ func parseLinkInput(input string) (Link, error) {
 		candidate = strings.TrimRight(candidate, "，。；！、）】》〉,;!)\u200b")
 		u, err := url.Parse(candidate)
 		if err != nil {
-			continue
-		}
-		legacyDeezerHost := strings.ToLower(u.Hostname())
-		validScheme := strings.EqualFold(u.Scheme, "https") || strings.EqualFold(u.Scheme, "http")
-		if validScheme && u.User == nil && u.Opaque == "" && u.Port() == "" && (legacyDeezerHost == "deezer.page.link" || legacyDeezerHost == "dzr.page.link") {
-			routeErr = errors.New("Deezer 旧版 page.link 短链已停止跳转，请重新复制当前公开歌单分享链接（如 link.deezer.com/s/...）或粘贴 deezer.com 歌单链接")
 			continue
 		}
 		provider, err := Validate(u)
@@ -354,33 +342,6 @@ func parseLinkInput(input string) (Link, error) {
 			if link.ID == "" || !bodianCollectionPath.MatchString(path) || !digits.MatchString(link.ID) || !sourceValid {
 				routeErr = errors.New("请使用波点音乐的公开歌单分享链接")
 				continue
-			}
-		}
-		if provider == Deezer {
-			host := strings.ToLower(u.Hostname())
-			if host == "link.deezer.com" {
-				if !deezerShortSharePath.MatchString(path) {
-					routeErr = errors.New("请使用 Deezer 的公开歌单分享链接")
-					continue
-				}
-				link.ID = ""
-			} else if host != "deezer.com" && host != "www.deezer.com" {
-				routeErr = errors.New("请使用 Deezer 的公开歌单分享链接")
-				continue
-			} else {
-				if match := deezerPlaylistPath.FindStringSubmatch(path); len(match) > 1 {
-					link.Kind = "playlist"
-					link.ID = match[1]
-				} else if match := deezerAlbumPath.FindStringSubmatch(path); len(match) > 1 {
-					link.Kind = "album"
-					link.ID = match[1]
-				} else if match := deezerTrackPath.FindStringSubmatch(path); len(match) > 1 {
-					link.Kind = "track"
-					link.ID = match[1]
-				} else {
-					routeErr = errors.New("请使用 Deezer 的公开歌单分享链接")
-					continue
-				}
 			}
 		}
 		if provider == Kugou {

@@ -134,54 +134,6 @@ func TestBodianFallsBackToBrowserParameterProfile(t *testing.T) {
 	}
 }
 
-func TestDeezerRecoversFromDetailEmbeddedTracks(t *testing.T) {
-	service := testService(func(r *http.Request) (*http.Response, error) {
-		if r.URL.Path == "/playlist/1" {
-			return response(r, map[string]any{
-				"id": 1, "title": "Deezer list", "public": true, "nb_tracks": 1,
-				"tracks": map[string]any{"total": 1, "data": deezerRows(7, 1)},
-			}), nil
-		}
-		if r.URL.Path == "/playlist/1/tracks" {
-			return nil, fmt.Errorf("tracks route down")
-		}
-		return nil, fmt.Errorf("unexpected Deezer request: %s", r.URL)
-	})
-	list, err := service.Fetch(context.Background(), "https://www.deezer.com/playlist/1", Options{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if list.Name != "Deezer list" || list.SongsCount != 1 || list.Tracks[0].ID != "7" || !list.Complete {
-		t.Fatalf("unexpected Deezer detail fallback result: %#v", list)
-	}
-}
-
-func TestDeezerRequiresVerifiedPublicMetadataBeforeFetchingTracks(t *testing.T) {
-	for _, failure := range []string{"unavailable", "malformed", "missing public flag", "wrong id"} {
-		t.Run(failure, func(t *testing.T) {
-			service := testService(func(r *http.Request) (*http.Response, error) {
-				if r.URL.Path != "/playlist/1" {
-					t.Fatalf("tracks requested before confirming public metadata: %s", r.URL.Path)
-				}
-				switch failure {
-				case "unavailable":
-					return nil, fmt.Errorf("detail route down")
-				case "malformed":
-					return htmlResponse(r, "<html>detail unavailable</html>"), nil
-				case "missing public flag":
-					return response(r, map[string]any{"id": 1, "nb_tracks": 1}), nil
-				default:
-					return response(r, map[string]any{"id": 2, "public": true, "nb_tracks": 1}), nil
-				}
-			})
-			list, err := service.Fetch(context.Background(), "https://www.deezer.com/playlist/1", Options{})
-			if err == nil || list != nil {
-				t.Fatalf("list=%#v err=%v", list, err)
-			}
-		})
-	}
-}
-
 func TestNetEaseSongDetailFallsBackToLegacyRoute(t *testing.T) {
 	service := testService(func(r *http.Request) (*http.Response, error) {
 		switch r.URL.Path {
