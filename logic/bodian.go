@@ -149,14 +149,7 @@ func (s *Service) bodian(ctx context.Context, link musicurl.Link) (*models.SongL
 			break
 		}
 		count := min(bodianPageSize, s.MaxSongs-len(list.Tracks))
-		query := url.Values{}
-		query.Set("source", source)
-		query.Set("pn", strconv.Itoa(pageNo))
-		query.Set("rn", strconv.Itoa(count))
-		query.Set("uid", "-1")
-		query.Set("token", "")
-		address := bodianAPIBase + "/" + url.PathEscape(link.ID) + "/musicList?" + query.Encode()
-		body, _, err := s.HTTP.Do(ctx, http.MethodGet, address, nil, headers)
+		body, err := s.bodianMusicList(ctx, link.ID, source, pageNo, count, headers)
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
@@ -259,15 +252,67 @@ func (s *Service) bodian(ctx context.Context, link musicurl.Link) (*models.SongL
 	return list, nil
 }
 
+// bodianMusicList tries the current parameter profile first, then the exact
+// browser profile observed on the official Bodian share page (source/pn/rn
+// only). The two profiles use the same official host but different parameter
+// validation, so a validation change does not take down both paths.
+func (s *Service) bodianMusicList(ctx context.Context, id, source string, pageNo, count int, headers map[string]string) ([]byte, error) {
+	profiles := []url.Values{
+		{"source": {source}, "pn": {strconv.Itoa(pageNo)}, "rn": {strconv.Itoa(count)}, "uid": {"-1"}, "token": {""}},
+		{"source": {source}, "pn": {strconv.Itoa(pageNo)}, "rn": {strconv.Itoa(count)}},
+	}
+	var last error
+	for _, query := range profiles {
+		address := bodianAPIBase + "/" + url.PathEscape(id) + "/musicList?" + query.Encode()
+		body, _, err := s.HTTP.Do(ctx, http.MethodGet, address, nil, headers)
+		if err != nil {
+			last = err
+			continue
+		}
+		var status struct {
+			Code json.RawMessage `json:"code"`
+			Msg  string          `json:"msg"`
+		}
+		if json.Unmarshal(body, &status) == nil && bodianStatus(status.Code, status.Msg) == nil {
+			return body, nil
+		}
+		last = fmt.Errorf("波点分页接口返回无效状态: %s", strings.TrimSpace(status.Msg))
+	}
+	if last == nil {
+		last = fmt.Errorf("波点音乐未返回分页数据")
+	}
+	return nil, last
+}
+
 func (s *Service) bodianInfo(ctx context.Context, id, source string, headers map[string]string) (*bodianPlaylistInfo, error) {
-	query := url.Values{}
-	query.Set("source", source)
-	query.Set("uid", "-1")
-	query.Set("token", "")
-	address := bodianAPIBase + "/info/" + url.PathEscape(id) + "?" + query.Encode()
-	body, _, err := s.HTTP.Do(ctx, http.MethodGet, address, nil, headers)
-	if err != nil {
-		return nil, err
+	profiles := []url.Values{
+		{"source": {source}, "uid": {"-1"}, "token": {""}},
+		{"source": {source}},
+	}
+	var body []byte
+	var last error
+	for _, query := range profiles {
+		address := bodianAPIBase + "/info/" + url.PathEscape(id) + "?" + query.Encode()
+		candidate, _, err := s.HTTP.Do(ctx, http.MethodGet, address, nil, headers)
+		if err != nil {
+			last = err
+			continue
+		}
+		var status struct {
+			Code json.RawMessage `json:"code"`
+			Msg  string          `json:"msg"`
+		}
+		if json.Unmarshal(candidate, &status) == nil && bodianStatus(status.Code, status.Msg) == nil {
+			body = candidate
+			break
+		}
+		last = fmt.Errorf("波点元信息接口返回无效状态: %s", strings.TrimSpace(status.Msg))
+	}
+	if len(body) == 0 {
+		if last == nil {
+			last = fmt.Errorf("波点音乐未返回元信息")
+		}
+		return nil, last
 	}
 	var response bodianInfoResponse
 	if err := json.Unmarshal(body, &response); err != nil {

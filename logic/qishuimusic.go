@@ -75,6 +75,44 @@ func (m qishuiMedia) track() *qishuiTrack {
 	return m.Entity.Track
 }
 
+// qishuiAPIEndpoints are official Qishui/Luna hosts observed serving the same
+// public playlist detail protocol. Rotating them keeps pagination alive when a
+// single CDN or DNS name is unavailable; the share-page parser remains a
+// separate, independent fallback.
+var qishuiAPIEndpoints = []string{
+	"https://beta-luna.douyin.com/luna/playlist/detail",
+	"https://api.qishui.com/luna/playlist/detail",
+	"https://api5-lf.qishui.com/luna/playlist/detail",
+}
+
+// qishuiPageBody tries every official host for one cursor page. A fresh payload
+// reader is required for each attempt because the HTTP client consumes it.
+func (s *Service) qishuiPageBody(ctx context.Context, payload []byte) ([]byte, error) {
+	failures := make([]error, 0, len(qishuiAPIEndpoints))
+	for _, endpoint := range qishuiAPIEndpoints {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		body, _, err := s.HTTP.Do(ctx, http.MethodPost, endpoint, bytes.NewReader(payload),
+			map[string]string{"Content-Type": "application/json", "User-Agent": "Luna/19.1.0 Android"})
+		if err == nil && len(body) > 0 {
+			return body, nil
+		}
+		if err != nil {
+			failures = append(failures, err)
+			if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+				return nil, err
+			}
+		} else {
+			failures = append(failures, fmt.Errorf("汽水备用主机返回空响应: %s", endpoint))
+		}
+	}
+	if len(failures) == 0 {
+		return nil, fmt.Errorf("汽水音乐所有备用主机均不可用")
+	}
+	return nil, errors.Join(failures...)
+}
+
 func (s *Service) qishuiPages(ctx context.Context, id string) (*models.SongList, error) {
 	cursor := "0"
 	seen := map[string]bool{}
@@ -83,7 +121,7 @@ func (s *Service) qishuiPages(ctx context.Context, id string) (*models.SongList,
 	for len(seen) < 100 && !seen[cursor] {
 		seen[cursor] = true
 		payload, _ := json.Marshal(map[string]any{"playlist_id": id, "cursor": cursor, "count": 200})
-		body, _, err := s.HTTP.Do(ctx, http.MethodPost, "https://beta-luna.douyin.com/luna/playlist/detail", bytes.NewReader(payload), map[string]string{"Content-Type": "application/json", "User-Agent": "Luna/19.1.0 Android"})
+		body, err := s.qishuiPageBody(ctx, payload)
 		if err != nil {
 			return list, err
 		}

@@ -67,6 +67,19 @@ The adapter requires the decoded owner to equal the official share-page `list_cr
 
 MIT sources used for signature/protocol references retain their notices in [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md). The additional Apache-2.0 sources above were consulted for command endpoint and request-field protocol facts without incorporating their code. No changes were made to FluentRead or its reference repositories.
 
+### Multi-endpoint resilience (observed 2026-11-21)
+
+Every provider now has at least two independent read paths, kept in the same request context and with primary error semantics preserved:
+
+- **Qishui**: the public `/luna/playlist/detail` cursor API was checked on `beta-luna.douyin.com`, `api.qishui.com` and `api5-lf.qishui.com`; all three returned the same 5-row page and next cursor for a public playlist. Host rotation is per page, and the share page's `_ROUTER_DATA` remains a separate fallback. Only the exact `/luna/playlist/detail` route is accepted for the API hosts.
+- **Migu**: the primary `MIGUM3.0/resource/playlist/song/v2.0` route was cross-checked with the official `MIGUM3.0/v1.0/user/queryMusicListSongs.do` route. The latter returned `totalCount=195` and ordered `contentId`/`songName`/`singer` rows without credentials for the public sample, so it can recover the song list when the v2 route fails.
+- **Qianqian**: the share page `music.91q.com/songlist/295893` embeds `window.__NUXT__` with `pageData.trackList`; the live sample contained all 13 tracks with resolvable Nuxt variable names, IDs and artists. It is used only when the signed API is unavailable or incomplete, and is marked as an unverifiable partial result.
+- **Bodian**: the official share-page client calls `bd-api.kuwo.cn/api/service/playlist/{id}/musicList` with only `source`, `pn` and `rn`; the client also uses a fuller header/parameter profile. Both profiles were observed returning HTTP 200 with ordered rows for public playlist `86749638`. The browser-shaped profile is a second validation path on the same official host.
+- **Deezer**: the public `/playlist/{id}` detail response can embed a first `tracks` page. GoMusic uses it when `/playlist/{id}/tracks` fails, and still reads the tracks endpoint when the detail endpoint is unavailable. Private-playlist and malformed-ID semantics remain unchanged.
+- **NetEase**: batch song metadata falls back from `/api/v3/song/detail` to `/api/song/detail`; playlist detail keeps its existing v6 → legacy fallback.
+
+No playback, download, login or third-party proxy services were added. Fallback results are merged by stable track ID and the existing warning/completeness rules still apply.
+
 ## Frontend choice
 
 [Element Plus](https://element-plus.org/en-US/guide/design.html), [Reka UI](https://reka-ui.com/) and retaining Vue with native controls were compared for this form/preview page. Element Plus was globally loaded in the old application. Reka offers unstyled accessible components but this page needs only ordinary forms, selects, checkboxes and disclosure controls.

@@ -6,6 +6,7 @@ import (
 	"GoMusic/misc/models"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"golang.org/x/sync/errgroup"
 	"net/http"
@@ -225,24 +226,13 @@ func (s *Service) netEaseSongs(ctx context.Context, ids []string, seeds map[stri
 				payload = append(payload, map[string]string{"id": id})
 			}
 			encoded, _ := json.Marshal(payload)
-			body, _, err := s.HTTP.Do(gctx, http.MethodPost, "https://music.163.com/api/v3/song/detail",
-				strings.NewReader(url.Values{"c": {string(encoded)}}.Encode()), nil)
-			if err != nil {
-				return fmt.Errorf("获取网易云歌曲详情失败: %w", err)
-			}
-			var result struct {
-				Code  int       `json:"code"`
-				Songs []netSong `json:"songs"`
-			}
-			if err = json.Unmarshal(body, &result); err != nil {
-				return err
-			}
-			if result.Code != 200 {
-				return fmt.Errorf("网易云歌曲详情暂时不可访问 (code=%d)", result.Code)
+			songs, detailErr := s.netEaseSongChunk(gctx, chunk, string(encoded))
+			if detailErr != nil {
+				return detailErr
 			}
 			mu.Lock()
 			defer mu.Unlock()
-			for _, song := range result.Songs {
+			for _, song := range songs {
 				if song.Name != "" {
 					found[song.ID.String()] = song.track()
 				}
@@ -275,6 +265,48 @@ func (s *Service) netEaseSongs(ctx context.Context, ids []string, seeds map[stri
 		}
 	}
 	return found, nil
+}
+
+// netEaseSongChunk tries the batch detail endpoint first and falls back to the
+// older official /api/song/detail route. Both are read-only metadata APIs.
+func (s *Service) netEaseSongChunk(ctx context.Context, chunk []string, encodedIDs string) ([]netSong, error) {
+	body, _, err := s.HTTP.Do(ctx, http.MethodPost, "https://music.163.com/api/v3/song/detail",
+		strings.NewReader(url.Values{"c": {encodedIDs}}.Encode()), nil)
+	var result struct {
+		Code  int       `json:"code"`
+		Songs []netSong `json:"songs"`
+	}
+	if err == nil {
+		if parseErr := json.Unmarshal(body, &result); parseErr == nil && result.Code == 200 {
+			return result.Songs, nil
+		}
+	}
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	idList := make([]string, 0, len(chunk))
+	for _, id := range chunk {
+		if id != "" {
+			idList = append(idList, id)
+		}
+	}
+	idsJSON, _ := json.Marshal(idList)
+	legacyBody, _, legacyErr := s.HTTP.Do(ctx, http.MethodGet, "https://music.163.com/api/song/detail?ids="+
+		url.QueryEscape(string(idsJSON)), nil, map[string]string{"Referer": "https://music.163.com/"})
+	if legacyErr != nil {
+		return nil, fmt.Errorf("获取网易云歌曲详情失败: %w", errors.Join(err, legacyErr))
+	}
+	var legacy struct {
+		Code  int       `json:"code"`
+		Songs []netSong `json:"songs"`
+	}
+	if err := json.Unmarshal(legacyBody, &legacy); err != nil {
+		return nil, fmt.Errorf("网易云备用歌曲详情格式无效: %w", err)
+	}
+	if legacy.Code != 200 {
+		return nil, fmt.Errorf("网易云备用歌曲详情暂时不可访问 (code=%d)", legacy.Code)
+	}
+	return legacy.Songs, nil
 }
 
 func missingIDs(ids []string, found map[string]models.Track) []string {

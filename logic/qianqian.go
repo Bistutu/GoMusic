@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -117,6 +118,28 @@ func (s *Service) qianqian(ctx context.Context, link musicurl.Link) (*models.Son
 				pageErr = fmt.Errorf("千千音乐提前结束分页，平台显示 %d 首，当前获取 %d 首", list.TotalCount, len(list.Tracks))
 			}
 			break
+		}
+	}
+
+	// The signed API is the primary channel. When it is blocked or returns an
+	// incomplete first page, the official share page embeds the same trackList
+	// in window.__NUXT__, giving an independent read-only recovery path.
+	if len(list.Tracks) == 0 || pageErr != nil || (totalKnown && len(list.Tracks) < list.TotalCount) {
+		if ctx.Err() == nil {
+			page, _, pageRequestErr := s.HTTP.Do(ctx, http.MethodGet, link.URL.String(), nil,
+				map[string]string{"Accept": "text/html", "Referer": "https://music.91q.com/"})
+			if pageRequestErr == nil {
+				candidate, parseErr := parseQianqianSharePage(page)
+				if parseErr == nil && candidate != nil && len(candidate.Tracks) > 0 {
+					name := list.Name
+					list = preferPlaylist(list, candidate)
+					if name != "" {
+						list.Name = name
+					}
+					list.Warnings = append(list.Warnings, "千千音乐签名接口不可用，已从歌单分享页恢复曲目，完整性无法确认")
+					pageErr = nil
+				}
+			}
 		}
 	}
 
@@ -262,4 +285,272 @@ func qianqianString(raw json.RawMessage) string {
 		return number
 	}
 	return ""
+}
+
+var qianqianPlaylistName = regexp.MustCompile(`cateList:\s*\[[^\]]*\]\s*,\s*title:\s*"((?:\\.|[^"\\])*)"`)
+
+// parseQianqianSharePage reads the public share page's embedded Nuxt payload.
+// It deliberately extracts only the track list and plain text metadata; no
+// script is evaluated and no playback fields are used.
+func parseQianqianSharePage(body []byte) (*models.SongList, error) {
+	text := string(body)
+	start := strings.Index(text, "window.__NUXT__")
+	if start < 0 {
+		return nil, fmt.Errorf("千千分享页未包含内嵌歌单数据")
+	}
+	state := text[start:]
+	marker := "trackList:"
+	offset := strings.Index(state, marker)
+	if offset < 0 {
+		return nil, fmt.Errorf("千千分享页未包含曲目列表")
+	}
+	array, ok := qianqianBalanced(state[offset+len(marker):], '[', ']')
+	if !ok {
+		return nil, fmt.Errorf("千千分享页曲目列表格式无效")
+	}
+	vars := qianqianVariables(state)
+	list := &models.SongList{Tracks: []models.Track{}, Warnings: []string{}}
+	if match := qianqianPlaylistName.FindStringSubmatch(state); len(match) > 1 {
+		name, err := strconv.Unquote(`"` + match[1] + `"`)
+		if err != nil {
+			name = match[1]
+		}
+		list.Name = strings.TrimSpace(name)
+	}
+	seen := map[string]bool{}
+	rest := array
+	for {
+		open := strings.Index(rest, "{")
+		if open < 0 {
+			break
+		}
+		object, ok := qianqianBalanced(rest[open:], '{', '}')
+		if !ok {
+			break
+		}
+		track := models.Track{ID: qianqianJSField(object, "TSID", vars), Title: qianqianJSField(object, "title", vars), Artists: []string{}}
+		if track.ID == "" {
+			track.ID = qianqianJSField(object, "assetId", vars)
+		}
+		if artistBlock, ok := qianqianJSBlock(object, "artist", '[', ']'); ok {
+			for remaining := artistBlock; ; {
+				offset := qianqianFindKey(remaining, "name")
+				if offset < 0 {
+					break
+				}
+				if name := qianqianJSField(remaining[offset:], "name", vars); name != "" {
+					track.Artists = append(track.Artists, name)
+				}
+				remaining = remaining[offset+len("name:"):]
+			}
+		}
+		appendDistinctTrack(list, track, seen)
+		rest = rest[open+len(object):]
+	}
+	if len(list.Tracks) == 0 {
+		return nil, fmt.Errorf("千千分享页未返回可读取的歌曲")
+	}
+	list.TotalCount = len(list.Tracks)
+	return list, nil
+}
+
+// qianqianBalanced returns the balanced region starting at the first open
+// bracket, ignoring brackets inside JavaScript string literals.
+func qianqianBalanced(text string, open, close byte) (string, bool) {
+	start := strings.IndexByte(text, open)
+	if start < 0 {
+		return "", false
+	}
+	depth := 0
+	var quote byte
+	escaped := false
+	for i := start; i < len(text); i++ {
+		char := text[i]
+		if quote != 0 {
+			if escaped {
+				escaped = false
+				continue
+			}
+			if char == '\\' {
+				escaped = true
+				continue
+			}
+			if char == quote {
+				quote = 0
+			}
+			continue
+		}
+		if char == '"' || char == '\'' || char == '`' {
+			quote = char
+			continue
+		}
+		switch char {
+		case open:
+			depth++
+		case close:
+			depth--
+			if depth == 0 {
+				return text[start : i+1], true
+			}
+		}
+	}
+	return "", false
+}
+
+func qianqianJSBlock(object, key string, open, close byte) (string, bool) {
+	offset := strings.Index(object, key+":")
+	if offset < 0 {
+		return "", false
+	}
+	return qianqianBalanced(object[offset+len(key)+1:], open, close)
+}
+
+// qianqianVariables maps the IIFE parameter names of window.__NUXT__ to their
+// literal values. Nuxt minifies repeated strings into these parameters, so a
+// track's title is often a bare identifier such as "V" rather than a literal.
+func qianqianVariables(state string) map[string]string {
+	vars := map[string]string{}
+	if end := strings.Index(state, "</script>"); end >= 0 {
+		state = state[:end]
+	}
+	start := strings.Index(state, "(function(")
+	if start < 0 {
+		return vars
+	}
+	paramsStart := start + len("(function(")
+	paramsEnd := strings.Index(state[paramsStart:], "){")
+	if paramsEnd < 0 {
+		return vars
+	}
+	invoke := strings.LastIndex(state, "}(")
+	if invoke < paramsStart+paramsEnd {
+		return vars
+	}
+	args, ok := qianqianBalanced(state[invoke+1:], '(', ')')
+	if !ok {
+		return vars
+	}
+	params := strings.Split(state[paramsStart:paramsStart+paramsEnd], ",")
+	values := qianqianSplitArguments(args[1 : len(args)-1])
+	for i, param := range params {
+		if i >= len(values) {
+			break
+		}
+		vars[strings.TrimSpace(param)] = values[i]
+	}
+	return vars
+}
+
+func qianqianSplitArguments(args string) []string {
+	values := []string{}
+	depth := 0
+	var quote byte
+	escaped := false
+	start := 0
+	for i := 0; i < len(args); i++ {
+		char := args[i]
+		if quote != 0 {
+			if escaped {
+				escaped = false
+				continue
+			}
+			if char == '\\' {
+				escaped = true
+				continue
+			}
+			if char == quote {
+				quote = 0
+			}
+			continue
+		}
+		switch char {
+		case '"', '\'', '`':
+			quote = char
+		case '(', '[', '{':
+			depth++
+		case ')', ']', '}':
+			depth--
+		case ',':
+			if depth == 0 {
+				values = append(values, strings.TrimSpace(args[start:i]))
+				start = i + 1
+			}
+		}
+	}
+	values = append(values, strings.TrimSpace(args[start:]))
+	for i, value := range values {
+		if value == "null" || value == "undefined" {
+			values[i] = ""
+			continue
+		}
+		if value != "" && (value[0] == '"' || value[0] == '\'') {
+			decoded, err := qianqianUnquote(value)
+			if err == nil {
+				values[i] = decoded
+			}
+		}
+	}
+	return values
+}
+
+func qianqianFindKey(object, key string) int {
+	needle := key + ":"
+	for offset := 0; ; {
+		index := strings.Index(object[offset:], needle)
+		if index < 0 {
+			return -1
+		}
+		position := offset + index
+		if position == 0 || !isQianqianKeyChar(object[position-1]) {
+			return position
+		}
+		offset = position + 1
+	}
+}
+
+func isQianqianKeyChar(char byte) bool {
+	return char == '_' || char == '$' || (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') || (char >= '0' && char <= '9')
+}
+
+func qianqianJSField(object, key string, vars map[string]string) string {
+	offset := qianqianFindKey(object, key)
+	if offset < 0 {
+		return ""
+	}
+	text := strings.TrimSpace(object[offset+len(key)+1:])
+	if text == "" {
+		return ""
+	}
+	if text[0] == '"' || text[0] == '\'' {
+		quote := text[0]
+		for i := 1; i < len(text); i++ {
+			if text[i] == '\\' {
+				i++
+				continue
+			}
+			if text[i] == quote {
+				value, err := qianqianUnquote(text[:i+1])
+				if err != nil {
+					return ""
+				}
+				return strings.TrimSpace(value)
+			}
+		}
+		return ""
+	}
+	end := 0
+	for end < len(text) && isQianqianKeyChar(text[end]) {
+		end++
+	}
+	return strings.TrimSpace(vars[text[:end]])
+}
+
+func qianqianUnquote(literal string) (string, error) {
+	if strings.HasPrefix(literal, "'") {
+		inner := strings.TrimSuffix(strings.TrimPrefix(literal, "'"), "'")
+		inner = strings.ReplaceAll(inner, `\"`, `"`)
+		inner = strings.ReplaceAll(inner, `\'`, `'`)
+		return inner, nil
+	}
+	return strconv.Unquote(literal)
 }

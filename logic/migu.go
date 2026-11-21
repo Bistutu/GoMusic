@@ -33,13 +33,29 @@ type miguSongsResponse struct {
 	} `json:"data"`
 }
 
+// miguAlternateSongsResponse is the flat shape returned by the official
+// queryMusicListSongs.do endpoint, kept as a second song-list channel.
+type miguAlternateSongsResponse struct {
+	Code       json.RawMessage `json:"code"`
+	Info       string          `json:"info"`
+	TotalCount json.RawMessage `json:"totalCount"`
+	List       []struct {
+		ContentID json.RawMessage `json:"contentId"`
+		SongID    json.RawMessage `json:"songId"`
+		Name      string          `json:"songName"`
+		Singer    string          `json:"singer"`
+	} `json:"list"`
+}
+
+type miguSinger struct {
+	Name string `json:"name"`
+}
+
 type miguSong struct {
 	ContentID json.RawMessage `json:"contentId"`
 	SongID    json.RawMessage `json:"songId"`
 	Name      string          `json:"songName"`
-	Singers   []struct {
-		Name string `json:"name"`
-	} `json:"singerList"`
+	Singers   []miguSinger    `json:"singerList"`
 }
 
 type miguPlaylistMetadata struct {
@@ -194,21 +210,58 @@ func (s *Service) miguSongsPage(ctx context.Context, id string, pageNo int) (*mi
 	body, _, err := s.HTTP.Do(ctx, http.MethodGet, address, nil, map[string]string{
 		"Referer": "https://music.migu.cn/",
 	})
-	if err != nil {
-		return nil, err
+	if err == nil {
+		var response miguSongsResponse
+		if parseErr := json.Unmarshal(body, &response); parseErr == nil {
+			if code := miguCode(response.Code); code == "000000" && response.Data != nil {
+				return &response, nil
+			}
+		}
 	}
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	alternate, alternateErr := s.miguAlternateSongsPage(ctx, id, pageNo, err)
+	if alternateErr != nil {
+		return nil, alternateErr
+	}
+	return alternate, nil
+}
 
-	var response miguSongsResponse
+// miguAlternateSongsPage uses the official queryMusicListSongs.do route when
+// the v2 playlist song route fails, keeping the same page size and ordering.
+func (s *Service) miguAlternateSongsPage(ctx context.Context, id string, pageNo int, primaryErr error) (*miguSongsResponse, error) {
+	query := url.Values{}
+	query.Set("pageNo", strconv.Itoa(pageNo))
+	query.Set("pageSize", strconv.Itoa(miguSongsPerPage))
+	query.Set("musicListId", id)
+	address := "https://app.c.nf.migu.cn/MIGUM3.0/v1.0/user/queryMusicListSongs.do?" + query.Encode()
+	body, _, err := s.HTTP.Do(ctx, http.MethodGet, address, nil, map[string]string{
+		"Referer": "https://music.migu.cn/",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("咪咕备用歌曲列表请求失败: %w", errors.Join(primaryErr, err))
+	}
+	var response miguAlternateSongsResponse
 	if err := json.Unmarshal(body, &response); err != nil {
-		return nil, fmt.Errorf("咪咕歌曲列表格式无效: %w", err)
+		return nil, fmt.Errorf("咪咕备用歌曲列表格式无效: %w", err)
 	}
 	if code := miguCode(response.Code); code != "000000" {
-		return nil, fmt.Errorf("咪咕歌曲列表请求失败 (code=%s): %s", code, strings.TrimSpace(response.Info))
+		return nil, fmt.Errorf("咪咕备用歌曲列表请求失败 (code=%s): %s", code, strings.TrimSpace(response.Info))
 	}
-	if response.Data == nil {
-		return nil, fmt.Errorf("咪咕音乐未返回歌单歌曲列表")
+	list := &miguSongsResponse{Code: response.Code, Info: response.Info}
+	list.Data = &struct {
+		TotalCount json.RawMessage `json:"totalCount"`
+		SongList   []miguSong      `json:"songList"`
+	}{TotalCount: response.TotalCount, SongList: make([]miguSong, 0, len(response.List))}
+	for _, item := range response.List {
+		song := miguSong{ContentID: item.ContentID, SongID: item.SongID, Name: item.Name}
+		if name := strings.TrimSpace(item.Singer); name != "" {
+			song.Singers = []miguSinger{{Name: name}}
+		}
+		list.Data.SongList = append(list.Data.SongList, song)
 	}
-	return &response, nil
+	return list, nil
 }
 
 func miguCount(raw json.RawMessage) (int, bool, error) {
