@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 
 	"GoMusic/misc/models"
 )
@@ -43,172 +43,55 @@ func (s *Service) qqFallbacks() []struct {
 	}
 }
 
-// qqPlainPages 使用无需签名的 musicu.fcg 分页拉取歌单。
-// 该接口与主接口同构，但单次最多返回 30 首，需逐页请求。
 func (s *Service) qqPlainPages(ctx context.Context, idText string) (*models.SongList, error) {
 	id, err := strconv.Atoi(idText)
 	if err != nil || id <= 0 {
 		return nil, fmt.Errorf("歌单 ID 无效: %q", idText)
 	}
-
-	var list *models.SongList
-	seenPages := map[string]bool{}
-	seenTracks := map[string]bool{}
-
-	for begin := 0; begin < s.MaxSongs; {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
-		count := maxSongsPerPage
-		if list != nil && count > list.TotalCount-begin {
-			count = list.TotalCount - begin
-		}
-		if count > s.MaxSongs-begin {
-			count = s.MaxSongs - begin
-		}
-		if count <= 0 {
-			break
-		}
-
-		payload := models.GetQQMusicReqStringWithPagination(id, "h5", begin, count)
-		address := qqMusicPlainAPIURL + "?data=" + url.QueryEscape(payload)
-		body, _, err := s.HTTP.Do(ctx, http.MethodGet, address, nil, map[string]string{"Referer": "https://y.qq.com/"})
-		if err != nil {
-			return list, err
-		}
-
-		var page models.QQMusicResp
-		if err = json.Unmarshal(body, &page); err != nil {
-			return list, err
-		}
-		if page.Code != 0 || page.Req0 == nil || page.Req0.Code != 0 || page.Req0.Data == nil {
-			return list, fmt.Errorf("明文接口拒绝访问 (code=%d)", page.Code)
-		}
-		data := page.Req0.Data
-		if list == nil {
-			list = &models.SongList{Name: data.Dirinfo.Title, TotalCount: data.Dirinfo.Songnum}
-		}
-		list.TotalCount = max(list.TotalCount, data.Dirinfo.Songnum)
-		if len(data.Songlist) == 0 {
-			if begin < list.TotalCount {
-				return list, fmt.Errorf("明文接口第 %d 页未返回歌曲", begin/maxSongsPerPage+1)
-			}
-			break
-		}
-
-		fingerprint, _ := json.Marshal(data.Songlist)
-		if seenPages[string(fingerprint)] {
-			return list, fmt.Errorf("明文接口返回重复分页")
-		}
-		seenPages[string(fingerprint)] = true
-
-		before := len(list.Tracks)
-		for _, song := range data.Songlist {
-			track := models.Track{ID: song.ID.String(), Title: song.Name, Artists: []string{}}
-			if track.ID == "" || track.ID == "0" {
-				track.ID = song.Mid
-			}
-			for _, artist := range song.Singer {
-				if artist.Name != "" {
-					track.Artists = append(track.Artists, artist.Name)
-				}
-			}
-			appendDistinctTrack(list, track, seenTracks)
-		}
-		if len(list.Tracks) == before {
-			return list, fmt.Errorf("明文接口分页没有返回新的有效歌曲")
-		}
-		begin += len(data.Songlist)
-		if begin >= list.TotalCount {
-			break
-		}
-	}
-	if list == nil {
-		return nil, fmt.Errorf("明文接口未返回有效歌单")
-	}
-	return list, nil
+	return s.qqPages(ctx, id, s.qqPlainPage)
 }
 
-// qqV8Playlist 使用旧版 v8 接口一次性获取完整歌单，主域名失败时切换备用域名。
-func (s *Service) qqV8Playlist(ctx context.Context, idText string) (*models.SongList, error) {
-	params := url.Values{}
-	params.Set("id", idText)
-	params.Set("format", "json")
-	params.Set("inCharset", "utf-8")
-	params.Set("outCharset", "utf-8")
-	query := params.Encode()
-
-	var last error
-	for _, endpoint := range []string{qqMusicV8APIURL, qqMusicV8AltURL} {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
-		body, _, err := s.HTTP.Do(ctx, http.MethodGet, endpoint+"?"+query, nil,
-			map[string]string{"Referer": "https://y.qq.com/"})
-		if err != nil {
-			last = err
-			continue
-		}
-		list, err := decodeQQV8Playlist(body)
-		if err != nil {
-			last = err
-			continue
-		}
-		return list, nil
-	}
-	return nil, fmt.Errorf("v8 歌单接口全部域名失败: %w", last)
-}
-
-// decodeQQV8Playlist 解析 v8 接口的 data.cdlist 结构。
-func decodeQQV8Playlist(body []byte) (*models.SongList, error) {
-	var response struct {
-		Code    int    `json:"code"`
-		Subcode int    `json:"subcode"`
-		Message string `json:"msg"`
-		Data    struct {
-			Cdlist []struct {
-				Dissname string `json:"dissname"`
-				Songnum  int    `json:"songnum"`
-				Songlist []struct {
-					Songid   json.Number `json:"songid"`
-					Songmid  string      `json:"songmid"`
-					Songname string      `json:"songname"`
-					Singer   []struct {
-						Name string `json:"name"`
-					} `json:"singer"`
-				} `json:"songlist"`
-			} `json:"cdlist"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(body, &response); err != nil {
+func (s *Service) qqPlainPage(ctx context.Context, id, begin, count int) (*models.QQMusicResp, error) {
+	payload := models.GetQQMusicReqStringWithPagination(id, "h5", begin, count)
+	address := qqMusicPlainAPIURL + "?data=" + url.QueryEscape(payload)
+	body, _, err := s.HTTP.Do(ctx, http.MethodGet, address, nil, map[string]string{"Referer": "https://y.qq.com/"})
+	if err != nil {
 		return nil, err
 	}
-	if response.Code != 0 || response.Subcode != 0 {
-		return nil, fmt.Errorf("v8 接口业务错误(code:%d, subcode:%d): %s", response.Code, response.Subcode, response.Message)
+	return decodeQQMusicPage(body)
+}
+
+// Try the alternate host if the first host fails or returns a shorter list.
+func (s *Service) qqV8Playlist(ctx context.Context, idText string) (*models.SongList, error) {
+	params := url.Values{
+		"id": {idText}, "format": {"json"}, "inCharset": {"utf-8"}, "outCharset": {"utf-8"},
 	}
-	if len(response.Data.Cdlist) == 0 {
-		return nil, fmt.Errorf("v8 接口未返回歌单")
-	}
-	data := response.Data.Cdlist[0]
-	if data.Dissname == "" && len(data.Songlist) == 0 {
-		return nil, fmt.Errorf("v8 接口未返回有效歌单信息")
-	}
-	list := &models.SongList{Name: data.Dissname, TotalCount: data.Songnum}
-	for _, song := range data.Songlist {
-		track := models.Track{ID: song.Songid.String(), Title: song.Songname, Artists: []string{}}
-		if track.ID == "" || track.ID == "0" {
-			track.ID = song.Songmid
+	var best *models.SongList
+	var failures []error
+	for _, endpoint := range []string{qqMusicV8APIURL, qqMusicV8AltURL} {
+		if err := ctx.Err(); err != nil {
+			return nil, err
 		}
-		for _, artist := range song.Singer {
-			if artist.Name != "" {
-				track.Artists = append(track.Artists, artist.Name)
-			}
+		body, _, err := s.HTTP.Do(ctx, http.MethodGet, endpoint+"?"+params.Encode(), nil,
+			map[string]string{"Referer": "https://y.qq.com/"})
+		if err != nil {
+			failures = append(failures, err)
+			continue
 		}
-		if track.Title != "" {
-			list.Tracks = append(list.Tracks, track)
+		list, err := decodeLegacyPlaylist(bytes.NewReader(body))
+		if err != nil {
+			failures = append(failures, err)
+			continue
+		}
+		best = preferPlaylist(best, list)
+		if qqPlaylistComplete(best) || len(best.Tracks) >= s.MaxSongs {
+			return best, nil
 		}
 	}
-	return list, nil
+	if best != nil {
+		return best, nil
+	}
+	return nil, fmt.Errorf("v8 歌单接口全部域名失败: %w", errors.Join(failures...))
 }
 
 // qqQzoneMusic 使用 qzone-music 的 JSONP 接口获取完整歌单。
@@ -228,21 +111,24 @@ func (s *Service) qqQzoneMusic(ctx context.Context, idText string) (*models.Song
 	if err != nil {
 		return nil, err
 	}
-	jsonBody, err := stripQQJSONP(body)
-	if err != nil {
-		return nil, err
+	if !json.Valid(body) {
+		body, err = stripQQJSONP(body)
+		if err != nil {
+			return nil, err
+		}
 	}
-	// qzone 与现有 legacy 接口同构（顶层 cdlist），共用解析器。
-	return decodeLegacyPlaylist(bytes.NewReader(jsonBody))
+	return decodeLegacyPlaylist(bytes.NewReader(body))
 }
 
-// stripQQJSONP 从 callback({...}) 中提取 JSON 载荷。
 func stripQQJSONP(data []byte) ([]byte, error) {
-	text := strings.TrimSpace(string(data))
-	start := strings.Index(text, "(")
-	end := strings.LastIndex(text, ")")
-	if start < 0 || end <= start {
-		return nil, fmt.Errorf("无法识别 JSONP 响应: %.80s", text)
+	data = bytes.TrimSpace(bytes.TrimSuffix(bytes.TrimSpace(data), []byte(";")))
+	start := bytes.IndexByte(data, '(')
+	if start < 0 || !bytes.Equal(bytes.TrimSpace(data[:start]), []byte("callback")) || !bytes.HasSuffix(data, []byte(")")) {
+		return nil, fmt.Errorf("无法识别 QQ 音乐 JSONP 响应")
 	}
-	return []byte(text[start+1 : end]), nil
+	payload := data[start+1 : len(data)-1]
+	if !json.Valid(payload) {
+		return nil, fmt.Errorf("QQ 音乐 JSONP 不包含有效 JSON")
+	}
+	return payload, nil
 }

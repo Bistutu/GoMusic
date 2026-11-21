@@ -69,16 +69,17 @@ MIT sources used for signature/protocol references retain their notices in [THIR
 
 ### Multi-endpoint resilience (observed 2026-11-21)
 
-Every provider now has at least two independent read paths, kept in the same request context and with primary error semantics preserved:
+The adapters use the following recovery paths inside the original request deadline:
 
-- **Qishui**: the public `/luna/playlist/detail` cursor API was checked on `beta-luna.douyin.com`, `api.qishui.com` and `api5-lf.qishui.com`; all three returned the same 5-row page and next cursor for a public playlist. Host rotation is per page, and the share page's `_ROUTER_DATA` remains a separate fallback. Only the exact `/luna/playlist/detail` route is accepted for the API hosts.
-- **Migu**: the primary `MIGUM3.0/resource/playlist/song/v2.0` route was cross-checked with the official `MIGUM3.0/v1.0/user/queryMusicListSongs.do` route. The latter returned `totalCount=195` and ordered `contentId`/`songName`/`singer` rows without credentials for the public sample, so it can recover the song list when the v2 route fails.
-- **Qianqian**: the share page `music.91q.com/songlist/295893` embeds `window.__NUXT__` with `pageData.trackList`; the live sample contained all 13 tracks with resolvable Nuxt variable names, IDs and artists. It is used only when the signed API is unavailable or incomplete, and is marked as an unverifiable partial result.
-- **Bodian**: the official share-page client calls `bd-api.kuwo.cn/api/service/playlist/{id}/musicList` with only `source`, `pn` and `rn`; the client also uses a fuller header/parameter profile. Both profiles were observed returning HTTP 200 with ordered rows for public playlist `86749638`. The browser-shaped profile is a second validation path on the same official host.
-- **Deezer**: the public `/playlist/{id}` detail response can embed a first `tracks` page. GoMusic uses it when `/playlist/{id}/tracks` fails, and still reads the tracks endpoint when the detail endpoint is unavailable. Private-playlist and malformed-ID semantics remain unchanged.
-- **NetEase**: batch song metadata falls back from `/api/v3/song/detail` to `/api/song/detail`; playlist detail keeps its existing v6 → legacy fallback.
+- **QQ Music**: the signed and plain MusicU requests share the same pagination logic. The legacy, v8 and Qzone fallbacks use the supported public response shapes and prefer the original `songorig` title where available.
+- **Qishui**: `beta-luna.douyin.com`, `api.qishui.com` and `api5-lf.qishui.com` serve the public cursor API. After a per-host timeout or unusable response, the adapter retries the same cursor on another host and starts the following page on the last successful host. The new API hosts accept only the HTTPS playlist-detail route. The public share page's `_ROUTER_DATA` can supply a preview.
+- **Migu**: both `MIGUM3.0/resource/playlist/song/v2.0` and `MIGUM3.0/v1.0/user/queryMusicListSongs.do` returned the same ordered IDs at the checked page boundaries for the 195-track public sample. The alternate route uses the same page number and size.
+- **Qianqian**: public share pages can embed `data[].pageData.trackList` in the Nuxt state. The adapter reads the literal playlist fields and preserves the reported count when available. A share-page result carries an incomplete-result warning.
+- **Bodian**: the browser query profile uses `source`, `pn` and `rn` on the same host as the full profile. Both use fixed page sizes and validate the response data before a profile is accepted.
+- **Deezer**: `/playlist/{id}` must confirm the playlist ID and public visibility. Its embedded tracks can recover a prefix when the first dedicated `/playlist/{id}/tracks` page is unavailable or invalid. For public playlist `6399367984`, the detail returned 400 of 490 tracks.
+- **NetEase**: the legacy playlist endpoint can recover tracks after a v6 failure or partial result. The legacy song-detail endpoint receives only the IDs missing from the primary batch response. Explicit access denial stops playlist recovery.
 
-No playback, download, login or third-party proxy services were added. Fallback results are merged by stable track ID and the existing warning/completeness rules still apply.
+Each path reads public playlist metadata. The adapter keeps the largest known total and selects the best verified ordered result when endpoints return different snapshots.
 
 ## Frontend choice
 

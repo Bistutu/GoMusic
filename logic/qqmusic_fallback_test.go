@@ -22,16 +22,16 @@ func TestDecodeQQV8Playlist(t *testing.T) {
 				"dissname": "测试歌单",
 				"songnum": 2,
 				"songlist": [
-					{"songid": 123, "songmid": "abc", "songname": "第一首", "singer": [{"name": "歌手甲"}, {"name": "歌手乙"}]},
+					{"songid": 123, "songmid": "abc", "songname": "第一首 (Live)", "songorig": "第一首", "singer": [{"name": "歌手甲"}, {"name": "歌手乙"}]},
 					{"songid": 456, "songmid": "def", "songname": "第二首", "singer": [{"name": "歌手丙"}]}
 				]
 			}]
 		}
 	}`
 
-	list, err := decodeQQV8Playlist([]byte(body))
+	list, err := decodeLegacyPlaylist(strings.NewReader(body))
 	if err != nil {
-		t.Fatalf("decodeQQV8Playlist() error = %v", err)
+		t.Fatalf("decodeLegacyPlaylist() error = %v", err)
 	}
 	if list.Name != "测试歌单" || list.TotalCount != 2 {
 		t.Fatalf("name=%q total=%d", list.Name, list.TotalCount)
@@ -50,7 +50,7 @@ func TestDecodeQQV8PlaylistError(t *testing.T) {
 		`{"code":0,"data":{"cdlist":[]}}`,
 		`{not json`,
 	} {
-		if _, err := decodeQQV8Playlist([]byte(body)); err == nil {
+		if _, err := decodeLegacyPlaylist(strings.NewReader(body)); err == nil {
 			t.Fatalf("expected error for %s", body)
 		}
 	}

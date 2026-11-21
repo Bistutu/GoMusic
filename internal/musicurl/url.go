@@ -88,9 +88,14 @@ func Validate(u *url.URL) (string, error) {
 	if u == nil || (!strings.EqualFold(u.Scheme, "https") && !strings.EqualFold(u.Scheme, "http")) || u.User != nil || u.Opaque != "" || u.Port() != "" {
 		return "", errors.New("仅支持音乐平台的 HTTP/HTTPS 链接")
 	}
-	p, ok := hosts[strings.ToLower(u.Host)]
+	host := strings.ToLower(u.Host)
+	p, ok := hosts[host]
 	if !ok {
 		return "", errors.New("仅支持网易云音乐、QQ 音乐、汽水音乐、酷狗音乐、酷我音乐、咪咕音乐、千千音乐、波点音乐和 Deezer 的官方链接")
+	}
+	if (host == "api.qishui.com" || host == "api5-lf.qishui.com") &&
+		(!strings.EqualFold(u.Scheme, "https") || !qishuiPlaylistDetailPath.MatchString(u.Path)) {
+		return "", errors.New("汽水音乐备用 API 仅支持 HTTPS 歌单详情路径")
 	}
 	return p, nil
 }

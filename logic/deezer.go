@@ -22,12 +22,12 @@ type deezerAPIError struct {
 }
 
 type deezerCollectionInfo struct {
-	Error    *deezerAPIError  `json:"error"`
-	ID       int64            `json:"id"`
-	Title    string           `json:"title"`
-	Public   *bool            `json:"public"`
-	NbTracks json.RawMessage  `json:"nb_tracks"`
-	Tracks   *deezerTrackPage `json:"tracks"`
+	Error    *deezerAPIError `json:"error"`
+	ID       int64           `json:"id"`
+	Title    string          `json:"title"`
+	Public   *bool           `json:"public"`
+	NbTracks json.RawMessage `json:"nb_tracks"`
+	Tracks   json.RawMessage `json:"tracks"`
 }
 
 type deezerTrackRow struct {
@@ -39,10 +39,12 @@ type deezerTrackRow struct {
 }
 
 type deezerTrackPage struct {
-	Error *deezerAPIError  `json:"error"`
-	Total json.RawMessage  `json:"total"`
-	Next  string           `json:"next"`
-	Data  []deezerTrackRow `json:"data"`
+	Error      *deezerAPIError  `json:"error"`
+	Total      json.RawMessage  `json:"total"`
+	Next       string           `json:"next"`
+	Data       []deezerTrackRow `json:"data"`
+	TotalCount int              `json:"-"`
+	TotalKnown bool             `json:"-"`
 }
 
 func (apiErr *deezerAPIError) Error() string {
@@ -77,55 +79,46 @@ func (s *Service) deezer(ctx context.Context, link musicurl.Link) (*models.SongL
 		"Accept":  "application/json",
 		"Referer": "https://www.deezer.com/",
 	})
-	var info *deezerCollectionInfo
-	var infoErr error
 	if err != nil {
-		infoErr = fmt.Errorf("Deezer 歌单详情暂时不可访问: %w", err)
-	} else {
-		var decoded deezerCollectionInfo
-		if err := json.Unmarshal(infoBody, &decoded); err != nil {
-			infoErr = fmt.Errorf("Deezer 歌单信息格式无效: %w", err)
-		} else {
-			info = &decoded
-		}
+		return nil, fmt.Errorf("Deezer 歌单详情暂时不可访问: %w", err)
 	}
-	if info != nil {
-		if info.Error != nil {
-			return nil, info.Error
-		}
-		if info.ID != collectionID {
-			return nil, fmt.Errorf("Deezer 返回了不同的歌单")
-		}
-		if info.Public == nil {
-			return nil, fmt.Errorf("Deezer 未能确认歌单为公开状态")
-		}
-		if !*info.Public {
-			return nil, ErrPrivatePlaylist
-		}
+	var info deezerCollectionInfo
+	if err := json.Unmarshal(infoBody, &info); err != nil {
+		return nil, fmt.Errorf("Deezer 歌单信息格式无效: %w", err)
+	}
+	if info.Error != nil {
+		return nil, info.Error
+	}
+	if info.ID != collectionID {
+		return nil, fmt.Errorf("Deezer 返回了不同的歌单")
+	}
+	// The tracks endpoint has no public field. Require explicit visibility
+	// from the detail endpoint before trying either source of tracks.
+	if info.Public == nil {
+		return nil, fmt.Errorf("Deezer 未能确认歌单为公开状态")
+	}
+	if !*info.Public {
+		return nil, ErrPrivatePlaylist
 	}
 
-	name := ""
-	if info != nil {
-		name = strings.TrimSpace(info.Title)
-	}
-	list := &models.SongList{
-		Name:     name,
-		Tracks:   []models.Track{},
-		Warnings: []string{},
-	}
-	var total int
-	var totalKnown bool
-	var totalErr error
-	if info != nil {
-		total, totalKnown, totalErr = deezerCount(info.NbTracks)
-	}
+	list := &models.SongList{Name: strings.TrimSpace(info.Title)}
+	total, totalKnown, totalErr := deezerCount(info.NbTracks)
 	if totalErr != nil {
 		list.Warnings = append(list.Warnings, "Deezer 歌单总数格式无效")
 	} else if totalKnown {
 		list.TotalCount = total
 	}
-	if infoErr != nil {
-		list.Warnings = append(list.Warnings, "Deezer 歌单详情不可用，已从歌曲列表接口恢复曲目")
+	totalConflictWarned := false
+	recordTotal := func(page *deezerTrackPage) {
+		if page == nil || !page.TotalKnown {
+			return
+		}
+		if totalKnown && page.TotalCount != list.TotalCount && !totalConflictWarned {
+			list.Warnings = append(list.Warnings, "Deezer 歌单信息与歌曲接口报告的总数不一致")
+			totalConflictWarned = true
+		}
+		list.TotalCount = max(list.TotalCount, page.TotalCount)
+		totalKnown = true
 	}
 
 	query := url.Values{}
@@ -135,7 +128,6 @@ func (s *Service) deezer(ctx context.Context, link musicurl.Link) (*models.SongL
 	nextIndex := 0
 	seenURLs := map[string]bool{}
 	missingIDs := false
-	totalConflictWarned := false
 	maxPages := (s.MaxSongs + deezerPageSize - 1) / deezerPageSize
 	if maxPages < 1 {
 		maxPages = 1
@@ -157,68 +149,40 @@ func (s *Service) deezer(ctx context.Context, link musicurl.Link) (*models.SongL
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		if requestErr != nil {
-			if len(list.Tracks) == 0 && info != nil && info.Tracks != nil && len(info.Tracks.Data) > 0 {
-				// The detail endpoint embeds the first track page; use it when the
-				// dedicated tracks endpoint is unavailable.
-				page := *info.Tracks
-				page.Next = ""
-				appendDeezerRows(list, page.Data, s.MaxSongs, &missingIDs)
-				list.Warnings = append(list.Warnings, "Deezer 歌曲列表接口不可用，已从歌单详情恢复首屏曲目，后续分页可能缺失")
+		var page *deezerTrackPage
+		if requestErr == nil {
+			page, requestErr = decodeDeezerPage(body)
+		}
+		recordTotal(page)
+		if requestErr == nil && len(page.Data) == 0 && (!totalKnown || len(list.Tracks) < list.TotalCount || page.Next != "") {
+			requestErr = fmt.Errorf("Deezer 没有返回可读取的歌曲")
+		}
+		if requestErr != nil && pageNo == 0 && len(info.Tracks) > 0 {
+			embedded, embeddedErr := decodeDeezerPage(info.Tracks)
+			recordTotal(embedded)
+			if embeddedErr == nil && (len(embedded.Data) > 0 || (totalKnown && list.TotalCount == 0 && embedded.Next == "")) {
+				appendDeezerRows(list, embedded.Data, s.MaxSongs, &missingIDs)
+				if embedded.Next != "" {
+					list.Warnings = append(list.Warnings, "Deezer 已从详情恢复首屏曲目，后续分页不可用")
+				}
 				break
 			}
-			if len(list.Tracks) == 0 {
-				return nil, fmt.Errorf("Deezer 歌曲第 %d 页获取失败: %w", pageNo, errors.Join(requestErr, infoErr))
-			}
-			list.Warnings = append(list.Warnings, fmt.Sprintf("Deezer 歌曲第 %d 页获取失败，结果可能不完整", pageNo))
-			break
 		}
-
-		var page deezerTrackPage
-		if err := json.Unmarshal(body, &page); err != nil {
+		if requestErr != nil {
 			if len(list.Tracks) == 0 {
-				return nil, fmt.Errorf("Deezer 歌曲分页响应无效: %w", err)
+				return nil, fmt.Errorf("Deezer 歌曲第 %d 页获取失败: %w", pageNo+1, requestErr)
 			}
-			list.Warnings = append(list.Warnings, "Deezer 后续歌曲分页响应无效，结果可能不完整")
+			list.Warnings = append(list.Warnings, fmt.Sprintf("Deezer 歌曲第 %d 页获取失败，结果可能不完整", pageNo+1))
 			break
-		}
-		if page.Error != nil {
-			if len(list.Tracks) == 0 {
-				return nil, page.Error
-			}
-			list.Warnings = append(list.Warnings, "Deezer 无法读取后续歌曲分页，结果可能不完整")
-			break
-		}
-		pageTotal, pageTotalKnown, pageTotalErr := deezerCount(page.Total)
-		if pageTotalErr != nil {
-			if len(list.Tracks) == 0 {
-				return nil, fmt.Errorf("Deezer 歌曲总数格式无效: %w", pageTotalErr)
-			}
-			list.Warnings = append(list.Warnings, "Deezer 歌曲总数格式无效，完整性无法确认")
-			break
-		}
-		if pageTotalKnown {
-			if totalKnown && pageTotal != list.TotalCount && !totalConflictWarned {
-				list.Warnings = append(list.Warnings, "Deezer 歌单信息与歌曲接口报告的总数不一致")
-				totalConflictWarned = true
-			}
-			list.TotalCount = max(list.TotalCount, pageTotal)
-			totalKnown = true
 		}
 		if len(page.Data) == 0 {
-			if len(list.Tracks) == 0 && (!totalKnown || list.TotalCount > 0) {
-				return nil, fmt.Errorf("Deezer 没有返回可读取的歌曲")
-			}
 			break
 		}
-
-		before := len(list.Tracks)
 		appendDeezerRows(list, page.Data, s.MaxSongs, &missingIDs)
-		if len(list.Tracks) == before {
-			list.Warnings = append(list.Warnings, "Deezer 没有返回新的可读取歌曲")
-			break
-		}
 		if len(list.Tracks) >= s.MaxSongs {
+			if page.Next != "" && totalKnown && list.TotalCount <= len(list.Tracks) {
+				list.Warnings = append(list.Warnings, fmt.Sprintf("达到本次导出上限 %d 首，Deezer 仍有后续页", s.MaxSongs))
+			}
 			break
 		}
 		if page.Next == "" {
@@ -254,6 +218,30 @@ func (s *Service) deezer(ctx context.Context, link musicurl.Link) (*models.SongL
 		list.Warnings = append(list.Warnings, fmt.Sprintf("Deezer 已获取 %d 首，平台显示 %d 首，结果不完整", len(list.Tracks), list.TotalCount))
 	}
 	return list, nil
+}
+
+func decodeDeezerPage(body []byte) (*deezerTrackPage, error) {
+	var page deezerTrackPage
+	if err := json.Unmarshal(body, &page); err != nil {
+		return nil, fmt.Errorf("Deezer 歌曲分页响应无效: %w", err)
+	}
+	if page.Error != nil {
+		return nil, page.Error
+	}
+	total, known, err := deezerCount(page.Total)
+	if err != nil {
+		return nil, fmt.Errorf("Deezer 歌曲总数格式无效: %w", err)
+	}
+	page.TotalCount, page.TotalKnown = total, known
+	if page.Data != nil && len(page.Data) == 0 {
+		return &page, nil
+	}
+	for _, row := range page.Data {
+		if strings.TrimSpace(row.Title) != "" {
+			return &page, nil
+		}
+	}
+	return &page, fmt.Errorf("Deezer 没有返回可读取的歌曲")
 }
 
 func appendDeezerRows(list *models.SongList, rows []deezerTrackRow, maxSongs int, missingIDs *bool) {

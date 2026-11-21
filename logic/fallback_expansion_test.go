@@ -73,7 +73,7 @@ func TestMiguAlternateSongsEndpointRecoversList(t *testing.T) {
 }
 
 func TestQianqianSharePageRecoversWhenAPIRejects(t *testing.T) {
-	page := `window.__NUXT__=(function(a,b,c){return {layout:"default",data:[{pageData:{trackList:[` +
+	page := `<script>window.__NUXT__=(function(a,b,c){return {layout:"default",data:[{pageData:{trackList:[` +
 		`{artist:[{name:a}],title:b,assetId:"id-1",TSID:"id-1"},` +
 		`{artist:[{name:c}],title:"Second song",assetId:"id-2",TSID:"id-2"}` +
 		`],cateList:[1],title:"Nuxt list",trackCount:2}}]}}("Artist A","First song","Artist B"));</script>`
@@ -151,27 +151,34 @@ func TestDeezerRecoversFromDetailEmbeddedTracks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if list.Name != "Deezer list" || list.SongsCount != 1 || list.Tracks[0].ID != "7" || len(list.Warnings) == 0 {
+	if list.Name != "Deezer list" || list.SongsCount != 1 || list.Tracks[0].ID != "7" || !list.Complete {
 		t.Fatalf("unexpected Deezer detail fallback result: %#v", list)
 	}
 }
 
-func TestDeezerTrackListSurvivesDetailOutage(t *testing.T) {
-	service := testService(func(r *http.Request) (*http.Response, error) {
-		if r.URL.Path == "/playlist/1" {
-			return nil, fmt.Errorf("detail route down")
-		}
-		if r.URL.Path == "/playlist/1/tracks" {
-			return response(r, map[string]any{"total": 1, "data": deezerRows(9, 1)}), nil
-		}
-		return nil, fmt.Errorf("unexpected Deezer request: %s", r.URL)
-	})
-	list, err := service.Fetch(context.Background(), "https://www.deezer.com/playlist/1", Options{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if list.SongsCount != 1 || list.Tracks[0].ID != "9" || len(list.Warnings) == 0 {
-		t.Fatalf("unexpected Deezer tracks-only result: %#v", list)
+func TestDeezerRequiresVerifiedPublicMetadataBeforeFetchingTracks(t *testing.T) {
+	for _, failure := range []string{"unavailable", "malformed", "missing public flag", "wrong id"} {
+		t.Run(failure, func(t *testing.T) {
+			service := testService(func(r *http.Request) (*http.Response, error) {
+				if r.URL.Path != "/playlist/1" {
+					t.Fatalf("tracks requested before confirming public metadata: %s", r.URL.Path)
+				}
+				switch failure {
+				case "unavailable":
+					return nil, fmt.Errorf("detail route down")
+				case "malformed":
+					return htmlResponse(r, "<html>detail unavailable</html>"), nil
+				case "missing public flag":
+					return response(r, map[string]any{"id": 1, "nb_tracks": 1}), nil
+				default:
+					return response(r, map[string]any{"id": 2, "public": true, "nb_tracks": 1}), nil
+				}
+			})
+			list, err := service.Fetch(context.Background(), "https://www.deezer.com/playlist/1", Options{})
+			if err == nil || list != nil {
+				t.Fatalf("list=%#v err=%v", list, err)
+			}
+		})
 	}
 }
 

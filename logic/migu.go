@@ -27,10 +27,14 @@ type miguMetadataResponse struct {
 type miguSongsResponse struct {
 	Code json.RawMessage `json:"code"`
 	Info string          `json:"info"`
-	Data *struct {
-		TotalCount json.RawMessage `json:"totalCount"`
-		SongList   []miguSong      `json:"songList"`
-	} `json:"data"`
+	Data *miguSongPage   `json:"data"`
+}
+
+type miguSongPage struct {
+	TotalCount json.RawMessage `json:"totalCount"`
+	SongList   []miguSong      `json:"songList"`
+	total      int
+	totalKnown bool
 }
 
 // miguAlternateSongsResponse is the flat shape returned by the official
@@ -96,17 +100,13 @@ func (s *Service) migu(ctx context.Context, link musicurl.Link) (*models.SongLis
 			break
 		}
 
-		page, err := s.miguSongsPage(ctx, link.ID, pageNo)
+		page, err := s.miguSongsPage(ctx, link.ID, pageNo, list.TotalCount)
 		if err != nil {
 			pageErr = fmt.Errorf("咪咕歌单第 %d 页获取失败: %w", pageNo, err)
 			break
 		}
-		pageTotal, pageTotalKnown, err := miguCount(page.Data.TotalCount)
-		if err != nil {
-			pageErr = err
-			break
-		}
-		if pageTotalKnown {
+		pageTotal := page.total
+		if page.totalKnown {
 			if totalKnown && pageTotal != referenceTotal {
 				totalConflict = true
 			} else if !totalKnown {
@@ -117,24 +117,24 @@ func (s *Service) migu(ctx context.Context, link musicurl.Link) (*models.SongLis
 		}
 
 		before := len(list.Tracks)
-		for _, song := range page.Data.SongList {
+		for _, song := range page.SongList {
 			track := song.track()
 			appendDistinctTrack(list, track, seen)
 			if len(list.Tracks) >= s.MaxSongs {
 				break
 			}
 		}
-		if len(page.Data.SongList) > 0 && len(list.Tracks) == before {
+		if len(page.SongList) > 0 && len(list.Tracks) == before {
 			pageErr = fmt.Errorf("咪咕音乐分页没有返回新的有效歌曲")
 			break
 		}
-		if len(page.Data.SongList) == 0 {
+		if len(page.SongList) == 0 {
 			if totalKnown && len(list.Tracks) < list.TotalCount {
 				pageErr = fmt.Errorf("咪咕音乐提前结束分页，平台显示 %d 首，当前获取 %d 首", list.TotalCount, len(list.Tracks))
 			}
 			break
 		}
-		if len(page.Data.SongList) < miguSongsPerPage && (!totalKnown || len(list.Tracks) >= list.TotalCount) {
+		if len(page.SongList) < miguSongsPerPage && (!totalKnown || len(list.Tracks) >= list.TotalCount) {
 			break
 		}
 	}
@@ -201,67 +201,86 @@ func (s *Service) miguMetadata(ctx context.Context, id string) (*miguPlaylistMet
 	return &miguPlaylistMetadata{Name: name, TotalCount: total, TotalKnown: known}, nil
 }
 
-func (s *Service) miguSongsPage(ctx context.Context, id string, pageNo int) (*miguSongsResponse, error) {
-	query := url.Values{}
-	query.Set("pageNo", strconv.Itoa(pageNo))
-	query.Set("pageSize", strconv.Itoa(miguSongsPerPage))
-	query.Set("playlistId", id)
-	address := "https://app.c.nf.migu.cn/MIGUM3.0/resource/playlist/song/v2.0?" + query.Encode()
-	body, _, err := s.HTTP.Do(ctx, http.MethodGet, address, nil, map[string]string{
-		"Referer": "https://music.migu.cn/",
-	})
+func (s *Service) miguSongsPage(ctx context.Context, id string, pageNo, knownTotal int) (*miguSongPage, error) {
+	query := url.Values{
+		"pageNo": {strconv.Itoa(pageNo)}, "pageSize": {strconv.Itoa(miguSongsPerPage)}, "playlistId": {id},
+	}
+	const base = "https://app.c.nf.migu.cn/MIGUM3.0"
+	headers := map[string]string{"Referer": "https://music.migu.cn/"}
+	body, _, err := s.HTTP.Do(ctx, http.MethodGet, base+"/resource/playlist/song/v2.0?"+query.Encode(), nil, headers)
+	var primary miguSongsResponse
 	if err == nil {
-		var response miguSongsResponse
-		if parseErr := json.Unmarshal(body, &response); parseErr == nil {
-			if code := miguCode(response.Code); code == "000000" && response.Data != nil {
-				return &response, nil
+		err = json.Unmarshal(body, &primary)
+		if err == nil && miguCode(primary.Code) != "000000" {
+			err = fmt.Errorf("咪咕歌曲列表请求失败 (code=%s): %s", miguCode(primary.Code), strings.TrimSpace(primary.Info))
+			primary.Data = nil
+		}
+		if err == nil {
+			err = primary.Data.validate(pageNo, knownTotal)
+		}
+		if err == nil {
+			return primary.Data, nil
+		}
+	}
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return nil, ctxErr
+	}
+
+	// Both official routes accept the same 1-based page number and page size.
+	query.Del("playlistId")
+	query.Set("musicListId", id)
+	body, _, alternateErr := s.HTTP.Do(ctx, http.MethodGet, base+"/v1.0/user/queryMusicListSongs.do?"+query.Encode(), nil, headers)
+	if alternateErr == nil {
+		var alternate miguAlternateSongsResponse
+		alternateErr = json.Unmarshal(body, &alternate)
+		if alternateErr == nil && miguCode(alternate.Code) != "000000" {
+			alternateErr = fmt.Errorf("咪咕备用歌曲列表请求失败 (code=%s): %s", miguCode(alternate.Code), strings.TrimSpace(alternate.Info))
+		}
+		if alternateErr == nil {
+			candidate := &miguSongPage{TotalCount: alternate.TotalCount}
+			if alternate.List != nil {
+				candidate.SongList = make([]miguSong, 0, len(alternate.List))
+			}
+			for _, item := range alternate.List {
+				song := miguSong{ContentID: item.ContentID, SongID: item.SongID, Name: item.Name}
+				if name := strings.TrimSpace(item.Singer); name != "" {
+					song.Singers = []miguSinger{{Name: name}}
+				}
+				candidate.SongList = append(candidate.SongList, song)
+			}
+			if primary.Data != nil && primary.Data.totalKnown {
+				knownTotal = max(knownTotal, primary.Data.total)
+			}
+			alternateErr = candidate.validate(pageNo, knownTotal)
+			if alternateErr == nil {
+				if primary.Data != nil && primary.Data.totalKnown && primary.Data.total > candidate.total {
+					candidate.total, candidate.totalKnown = primary.Data.total, true
+				}
+				return candidate, nil
 			}
 		}
 	}
-	if ctx.Err() != nil {
-		return nil, ctx.Err()
-	}
-	alternate, alternateErr := s.miguAlternateSongsPage(ctx, id, pageNo, err)
-	if alternateErr != nil {
-		return nil, alternateErr
-	}
-	return alternate, nil
+	return nil, errors.Join(err, fmt.Errorf("咪咕备用歌曲列表不可用: %w", alternateErr))
 }
 
-// miguAlternateSongsPage uses the official queryMusicListSongs.do route when
-// the v2 playlist song route fails, keeping the same page size and ordering.
-func (s *Service) miguAlternateSongsPage(ctx context.Context, id string, pageNo int, primaryErr error) (*miguSongsResponse, error) {
-	query := url.Values{}
-	query.Set("pageNo", strconv.Itoa(pageNo))
-	query.Set("pageSize", strconv.Itoa(miguSongsPerPage))
-	query.Set("musicListId", id)
-	address := "https://app.c.nf.migu.cn/MIGUM3.0/v1.0/user/queryMusicListSongs.do?" + query.Encode()
-	body, _, err := s.HTTP.Do(ctx, http.MethodGet, address, nil, map[string]string{
-		"Referer": "https://music.migu.cn/",
-	})
+func (page *miguSongPage) validate(pageNo, knownTotal int) error {
+	if page == nil {
+		return fmt.Errorf("咪咕音乐未返回歌单歌曲列表")
+	}
+	total, known, err := miguCount(page.TotalCount)
 	if err != nil {
-		return nil, fmt.Errorf("咪咕备用歌曲列表请求失败: %w", errors.Join(primaryErr, err))
+		return err
 	}
-	var response miguAlternateSongsResponse
-	if err := json.Unmarshal(body, &response); err != nil {
-		return nil, fmt.Errorf("咪咕备用歌曲列表格式无效: %w", err)
-	}
-	if code := miguCode(response.Code); code != "000000" {
-		return nil, fmt.Errorf("咪咕备用歌曲列表请求失败 (code=%s): %s", code, strings.TrimSpace(response.Info))
-	}
-	list := &miguSongsResponse{Code: response.Code, Info: response.Info}
-	list.Data = &struct {
-		TotalCount json.RawMessage `json:"totalCount"`
-		SongList   []miguSong      `json:"songList"`
-	}{TotalCount: response.TotalCount, SongList: make([]miguSong, 0, len(response.List))}
-	for _, item := range response.List {
-		song := miguSong{ContentID: item.ContentID, SongID: item.SongID, Name: item.Name}
-		if name := strings.TrimSpace(item.Singer); name != "" {
-			song.Singers = []miguSinger{{Name: name}}
+	page.total, page.totalKnown = total, known
+	for _, song := range page.SongList {
+		if strings.TrimSpace(song.Name) != "" {
+			return nil
 		}
-		list.Data.SongList = append(list.Data.SongList, song)
 	}
-	return list, nil
+	if page.SongList != nil && len(page.SongList) == 0 && max(knownTotal, total) <= (pageNo-1)*miguSongsPerPage {
+		return nil
+	}
+	return fmt.Errorf("咪咕音乐这一页未返回可读取的歌曲")
 }
 
 func miguCount(raw json.RawMessage) (int, bool, error) {

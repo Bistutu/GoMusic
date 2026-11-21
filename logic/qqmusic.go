@@ -29,12 +29,12 @@ func (s *Service) qqMusic(ctx context.Context, link musicurl.Link) (*models.Song
 	if err != nil || id <= 0 {
 		return nil, fmt.Errorf("%w: 歌单 ID 无效", ErrInvalidLink)
 	}
-	primary, primaryErr := s.qqPages(ctx, id)
-	if primaryErr == nil && len(primary.Tracks) >= primary.TotalCount {
-		return primary, nil
-	}
+	primary, primaryErr := s.qqPages(ctx, id, s.qqPage)
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
+	}
+	if primaryErr == nil && (qqPlaylistComplete(primary) || len(primary.Tracks) >= s.MaxSongs) {
+		return primary, nil
 	}
 
 	// 主接口失败或不完整时，依次尝试所有备用接口，保留数据最完整的结果。
@@ -48,29 +48,40 @@ func (s *Service) qqMusic(ctx context.Context, link musicurl.Link) (*models.Song
 			return nil, ctx.Err()
 		}
 		candidate, err := fallback.fetch(ctx, link.ID)
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		if err != nil {
 			failures = append(failures, fmt.Errorf("%s: %w", fallback.name, err))
+		}
+		if isEmptyQQPlaylist(candidate) || (err != nil && len(candidate.Tracks) == 0) {
+			if err == nil {
+				failures = append(failures, fmt.Errorf("%s: 返回空的歌单数据", fallback.name))
+			}
 			continue
 		}
-		// 部分接口对失效/私密歌单会返回 200 + 空壳（无名称、无歌曲、无总数），
-		// 这不是有效歌单，不能当成成功结果，否则会吞掉原本应有的错误语义。
-		if isEmptyQQPlaylist(candidate) {
-			failures = append(failures, fmt.Errorf("%s: 返回空的歌单数据", fallback.name))
-			continue
+		if err != nil {
+			candidate.Warnings = append(candidate.Warnings, "QQ 音乐备用接口分页中断，结果可能不完整")
 		}
 		best = preferPlaylist(best, candidate)
-		if best != nil && best.TotalCount > 0 && len(best.Tracks) >= best.TotalCount {
+		if qqPlaylistComplete(best) || len(best.Tracks) >= s.MaxSongs {
 			return best, nil
 		}
 	}
-	if best != nil {
-		best.Warnings = append(best.Warnings, "QQ 音乐未返回完整歌单，请检查公开权限或稍后重试")
+	if best != nil && len(best.Tracks) > 0 {
+		if len(best.Warnings) == 0 {
+			best.Warnings = append(best.Warnings, "QQ 音乐未返回完整歌单，请检查公开权限或稍后重试")
+		}
 		return best, nil
 	}
 	return nil, fmt.Errorf("QQ 音乐歌单暂时不可访问，请确认歌单已公开: %w", errors.Join(failures...))
 }
 
-func (s *Service) qqPages(ctx context.Context, id int) (*models.SongList, error) {
+func qqPlaylistComplete(list *models.SongList) bool {
+	return !isEmptyQQPlaylist(list) && len(list.Tracks) == list.TotalCount && len(list.Warnings) == 0
+}
+
+func (s *Service) qqPages(ctx context.Context, id int, fetchPage func(context.Context, int, int, int) (*models.QQMusicResp, error)) (*models.SongList, error) {
 	var list *models.SongList
 	seenPages := map[string]bool{}
 	seenTracks := map[string]bool{}
@@ -85,7 +96,7 @@ func (s *Service) qqPages(ctx context.Context, id int) (*models.SongList, error)
 		if count <= 0 {
 			break
 		}
-		page, err := s.qqPage(ctx, id, begin, count)
+		page, err := fetchPage(ctx, id, begin, count)
 		if err != nil {
 			return list, err
 		}
@@ -143,25 +154,32 @@ func (s *Service) qqPage(ctx context.Context, id, begin, count int) (*models.QQM
 		address := fmt.Sprintf(qqMusicAPIURL, utils.Encrypt(payload), time.Now().UnixMilli())
 		body, _, err := s.HTTP.Do(ctx, http.MethodPost, address, strings.NewReader(payload), map[string]string{"Content-Type": "application/json", "Referer": "https://y.qq.com/"})
 		if err != nil {
-			last = err
-			continue
+			// Other platform parameters still use the same host. Leave time
+			// for the alternate endpoints on transport/HTTP failures.
+			return nil, fmt.Errorf("QQ 音乐分页请求失败: %w", err)
 		}
-		var page models.QQMusicResp
-		if err = json.Unmarshal(body, &page); err != nil {
-			last = err
-			continue
+		page, err := decodeQQMusicPage(body)
+		if err == nil {
+			return page, nil
 		}
-		if page.Code != 0 || page.Req0 == nil || page.Req0.Code != 0 || page.Req0.Data == nil {
-			last = fmt.Errorf("QQ 音乐拒绝歌单访问 (code=%d)", page.Code)
-			continue
-		}
-		if page.Req0.Data.Dirinfo.Title == "" && len(page.Req0.Data.Songlist) == 0 {
-			last = fmt.Errorf("QQ 音乐返回了无效的歌单数据")
-			continue
-		}
-		return &page, nil
+		last = err
 	}
 	return nil, fmt.Errorf("QQ 音乐分页请求失败: %w", last)
+}
+
+func decodeQQMusicPage(body []byte) (*models.QQMusicResp, error) {
+	var page models.QQMusicResp
+	if err := json.Unmarshal(body, &page); err != nil {
+		return nil, err
+	}
+	if page.Code != 0 || page.Req0 == nil || page.Req0.Code != 0 || page.Req0.Data == nil {
+		return nil, fmt.Errorf("QQ 音乐拒绝歌单访问 (code=%d)", page.Code)
+	}
+	data := page.Req0.Data
+	if strings.TrimSpace(data.Dirinfo.Title) == "" && len(data.Songlist) == 0 {
+		return nil, fmt.Errorf("QQ 音乐返回了无效的歌单数据")
+	}
+	return &page, nil
 }
 
 func (s *Service) qqLegacy(ctx context.Context, id string) (*models.SongList, error) {
@@ -180,27 +198,37 @@ func decodeLegacyPlaylist(body io.Reader) (*models.SongList, error) {
 	if response.Code != 0 || response.Subcode != 0 {
 		return nil, fmt.Errorf("旧版接口业务错误(code:%d, subcode:%d): %s", response.Code, response.Subcode, response.Message)
 	}
-	if len(response.Cdlist) == 0 {
+	cdlist := response.Cdlist
+	if len(cdlist) == 0 && response.Data != nil {
+		cdlist = response.Data.Cdlist
+	}
+	if len(cdlist) == 0 {
 		return nil, fmt.Errorf("旧版接口未返回歌单")
 	}
-	data := response.Cdlist[0]
-	if data.Dissname == "" && len(data.Songlist) == 0 {
+	data := cdlist[0]
+	if strings.TrimSpace(data.Dissname) == "" && len(data.Songlist) == 0 {
 		return nil, fmt.Errorf("旧版接口未返回有效歌单信息")
 	}
 	if data.Songnum > 0 && len(data.Songlist) == 0 {
 		return nil, fmt.Errorf("旧版接口未返回歌曲")
 	}
 	list := &models.SongList{Name: data.Dissname, TotalCount: data.Songnum}
+	seen := map[string]bool{}
 	for _, song := range data.Songlist {
-		track := models.Track{ID: song.Songid.String(), Title: song.Songname, Artists: []string{}}
+		title := song.Songorig
+		if strings.TrimSpace(title) == "" {
+			title = song.Songname
+		}
+		track := models.Track{ID: song.Songid.String(), Title: title, Artists: []string{}}
+		if track.ID == "" || track.ID == "0" {
+			track.ID = song.Songmid
+		}
 		for _, artist := range song.Singer {
 			if artist.Name != "" {
 				track.Artists = append(track.Artists, artist.Name)
 			}
 		}
-		if track.Title != "" {
-			list.Tracks = append(list.Tracks, track)
-		}
+		appendDistinctTrack(list, track, seen)
 	}
 	return list, nil
 }
@@ -219,7 +247,7 @@ func isEmptyQQPlaylist(list *models.SongList) bool {
 	if list == nil {
 		return true
 	}
-	return list.Name == "" && len(list.Tracks) == 0
+	return strings.TrimSpace(list.Name) == "" && len(list.Tracks) == 0
 }
 
 func extractPlaylistID(input string) (int, error) {
