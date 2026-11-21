@@ -43,7 +43,7 @@
 GoMusic 免费、开源。欢迎使用微信扫码支持项目，也可以查看[赞赏名单](SUPPORTERS.md)。点击图片可查看原图。
 
 <p align="center">
-<a href="images/approve.png"><img src="images/approve.png" alt="微信赞赏码" width="320" /></a>
+<a href="../static/src/assets/approve.jpg"><img src="../static/src/assets/approve.jpg" alt="微信赞赏码" width="320" /></a>
 </p>
 
 [API 接口与平台限制](../docs/API.md) · [自行部署](../DEPLOYMENT.md) · [网易云 ↔ QQ 互转](https://github.com/Bistutu/GoMusic/issues/17) · [MIT](../LICENSE) · [致谢](../THIRD_PARTY_NOTICES.md)

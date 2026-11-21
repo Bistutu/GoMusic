@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { platformOf } from "../lib/playlist";
-import type { ExportOptions } from "../lib/playlist";
+import { platformOf, type ExportOptions } from "../lib/playlist";
 import type { Copy } from "../i18n";
 const link = defineModel<string>({ required: true });
 const props = defineProps<{
@@ -13,21 +12,8 @@ const props = defineProps<{
 const emit = defineEmits<{ submit: []; cancel: [] }>();
 const exampleUrl = "http://163cn.tv/zoIxm3";
 const platform = computed(() => {
-  const p = platformOf(link.value);
-  return p
-    ? props.t[
-        p as
-          | "netease"
-          | "qq"
-          | "qishui"
-          | "kugou"
-          | "kuwo"
-          | "migu"
-          | "qianqian"
-          | "bodian"
-          | "deezer"
-      ]
-    : "";
+  const source = platformOf(link.value);
+  return source ? props.t[source] : "";
 });
 </script>
 <template>
@@ -47,9 +33,8 @@ const platform = computed(() => {
       @keydown.ctrl.enter.prevent="emit('submit')"
       @keydown.meta.enter.prevent="emit('submit')"
     />
-    <p class="supported-sources">{{ t.sources }}</p>
     <div class="input-helper">
-      <span>{{ platform ? t.detected + platform : t.privacy }}</span>
+      <span v-if="platform">{{ t.detected + platform }}</span>
       <button
         type="button"
         class="text-button example-link"

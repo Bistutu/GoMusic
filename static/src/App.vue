@@ -2,7 +2,11 @@
 import { computed, reactive, ref, watch } from "vue";
 import { messages } from "./i18n";
 import { usePlaylist } from "./composables/usePlaylist";
-import { kugouCodeOf, type ExportOptions } from "./lib/playlist";
+import {
+  kugouCodeOf,
+  playlistSources,
+  type ExportOptions,
+} from "./lib/playlist";
 import PlaylistForm from "./components/PlaylistForm.vue";
 import ExportPanel from "./components/ExportPanel.vue";
 import TransferGuide from "./components/TransferGuide.vue";
@@ -103,13 +107,16 @@ const errorMessage = computed(() => {
     </header>
     <main>
       <div class="page-intro">
-        <h1>
-          <template v-for="(part, index) in t.title.split(' / ')" :key="index"
-            ><template v-if="index"> / </template
-            ><span class="title-part">{{ part }}</span></template
-          >
-        </h1>
-        <p>{{ t.subtitle }}</p>
+        <h1>{{ t.title }}</h1>
+        <ul class="source-list" role="list" :aria-label="t.sources">
+          <li v-for="(source, index) in playlistSources" :key="source">
+            <span v-if="index === 0" class="source-prefix" aria-hidden="true">
+              {{ t.from }}
+            </span>
+            <span class="source-name">{{ t[source] }}</span>
+          </li>
+        </ul>
+        <p class="playlist-destinations">{{ t.destinations }}</p>
       </div>
       <PlaylistForm
         v-model="link"

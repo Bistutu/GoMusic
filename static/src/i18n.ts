@@ -15,9 +15,9 @@ const zh = {
   transferTools: "迁移工具：",
   guide: "使用指南",
   language: "Switch to English",
-  subtitle: "至 Apple Music / YouTube Music / Spotify",
-  sources:
-    "支持公开歌单来源：网易云音乐、QQ 音乐、汽水音乐、酷狗音乐、酷我音乐、波点音乐、咪咕音乐、千千音乐、Deezer",
+  from: "从",
+  destinations: "迁移至 Apple\u00a0Music / YouTube\u00a0Music / Spotify",
+  sources: "歌单来源",
   netease: "网易云音乐",
   qq: "QQ 音乐",
   qishui: "汽水音乐",
@@ -33,7 +33,6 @@ const zh = {
   fetch: "获取歌单",
   loading: "正在获取歌单…",
   cancel: "取消",
-  privacy: "仅支持获取公开歌单",
   errorInvalid: "请输入支持平台的公开歌单链接或有效酷狗码（最多 4096 字节）。",
   errorKugouCode: "酷狗码无效、已过期或不是公开歌单，请核对后重试。",
   errorDeezerRetiredLink:
@@ -103,10 +102,10 @@ const en: Record<keyof typeof zh, string> = {
   transferTools: "Transfer tools:",
   guide: "How it works",
   language: "切换到中文",
-  subtitle: "To Apple Music / YouTube Music / Spotify",
-  sources:
-    "Public playlist sources: NetEase Cloud Music, QQ Music, Qishui, Kugou, Kuwo, Bodian, Migu, Qianqian and Deezer",
-  netease: "NetEase",
+  from: "From",
+  destinations: "Transfer to Apple\u00a0Music / YouTube\u00a0Music / Spotify",
+  sources: "Playlist sources",
+  netease: "NetEase Cloud Music",
   qq: "QQ Music",
   qishui: "Qishui",
   kugou: "Kugou",
@@ -122,7 +121,6 @@ const en: Record<keyof typeof zh, string> = {
   fetch: "Get playlist",
   loading: "Getting playlist…",
   cancel: "Cancel",
-  privacy: "Public playlists only",
   errorInvalid:
     "Enter a supported public playlist link or a valid Kugou code (up to 4096 bytes).",
   errorKugouCode:

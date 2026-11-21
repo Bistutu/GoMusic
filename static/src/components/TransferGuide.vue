@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Copy } from "../i18n";
-import sponsorImage from "../assets/approve.png";
+import sponsorImage from "../assets/approve.jpg";
 defineProps<{ t: Copy }>();
 const sponsors = [
   ["冰楠 ₿.Ξ 🧘", 188],

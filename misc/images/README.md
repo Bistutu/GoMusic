@@ -13,4 +13,4 @@ The input is the public Kugou code `40725013`. Both desktop and mobile requests 
 
 When refreshing these assets, use the current running site, verify the API's fetched and total counts, switch the UI language, and capture through the end of the export panel. Check that mobile controls are visible and the page has no horizontal overflow. Verify that clipboard and TXT contents match the editor without line numbers. Update both language pairs together.
 
-`approve.png` is the original WeChat appreciation image, retained separately from the application screenshots.
+The website and README files use the same [WeChat appreciation image](../../static/src/assets/approve.jpg).

@@ -34,7 +34,7 @@ GoMusic은 공개 플레이리스트의 곡 정보만 텍스트로 내보냅니�
 GoMusic은 무료 오픈 소스입니다. WeChat 코드로 후원하거나 [후원자 명단](misc/SUPPORTERS.md)을 확인할 수 있습니다. 이미지를 누르면 원본이 열립니다.
 
 <p align="center">
-<a href="misc/images/approve.png"><img src="misc/images/approve.png" alt="WeChat 후원 코드" width="320" /></a>
+<a href="static/src/assets/approve.jpg"><img src="static/src/assets/approve.jpg" alt="WeChat 후원 코드" width="320" /></a>
 </p>
 
 [API 및 플랫폼 제한](docs/API.md) · [직접 호스팅 (中文)](DEPLOYMENT.md) · [NetEase ↔ QQ](https://github.com/Bistutu/GoMusic/issues/17) · [MIT](LICENSE) · [크레딧](THIRD_PARTY_NOTICES.md)

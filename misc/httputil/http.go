@@ -12,6 +12,10 @@ import (
 
 const MaxResponseBytes = 16 << 20
 
+type StatusError struct{ Code int }
+
+func (e *StatusError) Error() string { return fmt.Sprintf("音乐平台返回 HTTP %d", e.Code) }
+
 type Client struct{ http *http.Client }
 
 func NewClient(client *http.Client) *Client {
@@ -69,7 +73,7 @@ func (c *Client) Resolve(ctx context.Context, address string, headers map[string
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("音乐平台返回 HTTP %d", resp.StatusCode)
+		return nil, &StatusError{Code: resp.StatusCode}
 	}
 	return resp.Request.URL, nil
 }
@@ -90,7 +94,7 @@ func (c *Client) DoWithCookies(ctx context.Context, method, address string, body
 	defer resp.Body.Close()
 	cookies := resp.Cookies()
 	if resp.StatusCode != http.StatusOK {
-		return nil, cookies, resp.Request.URL, fmt.Errorf("音乐平台返回 HTTP %d", resp.StatusCode)
+		return nil, cookies, resp.Request.URL, &StatusError{Code: resp.StatusCode}
 	}
 	data, err := io.ReadAll(io.LimitReader(resp.Body, MaxResponseBytes+1))
 	if err != nil {

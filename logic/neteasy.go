@@ -2,10 +2,12 @@ package logic
 
 import (
 	"GoMusic/internal/musicurl"
+	"GoMusic/misc/httputil"
 	"GoMusic/misc/log"
 	"GoMusic/misc/models"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"golang.org/x/sync/errgroup"
 	"net/http"
@@ -52,10 +54,38 @@ func (s *Service) netEase(ctx context.Context, link musicurl.Link) (*models.Song
 	if err != nil {
 		return nil, err
 	}
+	list, primaryErr := s.netEaseV6(ctx, link.ID)
+	if primaryErr == nil && (len(list.Tracks) >= list.TotalCount || len(list.Tracks) >= s.MaxSongs) {
+		return list, nil
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if errors.Is(primaryErr, ErrPrivatePlaylist) {
+		return nil, primaryErr
+	}
+	legacy, legacyErr := s.netEaseLegacy(ctx, link.ID)
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if errors.Is(legacyErr, ErrPrivatePlaylist) {
+		return nil, legacyErr
+	}
+	if legacyErr == nil {
+		return preferPlaylist(list, legacy), nil
+	}
+	if list != nil && (len(list.Tracks) > 0 || primaryErr == nil) {
+		return list, nil
+	}
+	return nil, errors.Join(primaryErr, legacyErr)
+}
+
+// netEaseV6 使用 v6 详情接口取 trackIds，再按批次补齐歌曲元数据。
+func (s *Service) netEaseV6(ctx context.Context, id string) (*models.SongList, error) {
 	body, _, err := s.HTTP.Do(ctx, http.MethodPost, "https://music.163.com/api/v6/playlist/detail",
-		strings.NewReader(url.Values{"id": {link.ID}, "n": {"100000"}}.Encode()), nil)
+		strings.NewReader(url.Values{"id": {id}, "n": {"100000"}}.Encode()), nil)
 	if err != nil {
-		return nil, fmt.Errorf("请求网易云歌单失败: %w", err)
+		return nil, fmt.Errorf("请求网易云歌单失败: %w", netEasePlaylistStatus(err))
 	}
 	var metadata struct {
 		Code     int `json:"code"`
@@ -78,8 +108,9 @@ func (s *Service) netEase(ctx context.Context, link musicurl.Link) (*models.Song
 		return nil, fmt.Errorf("网易云歌单不存在、未公开或暂时不可访问 (code=%d)", metadata.Code)
 	}
 	p := metadata.Playlist
+	list := &models.SongList{Name: p.Name, TotalCount: max(p.TrackCount, len(p.TrackIDs))}
 	if p.TrackCount > 0 && len(p.TrackIDs) == 0 {
-		return nil, fmt.Errorf("网易云未返回歌曲列表，请检查歌单访问权限")
+		return list, fmt.Errorf("网易云未返回歌曲列表，请检查歌单访问权限")
 	}
 	ids := make([]string, 0, len(p.TrackIDs))
 	for _, item := range p.TrackIDs {
@@ -97,19 +128,71 @@ func (s *Service) netEase(ctx context.Context, link musicurl.Link) (*models.Song
 		}
 	}
 	tracks, err := s.netEaseSongs(ctx, ids, seeds)
-	if err != nil {
-		return nil, err
-	}
-	list := &models.SongList{Name: p.Name, TotalCount: p.TrackCount, Tracks: make([]models.Track, 0, len(ids))}
-	if len(p.TrackIDs) > list.TotalCount {
-		list.TotalCount = len(p.TrackIDs)
-	}
+	list.Tracks = make([]models.Track, 0, len(ids))
 	for _, id := range ids {
 		if track, ok := tracks[id]; ok {
 			list.Tracks = append(list.Tracks, track)
 		}
 	}
+	return list, err
+}
+
+// The legacy route can return fewer embedded rows than its advertised total.
+func (s *Service) netEaseLegacy(ctx context.Context, id string) (*models.SongList, error) {
+	body, _, err := s.HTTP.Do(ctx, http.MethodGet, "https://music.163.com/api/playlist/detail?id="+url.QueryEscape(id), nil,
+		map[string]string{"Referer": "https://music.163.com/"})
+	if err != nil {
+		return nil, fmt.Errorf("请求网易云备用接口失败: %w", netEasePlaylistStatus(err))
+	}
+	var metadata struct {
+		Code   int `json:"code"`
+		Result *struct {
+			Name       string    `json:"name"`
+			TrackCount *int      `json:"trackCount"`
+			Tracks     []netSong `json:"tracks"`
+		} `json:"result"`
+	}
+	if err = json.Unmarshal(body, &metadata); err != nil {
+		return nil, fmt.Errorf("网易云备用接口返回了无效数据: %w", err)
+	}
+	if metadata.Code == 401 || metadata.Code == 403 {
+		return nil, fmt.Errorf("%w: 该网易云歌单未公开，请先设置为公开", ErrPrivatePlaylist)
+	}
+	if metadata.Code != 200 || metadata.Result == nil || strings.TrimSpace(metadata.Result.Name) == "" {
+		return nil, fmt.Errorf("网易云备用接口歌单不存在或暂时不可访问 (code=%d)", metadata.Code)
+	}
+	result := metadata.Result
+	list := &models.SongList{Name: result.Name}
+	if result.TrackCount != nil {
+		list.TotalCount = *result.TrackCount
+	}
+	seen := map[string]bool{}
+	for _, song := range result.Tracks {
+		appendDistinctTrack(list, song.track(), seen)
+		if len(list.Tracks) >= s.MaxSongs {
+			break
+		}
+	}
+	if len(list.Tracks) == 0 && (result.TrackCount == nil || *result.TrackCount != 0 || result.Tracks == nil || len(result.Tracks) != 0) {
+		return nil, fmt.Errorf("网易云备用接口未返回有效歌曲")
+	}
+	if result.TrackCount == nil {
+		list.TotalCount = len(result.Tracks)
+		list.Warnings = append(list.Warnings, "网易云备用接口未返回可确认的歌单总数")
+	}
+	if list.TotalCount < len(result.Tracks) {
+		list.TotalCount = len(result.Tracks)
+		list.Warnings = append(list.Warnings, "网易云备用接口的歌单总数与返回条数不一致")
+	}
 	return list, nil
+}
+
+func netEasePlaylistStatus(err error) error {
+	var status *httputil.StatusError
+	if errors.As(err, &status) && (status.Code == http.StatusUnauthorized || status.Code == http.StatusForbidden) {
+		return errors.Join(ErrPrivatePlaylist, err)
+	}
+	return err
 }
 
 func (s *Service) netEaseSongs(ctx context.Context, ids []string, seeds map[string]models.Track) (map[string]models.Track, error) {
@@ -155,24 +238,13 @@ func (s *Service) netEaseSongs(ctx context.Context, ids []string, seeds map[stri
 				payload = append(payload, map[string]string{"id": id})
 			}
 			encoded, _ := json.Marshal(payload)
-			body, _, err := s.HTTP.Do(gctx, http.MethodPost, "https://music.163.com/api/v3/song/detail",
-				strings.NewReader(url.Values{"c": {string(encoded)}}.Encode()), nil)
-			if err != nil {
-				return fmt.Errorf("获取网易云歌曲详情失败: %w", err)
-			}
-			var result struct {
-				Code  int       `json:"code"`
-				Songs []netSong `json:"songs"`
-			}
-			if err = json.Unmarshal(body, &result); err != nil {
-				return err
-			}
-			if result.Code != 200 {
-				return fmt.Errorf("网易云歌曲详情暂时不可访问 (code=%d)", result.Code)
+			songs, detailErr := s.netEaseSongChunk(gctx, chunk, string(encoded))
+			if detailErr != nil {
+				return detailErr
 			}
 			mu.Lock()
 			defer mu.Unlock()
-			for _, song := range result.Songs {
+			for _, song := range songs {
 				if song.Name != "" {
 					found[song.ID.String()] = song.track()
 				}
@@ -181,7 +253,7 @@ func (s *Service) netEaseSongs(ctx context.Context, ids []string, seeds map[stri
 		})
 	}
 	if err := group.Wait(); err != nil {
-		return nil, err
+		return found, err
 	}
 	// Backfill Redis even when all missing metadata came from MySQL.
 	values := make([]models.Track, 0, len(found))
@@ -205,6 +277,68 @@ func (s *Service) netEaseSongs(ctx context.Context, ids []string, seeds map[stri
 		}
 	}
 	return found, nil
+}
+
+// netEaseSongChunk tries the batch detail endpoint first and falls back to the
+// older official /api/song/detail route. Both are read-only metadata APIs.
+func (s *Service) netEaseSongChunk(ctx context.Context, chunk []string, encodedIDs string) ([]netSong, error) {
+	body, _, err := s.HTTP.Do(ctx, http.MethodPost, "https://music.163.com/api/v3/song/detail",
+		strings.NewReader(url.Values{"c": {encodedIDs}}.Encode()), nil)
+	var primary []netSong
+	if err == nil {
+		primary, err = decodeNetEaseSongDetails(body)
+	}
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return nil, ctxErr
+	}
+	valid := map[string]bool{}
+	for _, song := range primary {
+		if song.Name != "" {
+			valid[song.ID.String()] = true
+		}
+	}
+	missing := make([]string, 0, len(chunk))
+	for _, id := range chunk {
+		if !valid[id] {
+			missing = append(missing, id)
+		}
+	}
+	if len(missing) == 0 {
+		return primary, nil
+	}
+	idsJSON, _ := json.Marshal(missing)
+	legacyBody, _, legacyErr := s.HTTP.Do(ctx, http.MethodGet, "https://music.163.com/api/song/detail?ids="+
+		url.QueryEscape(string(idsJSON)), nil, map[string]string{"Referer": "https://music.163.com/"})
+	var legacy []netSong
+	if legacyErr == nil {
+		legacy, legacyErr = decodeNetEaseSongDetails(legacyBody)
+	}
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return nil, ctxErr
+	}
+	if err != nil && legacyErr != nil {
+		return nil, fmt.Errorf("获取网易云歌曲详情失败: %w", errors.Join(err, legacyErr))
+	}
+	for _, song := range legacy {
+		if !valid[song.ID.String()] {
+			primary = append(primary, song)
+		}
+	}
+	return primary, nil
+}
+
+func decodeNetEaseSongDetails(body []byte) ([]netSong, error) {
+	var result struct {
+		Code  int       `json:"code"`
+		Songs []netSong `json:"songs"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, fmt.Errorf("网易云歌曲详情格式无效: %w", err)
+	}
+	if result.Code != 200 {
+		return nil, fmt.Errorf("网易云歌曲详情暂时不可访问 (code=%d)", result.Code)
+	}
+	return result.Songs, nil
 }
 
 func missingIDs(ids []string, found map[string]models.Track) []string {

@@ -110,26 +110,45 @@ textarea:focus {
 }
 h1 {
   text-wrap: balance;
-  font-size: 26px;
-  font-weight: 600;
-  line-height: 1.6;
+  font-size: 30px;
+  font-weight: 650;
+  line-height: 1.35;
   letter-spacing: -0.4px;
   margin: 0 0 7px;
 }
-.title-part {
+.playlist-destinations {
+  font-size: 15px;
+  color: #575757;
+  line-height: 1.6;
+  margin: 0 auto;
+  text-wrap: balance;
+}
+.source-list {
+  margin: 9px 0;
+  padding: 0;
+  list-style: none;
+  color: #333;
+  font-size: 0;
+  line-height: 0;
+  text-wrap: balance;
+}
+.source-list li {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 3px;
+  vertical-align: top;
+  font-size: 14px;
+  line-height: 1.6;
   white-space: nowrap;
 }
-.page-intro p {
-  font-size: 17px;
-  color: #737373;
-  line-height: 1.6;
-  margin: 0;
+.source-prefix {
+  color: #575757;
 }
-.supported-sources {
-  margin: 6px 0 0;
-  font-size: 13px;
-  line-height: 1.7;
-  color: #737373;
+.source-name {
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: #f3f3f3;
 }
 .input-label {
   display: block;
@@ -155,7 +174,6 @@ h1 {
 .input-helper {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
   color: #858585;
@@ -165,6 +183,7 @@ h1 {
   min-height: 20px;
 }
 .example-link {
+  margin-inline-start: auto;
   font-size: inherit;
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -575,12 +594,13 @@ h1 {
     margin-bottom: 24px;
   }
   h1 {
-    font-size: 20px;
-    line-height: 1.55;
+    font-size: 24px;
   }
-  .page-intro p {
-    font-size: 15px;
-    line-height: 1.8;
+  .source-list li {
+    margin: 2.5px;
+  }
+  .source-name {
+    padding-inline: 5px;
   }
   .link-input {
     height: 72px;

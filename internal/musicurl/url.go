@@ -70,6 +70,7 @@ var hosts = map[string]string{
 	"music.163.com": NetEase, "y.music.163.com": NetEase, "163cn.tv": NetEase, "163cn.com": NetEase,
 	"y.qq.com": QQ, "i.y.qq.com": QQ, "i2.y.qq.com": QQ, "c6.y.qq.com": QQ, "c.y.qq.com": QQ, "u.y.qq.com": QQ, "u6.y.qq.com": QQ,
 	"qishui.douyin.com": Qishui, "music.douyin.com": Qishui, "beta-luna.douyin.com": Qishui,
+	"api.qishui.com": Qishui, "api5-lf.qishui.com": Qishui,
 	"kugou.com": Kugou, "www.kugou.com": Kugou, "m.kugou.com": Kugou, "t.kugou.com": Kugou, "t1.kugou.com": Kugou, "activity.kugou.com": Kugou, "mobilecdn.kugou.com": Kugou, "mobiles.kugou.com": Kugou, "pubsongscdn.kugou.com": Kugou,
 	"kuwo.cn": Kuwo, "www.kuwo.cn": Kuwo, "m.kuwo.cn": Kuwo, "t.kuwo.cn": Kuwo, "nplserver.kuwo.cn": Kuwo, "kbangserver.kuwo.cn": Kuwo,
 	"music.migu.cn": Migu, "app.c.nf.migu.cn": Migu,
@@ -87,9 +88,14 @@ func Validate(u *url.URL) (string, error) {
 	if u == nil || (!strings.EqualFold(u.Scheme, "https") && !strings.EqualFold(u.Scheme, "http")) || u.User != nil || u.Opaque != "" || u.Port() != "" {
 		return "", errors.New("仅支持音乐平台的 HTTP/HTTPS 链接")
 	}
-	p, ok := hosts[strings.ToLower(u.Host)]
+	host := strings.ToLower(u.Host)
+	p, ok := hosts[host]
 	if !ok {
 		return "", errors.New("仅支持网易云音乐、QQ 音乐、汽水音乐、酷狗音乐、酷我音乐、咪咕音乐、千千音乐、波点音乐和 Deezer 的官方链接")
+	}
+	if (host == "api.qishui.com" || host == "api5-lf.qishui.com") &&
+		(!strings.EqualFold(u.Scheme, "https") || !qishuiPlaylistDetailPath.MatchString(u.Path)) {
+		return "", errors.New("汽水音乐备用 API 仅支持 HTTPS 歌单详情路径")
 	}
 	return p, nil
 }
@@ -267,7 +273,7 @@ func parseLinkInput(input string) (Link, error) {
 					routeErr = errors.New("请使用汽水音乐的公开歌单分享链接")
 					continue
 				}
-			case "beta-luna.douyin.com":
+			case "beta-luna.douyin.com", "api.qishui.com", "api5-lf.qishui.com":
 				if !qishuiPlaylistDetailPath.MatchString(path) || !digits.MatchString(link.ID) {
 					routeErr = errors.New("请使用汽水音乐的公开歌单分享链接")
 					continue

@@ -25,8 +25,34 @@ test("keeps the page usable on desktop and mobile", async ({
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText(
-    "音乐迁移",
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("音乐迁移");
+  await expect(page.getByText("从", { exact: true })).toBeVisible();
+  const sources = page.getByRole("list", { name: "歌单来源" });
+  await expect(sources).toBeInViewport({ ratio: 1 });
+  await expect(sources.locator(".source-name")).toHaveText([
+    "网易云音乐",
+    "QQ 音乐",
+    "汽水音乐",
+    "酷狗音乐",
+    "酷我音乐",
+    "波点音乐",
+    "咪咕音乐",
+    "千千音乐",
+    "Deezer",
+  ]);
+  const sourceBounds = (await sources.boundingBox())!;
+  const destinations = page.getByText(
+    "迁移至 Apple Music / YouTube Music / Spotify",
+    {
+      exact: true,
+    },
+  );
+  const input = page.getByLabel("公开歌单链接或酷狗码");
+  expect(sourceBounds.y + sourceBounds.height).toBeLessThan(
+    (await destinations.boundingBox())!.y,
+  );
+  expect(sourceBounds.y + sourceBounds.height).toBeLessThan(
+    (await input.boundingBox())!.y,
   );
   await expect(
     page.getByRole("button", { name: "获取歌单", exact: true }),
@@ -57,6 +83,17 @@ test("keeps the page usable on desktop and mobile", async ({
     path: `test-results/${testInfo.project.name}-initial.png`,
     fullPage: true,
   });
+  await page.setViewportSize({ width: 520, height: 844 });
+  const rowCounts = await sources.evaluate((list) => {
+    const rows = new Map<number, number>();
+    for (const item of list.children) {
+      const top = item.getBoundingClientRect().top;
+      rows.set(top, (rows.get(top) ?? 0) + 1);
+    }
+    return [...rows.values()].sort();
+  });
+  expect(rowCounts.length).toBeLessThanOrEqual(2);
+  if (rowCounts.length === 2) expect(rowCounts).toEqual([4, 5]);
   expect(errors).toEqual([]);
 });
 test("validates links and shows useful network errors", async ({ page }) => {
@@ -434,6 +471,25 @@ test("persists the language preference", async ({ page }, testInfo) => {
   await expect(
     page.getByRole("button", { name: "Get playlist", exact: true }),
   ).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "Music Transfer",
+  );
+  await expect(page.getByText("From", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Transfer to Apple Music / YouTube Music / Spotify", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  const sources = page.getByRole("list", {
+    name: "Playlist sources",
+  });
+  await expect(sources).toBeInViewport({ ratio: 1 });
+  await expect(sources.getByRole("listitem")).toHaveCount(9);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
   await page.reload();
   await expect(
     page.getByRole("button", { name: "Get playlist", exact: true }),

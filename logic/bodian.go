@@ -37,6 +37,8 @@ type bodianPageResponse struct {
 		Total json.RawMessage `json:"total"`
 		List  []bodianSong    `json:"list"`
 	} `json:"data"`
+	total      int
+	totalKnown bool
 }
 
 type bodianSong struct {
@@ -51,7 +53,6 @@ type bodianPlaylistInfo struct {
 	Name       string
 	TotalCount int
 	TotalKnown bool
-	IsPrivate  json.RawMessage
 }
 
 func (song bodianSong) track() models.Track {
@@ -118,13 +119,8 @@ func (s *Service) bodian(ctx context.Context, link musicurl.Link) (*models.SongL
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-	if info != nil {
-		private, known, err := bodianPrivate(info.IsPrivate)
-		if err != nil {
-			infoErr = errors.Join(infoErr, err)
-		} else if known && private {
-			return nil, ErrPrivatePlaylist
-		}
+	if errors.Is(infoErr, ErrPrivatePlaylist) {
+		return nil, infoErr
 	}
 
 	list := &models.SongList{Tracks: []models.Track{}, Warnings: []string{}}
@@ -148,15 +144,7 @@ func (s *Service) bodian(ctx context.Context, link musicurl.Link) (*models.SongL
 		if len(list.Tracks) >= s.MaxSongs || (totalKnown && list.TotalCount > 0 && len(list.Tracks) >= list.TotalCount) {
 			break
 		}
-		count := min(bodianPageSize, s.MaxSongs-len(list.Tracks))
-		query := url.Values{}
-		query.Set("source", source)
-		query.Set("pn", strconv.Itoa(pageNo))
-		query.Set("rn", strconv.Itoa(count))
-		query.Set("uid", "-1")
-		query.Set("token", "")
-		address := bodianAPIBase + "/" + url.PathEscape(link.ID) + "/musicList?" + query.Encode()
-		body, _, err := s.HTTP.Do(ctx, http.MethodGet, address, nil, headers)
+		page, err := s.bodianMusicList(ctx, link.ID, source, pageNo, len(list.Tracks), list.TotalCount, headers)
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
@@ -165,24 +153,7 @@ func (s *Service) bodian(ctx context.Context, link musicurl.Link) (*models.SongL
 			break
 		}
 
-		var page bodianPageResponse
-		if err := json.Unmarshal(body, &page); err != nil {
-			pageErr = fmt.Errorf("波点音乐分页响应格式无效: %w", err)
-			break
-		}
-		if err := bodianStatus(page.Code, page.Msg); err != nil {
-			pageErr = err
-			break
-		}
-		if page.Data == nil {
-			pageErr = fmt.Errorf("波点音乐未返回歌单曲目")
-			break
-		}
-		pageTotal, pageTotalKnown, err := kuwoTotal(page.Data.Total)
-		if err != nil {
-			pageErr = err
-			break
-		}
+		pageTotal, pageTotalKnown := page.total, page.totalKnown
 		if pageTotalKnown {
 			if totalKnown && pageTotal != referenceTotal {
 				totalConflict = true
@@ -218,7 +189,7 @@ func (s *Service) bodian(ctx context.Context, link musicurl.Link) (*models.SongL
 		if totalKnown && len(list.Tracks) >= list.TotalCount {
 			break
 		}
-		if !totalKnown && len(page.Data.List) < count {
+		if !totalKnown && len(page.Data.List) < bodianPageSize {
 			break
 		}
 	}
@@ -259,31 +230,104 @@ func (s *Service) bodian(ctx context.Context, link musicurl.Link) (*models.SongL
 	return list, nil
 }
 
-func (s *Service) bodianInfo(ctx context.Context, id, source string, headers map[string]string) (*bodianPlaylistInfo, error) {
-	query := url.Values{}
-	query.Set("source", source)
+// Try the browser's minimal query profile when the app profile returns an
+// invalid response. Both use the same endpoint and request headers.
+func (s *Service) bodianRequest(ctx context.Context, path string, query url.Values, headers map[string]string, decode func([]byte) error) error {
 	query.Set("uid", "-1")
 	query.Set("token", "")
-	address := bodianAPIBase + "/info/" + url.PathEscape(id) + "?" + query.Encode()
-	body, _, err := s.HTTP.Do(ctx, http.MethodGet, address, nil, headers)
+	var failures []error
+	for attempt := range 2 {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if attempt > 0 {
+			query.Del("uid")
+			query.Del("token")
+		}
+		body, _, err := s.HTTP.Do(ctx, http.MethodGet, bodianAPIBase+path+"?"+query.Encode(), nil, headers)
+		if err == nil {
+			err = decode(body)
+		}
+		if err == nil || errors.Is(err, ErrPrivatePlaylist) {
+			return err
+		}
+		failures = append(failures, err)
+	}
+	return errors.Join(failures...)
+}
+
+func (s *Service) bodianMusicList(ctx context.Context, id, source string, pageNo, fetched, knownTotal int, headers map[string]string) (*bodianPageResponse, error) {
+	// Keep the page size constant. Changing rn on the last page changes
+	// the offset derived from pn when the export cap is not a multiple of rn.
+	pageSize := min(bodianPageSize, s.MaxSongs)
+	query := url.Values{"source": {source}, "pn": {strconv.Itoa(pageNo)}, "rn": {strconv.Itoa(pageSize)}}
+	var page bodianPageResponse
+	err := s.bodianRequest(ctx, "/"+url.PathEscape(id)+"/musicList", query, headers, func(body []byte) error {
+		var candidate bodianPageResponse
+		if err := json.Unmarshal(body, &candidate); err != nil {
+			return fmt.Errorf("波点音乐分页响应格式无效: %w", err)
+		}
+		if err := bodianStatus(candidate.Code, candidate.Msg); err != nil {
+			return err
+		}
+		if candidate.Data == nil || candidate.Data.List == nil {
+			return fmt.Errorf("波点音乐未返回歌单曲目")
+		}
+		total, known, err := kuwoTotal(candidate.Data.Total)
+		if err != nil {
+			return err
+		}
+		// Keep totals from both profiles even when one returns no usable rows.
+		if known {
+			page.total, page.totalKnown = max(page.total, total), true
+		}
+		candidate.total, candidate.totalKnown = page.total, page.totalKnown
+		for _, song := range candidate.Data.List {
+			if strings.TrimSpace(song.Name) != "" || strings.TrimSpace(song.Title) != "" {
+				page = candidate
+				return nil
+			}
+		}
+		if len(candidate.Data.List) == 0 && max(knownTotal, page.total) <= fetched {
+			page = candidate
+			return nil
+		}
+		return fmt.Errorf("波点音乐这一页未返回可读取的歌曲")
+	})
+	return &page, err
+}
+
+func (s *Service) bodianInfo(ctx context.Context, id, source string, headers map[string]string) (*bodianPlaylistInfo, error) {
+	var info bodianPlaylistInfo
+	err := s.bodianRequest(ctx, "/info/"+url.PathEscape(id), url.Values{"source": {source}}, headers, func(body []byte) error {
+		var response bodianInfoResponse
+		if err := json.Unmarshal(body, &response); err != nil {
+			return fmt.Errorf("波点歌单元信息格式无效: %w", err)
+		}
+		if err := bodianStatus(response.Code, response.Msg); err != nil {
+			return err
+		}
+		if response.Data == nil {
+			return fmt.Errorf("波点歌单元信息为空")
+		}
+		private, _, err := bodianPrivate(response.Data.IsPrivate)
+		if err != nil {
+			return err
+		}
+		if private {
+			return ErrPrivatePlaylist
+		}
+		total, known, err := kuwoTotal(response.Data.MusicCount)
+		if err != nil {
+			return err
+		}
+		info = bodianPlaylistInfo{Name: strings.TrimSpace(response.Data.Name), TotalCount: total, TotalKnown: known}
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	var response bodianInfoResponse
-	if err := json.Unmarshal(body, &response); err != nil {
-		return nil, fmt.Errorf("波点歌单元信息格式无效: %w", err)
-	}
-	if err := bodianStatus(response.Code, response.Msg); err != nil {
-		return nil, err
-	}
-	if response.Data == nil {
-		return nil, fmt.Errorf("波点歌单元信息为空")
-	}
-	total, known, err := kuwoTotal(response.Data.MusicCount)
-	if err != nil {
-		return nil, err
-	}
-	return &bodianPlaylistInfo{Name: strings.TrimSpace(response.Data.Name), TotalCount: total, TotalKnown: known, IsPrivate: response.Data.IsPrivate}, nil
+	return &info, nil
 }
 
 func bodianStatus(raw json.RawMessage, message string) error {

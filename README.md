@@ -43,7 +43,7 @@ GoMusic exports public playlist song information as text, not audio; the transfe
 GoMusic is free and open source. Scan the WeChat code to support the project, or [view the supporters](misc/SUPPORTERS.md). Click any image to open its original.
 
 <p align="center">
-<a href="misc/images/approve.png"><img src="misc/images/approve.png" alt="WeChat appreciation code" width="320" /></a>
+<a href="static/src/assets/approve.jpg"><img src="static/src/assets/approve.jpg" alt="WeChat appreciation code" width="320" /></a>
 </p>
 
 [API limits](docs/API.md) · [Self-hosting](DEPLOYMENT.md) · [NetEase ↔ QQ guide](https://github.com/Bistutu/GoMusic/issues/17) · [MIT](LICENSE) · [Credits](THIRD_PARTY_NOTICES.md)

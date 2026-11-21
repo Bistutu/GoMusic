@@ -61,18 +61,25 @@ type QQMusicResp struct {
 	} `json:"req_0"`
 }
 type QQMusicLegacyResp struct {
-	Code    int    `json:"code"`
-	Subcode int    `json:"subcode"`
-	Message string `json:"msg"`
-	Cdlist  []struct {
-		Dissname string `json:"dissname"`
-		Songnum  int    `json:"songnum"`
-		Songlist []struct {
-			Songid   json.Number `json:"songid"`
-			Songname string      `json:"songname"`
-			Singer   []struct {
-				Name string `json:"name"`
-			} `json:"singer"`
-		} `json:"songlist"`
-	} `json:"cdlist"`
+	Code    int                 `json:"code"`
+	Subcode int                 `json:"subcode"`
+	Message string              `json:"msg"`
+	Cdlist  []QQMusicLegacyList `json:"cdlist"`
+	Data    *struct {
+		Cdlist []QQMusicLegacyList `json:"cdlist"`
+	} `json:"data"`
+}
+
+type QQMusicLegacyList struct {
+	Dissname string `json:"dissname"`
+	Songnum  int    `json:"songnum"`
+	Songlist []struct {
+		Songid   json.Number `json:"songid"`
+		Songmid  string      `json:"songmid"`
+		Songname string      `json:"songname"`
+		Songorig string      `json:"songorig"`
+		Singer   []struct {
+			Name string `json:"name"`
+		} `json:"singer"`
+	} `json:"songlist"`
 }

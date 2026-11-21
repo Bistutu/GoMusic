@@ -67,13 +67,27 @@ The adapter requires the decoded owner to equal the official share-page `list_cr
 
 MIT sources used for signature/protocol references retain their notices in [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md). The additional Apache-2.0 sources above were consulted for command endpoint and request-field protocol facts without incorporating their code. No changes were made to FluentRead or its reference repositories.
 
+### Multi-endpoint resilience (observed 2026-11-21)
+
+The adapters use the following recovery paths inside the original request deadline:
+
+- **QQ Music**: the signed and plain MusicU requests share the same pagination logic. The legacy, v8 and Qzone fallbacks use the supported public response shapes and prefer the original `songorig` title where available.
+- **Qishui**: `beta-luna.douyin.com`, `api.qishui.com` and `api5-lf.qishui.com` serve the public cursor API. After a per-host timeout or unusable response, the adapter retries the same cursor on another host and starts the following page on the last successful host. The new API hosts accept only the HTTPS playlist-detail route. The public share page's `_ROUTER_DATA` can supply a preview.
+- **Migu**: both `MIGUM3.0/resource/playlist/song/v2.0` and `MIGUM3.0/v1.0/user/queryMusicListSongs.do` returned the same ordered IDs at the checked page boundaries for the 195-track public sample. The alternate route uses the same page number and size.
+- **Qianqian**: public share pages can embed `data[].pageData.trackList` in the Nuxt state. The adapter reads the literal playlist fields and preserves the reported count when available. A share-page result carries an incomplete-result warning.
+- **Bodian**: the browser query profile uses `source`, `pn` and `rn` on the same host as the full profile. Both use fixed page sizes and validate the response data before a profile is accepted.
+- **Deezer**: `/playlist/{id}` must confirm the playlist ID and public visibility. Its embedded tracks can recover a prefix when the first dedicated `/playlist/{id}/tracks` page is unavailable or invalid. For public playlist `6399367984`, the detail returned 400 of 490 tracks.
+- **NetEase**: the legacy playlist endpoint can recover tracks after a v6 failure or partial result. The legacy song-detail endpoint receives only the IDs missing from the primary batch response. Explicit access denial stops playlist recovery.
+
+Each path reads public playlist metadata. The adapter keeps the largest known total and selects the best verified ordered result when endpoints return different snapshots.
+
 ## Frontend choice
 
 [Element Plus](https://element-plus.org/en-US/guide/design.html), [Reka UI](https://reka-ui.com/) and retaining Vue with native controls were compared for this form/preview page. Element Plus was globally loaded in the old application. Reka offers unstyled accessible components but this page needs only ordinary forms, selects, checkboxes and disclosure controls.
 
-The chosen implementation keeps Vue, replaces Vue CLI with [Vite](https://vite.dev/guide/), uses TypeScript and native controls, and removes the global UI library, Axios and the global `ResizeObserver` override. It uses system fonts, same-origin API calls, and no external advertising script. The original GitHub Star badge, migration instructions, support QR and supporter list remain visible.
+The chosen implementation keeps Vue, replaces Vue CLI with [Vite](https://vite.dev/guide/), uses TypeScript and native controls, and removes the global UI library, Axios and the global `ResizeObserver` override. It uses system fonts, same-origin API calls, and no external advertising script. The GitHub Star badge, migration instructions, support QR and supporter list remain visible.
 
-Actual browser checks cover initial/loading/result/error states, download contents, cancellation/retry, 500-track batches, preferences, and desktop/mobile overflow. Live screenshot inspection additionally reads a real public playlist and verifies that clipboard contents match the export. The final design follows the owner’s review: a white single-column page, black/gray text and a pale-red accent on primary buttons. The source-platform title stays concise as providers expand, with automatic detection shown beside the input. Original-name, format and order controls are visible before fetching; the result area is always present. Help, the original support QR and supporter list are shown without collapsed panels. A retrieved source title uses the generic “Name” label for playlists. Initial input remains empty; example playlist names are never hardcoded into the product UI. The GitHub Star badge and Chinese/English switching are preserved.
+Actual browser checks cover initial/loading/result/error states, download contents, cancellation/retry, 500-track batches, preferences, and desktop/mobile overflow. Live screenshot inspection additionally reads a real public playlist and verifies that clipboard contents match the export. The final design follows the owner’s review: a white single-column page, black/gray text and a pale-red accent on primary buttons. The source-platform title stays concise as providers expand, with automatic detection shown beside the input. Original-name, format and order controls are visible before fetching; the result area is always present. Help, the support QR and supporter list are shown without collapsed panels. A retrieved source title uses the generic “Name” label for playlists. Initial input remains empty; example playlist names are never hardcoded into the product UI. The GitHub Star badge and Chinese/English switching are preserved.
 
 ## Structure
 

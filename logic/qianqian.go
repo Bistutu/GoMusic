@@ -54,6 +54,7 @@ func (s *Service) qianqian(ctx context.Context, link musicurl.Link) (*models.Son
 	list := &models.SongList{Tracks: []models.Track{}, Warnings: []string{}}
 	seen := map[string]bool{}
 	totalKnown := false
+	usedPreview := false
 	referenceTotal := 0
 	totalConflict := false
 	var pageErr error
@@ -120,6 +121,31 @@ func (s *Service) qianqian(ctx context.Context, link musicurl.Link) (*models.Son
 		}
 	}
 
+	needsFallback := pageErr != nil || (totalKnown && len(list.Tracks) < list.TotalCount) ||
+		(len(list.Tracks) == 0 && (list.Name == "" || !totalKnown))
+	if needsFallback && len(list.Tracks) < s.MaxSongs && ctx.Err() == nil {
+		address := "https://music.91q.com/songlist/" + url.PathEscape(link.ID)
+		body, finalURL, err := s.HTTP.Do(ctx, http.MethodGet, address, nil,
+			map[string]string{"Accept": "text/html", "Referer": "https://music.91q.com/"})
+		if err == nil && strings.TrimSuffix(finalURL.Path, "/") == "/songlist/"+link.ID {
+			if preview, err := parseQianqianSharePage(body); err == nil {
+				name := list.Name
+				list = preferPlaylist(list, preview)
+				if list == preview {
+					usedPreview = true
+					if name != "" {
+						list.Name = name
+					}
+					list.Warnings = append(list.Warnings, "已从千千歌单分享页恢复曲目，完整性无法确认")
+					pageErr = nil
+				}
+			}
+		}
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	if len(list.Tracks) == 0 {
 		if list.Name != "" && totalKnown && list.TotalCount == 0 && pageErr == nil {
 			return list, nil
@@ -135,7 +161,9 @@ func (s *Service) qianqian(ctx context.Context, link musicurl.Link) (*models.Son
 	}
 	if !totalKnown {
 		list.TotalCount = max(list.TotalCount, len(list.Tracks))
-		list.Warnings = append(list.Warnings, "千千音乐未返回可确认的歌单总数，无法确认结果是否完整")
+		if !usedPreview {
+			list.Warnings = append(list.Warnings, "千千音乐未返回可确认的歌单总数，无法确认结果是否完整")
+		}
 	}
 	if list.TotalCount < len(list.Tracks) {
 		totalConflict = true
